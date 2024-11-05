@@ -8,9 +8,9 @@
 
 class IHttpResponse;
 
-struct FAssetProfileEntry
+struct FAssetProfile
 {
-	FAssetProfileEntry(){}
+	FAssetProfile(){}
 	
 	FString Id;
 
@@ -48,14 +48,14 @@ public:
 
 	virtual TFuture<UBF::FLoadMeshResult> GetMeshResource(const FString& BlueprintId, const FString& ResourceId) override;
 
-	void RegisterAssetProfile(const FAssetProfileEntry& AssetProfile);
-	void RegisterAssetProfiles(const TArray<FAssetProfileEntry>& AssetProfileEntries);
+	void RegisterAssetProfile(const FAssetProfile& AssetProfile);
+	void RegisterAssetProfiles(const TArray<FAssetProfile>& AssetProfileEntries);
 	
 	virtual ~FAPIGraphProvider() override = default;
 private:
 	// These are records of id's and locations. 
 	// They are used to download graphs and resources as needed
-	TMap<FString, FAssetProfileEntry> AssetProfiles;
+	TMap<FString, FAssetProfile> AssetProfiles;
 	TMap<FString, TMap<FString, FAssetResourceManifestElement>> ResourceManifests;
 
 	TSharedPtr<ICacheLoader> GraphCacheLoader;

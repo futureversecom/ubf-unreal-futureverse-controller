@@ -9,12 +9,12 @@
 #include "ImageUtils.h"
 #include "ControllerLayers/AssetProfileUtils.h"
 
-FString FAssetProfileEntry::GetGraphUri() const
+FString FAssetProfile::GetGraphUri() const
 {
 	return RelativePath + GraphUri;
 }
 
-FString FAssetProfileEntry::GetResourceManifestUri() const
+FString FAssetProfile::GetResourceManifestUri() const
 {
 	return RelativePath + ResourceManifestUri;
 }
@@ -218,7 +218,7 @@ TFuture<UBF::FLoadMeshResult> FAPIGraphProvider::GetMeshResource(const FString& 
 	return Future;
 }
 
-void FAPIGraphProvider::RegisterAssetProfile(const FAssetProfileEntry& AssetProfile)
+void FAPIGraphProvider::RegisterAssetProfile(const FAssetProfile& AssetProfile)
 {
 	if (AssetProfiles.Contains(AssetProfile.Id))
 	{
@@ -230,9 +230,9 @@ void FAPIGraphProvider::RegisterAssetProfile(const FAssetProfileEntry& AssetProf
 	}
 }
 
-void FAPIGraphProvider::RegisterAssetProfiles(const TArray<FAssetProfileEntry>& AssetProfileEntries)
+void FAPIGraphProvider::RegisterAssetProfiles(const TArray<FAssetProfile>& AssetProfileEntries)
 {
-	for (const FAssetProfileEntry& Entry : AssetProfileEntries)
+	for (const FAssetProfile& Entry : AssetProfileEntries)
 	{
 		RegisterAssetProfile(Entry);
 	}

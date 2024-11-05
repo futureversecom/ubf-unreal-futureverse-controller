@@ -4,7 +4,7 @@
 
 namespace AssetProfileUtils
 {
-	inline void ParseAssetProfileJson(const FString& Json, TArray<FAssetProfileEntry>& AssetProfileEntries)
+	inline void ParseAssetProfileJson(const FString& Json, TArray<FAssetProfile>& AssetProfileEntries)
 	{
 		// Create a JSON Reader
 		TSharedRef<TJsonReader<>> Reader = TJsonReaderFactory<>::Create(Json);
@@ -39,7 +39,7 @@ namespace AssetProfileUtils
 				FString ResourceManifestUrl = AssetProfile->GetStringField(TEXT("ResourceManifestUrl"));
 
 				// Register the graph location using the extracted InventoryItemName and RenderBlueprintUrl
-				FAssetProfileEntry AssetProfileEntry;
+				FAssetProfile AssetProfileEntry;
 				AssetProfileEntry.Id = InventoryItemName;
 				AssetProfileEntry.GraphUri = RenderBlueprintUrl;
 				AssetProfileEntry.ResourceManifestUri = ResourceManifestUrl;
