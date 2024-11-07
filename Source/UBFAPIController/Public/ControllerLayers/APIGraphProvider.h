@@ -8,14 +8,15 @@
 
 class IHttpResponse;
 
-struct FAssetProfile
+struct UBFAPICONTROLLER_API FAssetProfile
 {
 	FAssetProfile(){}
 	
-	FString Id;
+	FString Id = FString("Invalid");
 
 	FString GetGraphUri() const;
 	FString GetResourceManifestUri() const;
+	bool IsValid() const {return Id != FString("Invalid");}
 
 	FString GraphUri;
 	FString ResourceManifestUri;
