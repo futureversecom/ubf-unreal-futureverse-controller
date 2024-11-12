@@ -4,7 +4,7 @@
 
 UBFAPICONTROLLER_API DECLARE_LOG_CATEGORY_EXTERN(LogUBFAPIController, Log, All);
 
-namespace UBFLogging
+namespace UBFAPIControllerLogging
 {
 	bool DebugLoggingEnabled();
 }

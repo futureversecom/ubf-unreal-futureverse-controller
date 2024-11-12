@@ -2,7 +2,7 @@
 
 DEFINE_LOG_CATEGORY(LogUBFAPIController);
 
-namespace UBFLogging
+namespace UBFAPIControllerLogging
 {
 	static TAutoConsoleVariable<bool> CVarUBFAPIControllerDebugLogging(
 	TEXT("UBFAPIController.Logging.DebugLogging"),

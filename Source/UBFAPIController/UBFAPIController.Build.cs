@@ -54,13 +54,5 @@ public class UBFAPIController : ModuleRules
 				// ... add any modules that your module loads dynamically here ...
 			}
 			);
-		
-		string projectDir = Path.GetFullPath(Target.ProjectFile!.Directory.ToString());
-
-		// include UBF/Lib folder
-		PrivateIncludePaths.AddRange( new string[]
-		{
-			Path.Combine(projectDir, "Plugins", "UBF", "Source", "UBF", "Lib")
-		});
 	}
 }
