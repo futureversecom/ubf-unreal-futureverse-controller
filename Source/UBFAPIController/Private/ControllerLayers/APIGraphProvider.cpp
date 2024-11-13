@@ -75,6 +75,8 @@ TFuture<UBF::FLoadGraphResult> FAPIGraphProvider::GetGraph(const FString& Bluepr
 		 		}
 		 		else
 		 		{
+		 			UE_LOG(LogUBFAPIController, VeryVerbose, TEXT("Graph downloaded with json: %s"), *GraphResult.Result.Value);
+		 			
 		 			UBF::FGraphHandle Graph;
 		 			if (UBF::FGraphHandle::Load(UBF::FRegistryHandle::Default(), GraphResult.Result.Value, Graph))
 		 			{
