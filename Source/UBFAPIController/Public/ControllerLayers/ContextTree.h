@@ -66,7 +66,7 @@ public:
 	
 	bool TryMoveMarker(const FString& Relationship, TSharedPtr<FContextData>& NewMarker)
 	{
-		if (!ensure(Marker.IsValid())) return false;
+		if (!Marker.IsValid()) return false;
 		
 		TSharedPtr<FContextData> Current = Marker;
 		
