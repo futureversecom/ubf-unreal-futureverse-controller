@@ -6,21 +6,30 @@
 #include "GraphProvider.h"
 #include "ICacheLoader.h"
 
+#include "APIGraphProvider.generated.h"
+
 class IHttpResponse;
 
+USTRUCT(BlueprintType)
 struct UBFAPICONTROLLER_API FAssetProfile
 {
+	GENERATED_BODY()
+public:
 	FAssetProfile(){}
 	
-	FString Id = FString("Invalid");
-
 	FString GetGraphUri() const;
 	FString GetResourceManifestUri() const;
 	bool IsValid() const {return Id != FString("Invalid");}
 
+	UPROPERTY(EditAnywhere, BlueprintReadWrite)
+	FString Id = FString("Invalid");
+	
+	UPROPERTY(EditAnywhere, BlueprintReadWrite)
 	FString GraphUri;
+	UPROPERTY(EditAnywhere, BlueprintReadWrite)
 	FString ResourceManifestUri;
 	
+	UPROPERTY(EditAnywhere, BlueprintReadWrite)
 	FString RelativePath;
 };
 
