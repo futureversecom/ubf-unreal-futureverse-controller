@@ -124,21 +124,25 @@ void UFutureverseInventoryComponent::HandleGetAssetTree(const TArray<FFuturevers
 		return;
 	}
 
-	for (const auto Item : Inventory)
+	for (auto TreePath : Tree)
 	{
-		if(Tree[0].Id.Contains(Item->GetCombinedID()))
+		for (const auto Item : Inventory)
 		{
-			FFutureverseAssetTreeData AssetTree;
-			AssetTree.TreePaths = Tree;
-			auto LinkedItems = GetLinkedItemsForAssetTree(Tree);
+			if(TreePath.Id.Contains(Item->GetCombinedID()))
+			{
+				FFutureverseAssetTreeData AssetTree;
+				AssetTree.TreePaths = Tree;
+				auto LinkedItems = GetLinkedItemsForAssetTree(Tree);
 
-			// Add Root item
-			LinkedItems.Add(Tree[0].Id, Item->GetAssetID());
-			AssetTree.LinkedItems = LinkedItems;
+				// Add Root item
+				LinkedItems.Add(TreePath.Id, Item->GetAssetID());
+				AssetTree.LinkedItems = LinkedItems;
 			
-			Item->SetAssetTree(AssetTree);
+				Item->SetAssetTree(AssetTree);
+			}
 		}
 	}
+	
 
 	if (PendingNumberOfAssetTreeRequests <= 0)
 	{
