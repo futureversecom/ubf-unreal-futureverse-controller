@@ -18,11 +18,16 @@
 			"Name": "FutureverseUBFController",
 			"Type": "Runtime",
 			"LoadingPhase": "Default"
+		},
+		{
+			"Name": "UBFAPIController",
+			"Type": "Runtime",
+			"LoadingPhase": "Default"
 		}
 	],	
 	"Plugins": [
 	{
-		"Name": "UBFAPIController",
+		"Name": "UBF",
 		"Enabled": true
 	},
 	{
