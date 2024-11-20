@@ -7,6 +7,8 @@
 #include "Engine/DataAsset.h"
 #include "CollectionAssetProfiles.generated.h"
 
+enum class EFutureverseEnvironment : uint8;
+
 USTRUCT(BlueprintType)
 struct FUTUREVERSEUBFCONTROLLER_API FAssetProfileData
 {
@@ -36,7 +38,7 @@ public:
 	FString BasePath;
 
 	UPROPERTY(EditAnywhere, BlueprintReadOnly)
-	FString AssetProfilesJson;
+	TMap<EFutureverseEnvironment, FString> AssetProfilesJsonMap;
 
 	UPROPERTY(EditAnywhere, BlueprintReadOnly)
 	TArray<FAssetProfileData> AdditionalData;

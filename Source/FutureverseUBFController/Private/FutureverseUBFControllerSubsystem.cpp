@@ -3,6 +3,7 @@
 
 #include "FutureverseUBFControllerSubsystem.h"
 
+#include "EmergenceSingleton.h"
 #include "FutureverseUBFControllerLog.h"
 #include "CollectionData/CollectionAssetProfiles.h"
 #include "ControllerLayers/AssetProfileUtils.h"
@@ -47,8 +48,15 @@ void UFutureverseUBFControllerSubsystem::RenderItemTree(UFuturePassInventoryItem
 void UFutureverseUBFControllerSubsystem::RegisterAssetProfilesFromData(
 	UCollectionAssetProfiles* CollectionAssetProfiles)
 {
-	RegisterAssetProfilesFromJson(CollectionAssetProfiles->AssetProfilesJson, CollectionAssetProfiles->BasePath);
-
+	if (!UEmergenceSingleton::GetEmergenceManager(this)) return;
+	
+	const auto Environment = UEmergenceSingleton::GetEmergenceManager(this)->GetFutureverseEnvironment();
+	
+	if (!CollectionAssetProfiles->AssetProfilesJsonMap.Contains(Environment)) return;
+	
+	const auto AssetProfilesJson = CollectionAssetProfiles->AssetProfilesJsonMap[Environment];
+	RegisterAssetProfilesFromJson(AssetProfilesJson, CollectionAssetProfiles->BasePath);
+	
 	for (const FAssetProfileData& Data : CollectionAssetProfiles->AdditionalData)
 	{
 		RegisterAssetProfile(Data.CreateProfileFromData(CollectionAssetProfiles->BasePath));
