@@ -58,7 +58,8 @@ private:
 		IGraphProvider* GraphProvider, ISubGraphResolver* SubGraphResolver,
 		const TMap<FString, UUBFBindingObject*>& InputMap, const FOnComplete& OnComplete);
 	
-	void BuildContextTreeFromAssetTree(const TSharedPtr<FContextTree>& ContextTree, const FFutureverseAssetTreeData& AssetTree) const;
+	void BuildContextTreeFromAssetTree(const TSharedPtr<FContextTree>& ContextTree, const FFutureverseAssetTreeData& AssetTree,
+		const TMap<FString, UBF::FDynamicHandle>& RootTraits) const;
 	
 	TSharedPtr<FAPIGraphProvider> APIGraphProvider;
 	TSharedPtr<FAPISubGraphResolver> APISubGraphProvider;
@@ -67,6 +68,10 @@ private:
 	TSharedPtr<FTempCacheLoader> TempCacheLoader;
 
 	TMap<FString, FAssetProfile> AssetProfiles;
+	TMap<FString, UBF::FGraphHandle> ParsingGraphs;
+	
+	UBF::FExecutionContextHandle LastParsingGraphExecutionContextHandle;
+	UBF::FGraphHandle LastParsedGraph;
 	
 	friend class UFuturePassInventoryItem;
 };

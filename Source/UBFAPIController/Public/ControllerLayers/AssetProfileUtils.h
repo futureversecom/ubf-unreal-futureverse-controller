@@ -37,12 +37,17 @@ namespace AssetProfileUtils
 				// Extract the RenderBlueprintUrl
 				FString RenderBlueprintUrl = AssetProfile->GetStringField(TEXT("RenderBlueprintUrl"));
 				FString ResourceManifestUrl = AssetProfile->GetStringField(TEXT("ResourceManifestUrl"));
-
+				FString ParsingBlueprintUrl = AssetProfile->HasField(TEXT("ParsingBlueprintUrl"))
+						? AssetProfile->GetStringField(TEXT("ParsingBlueprintUrl"))
+						: "";
+				
 				// Register the graph location using the extracted InventoryItemName and RenderBlueprintUrl
 				FAssetProfile AssetProfileEntry;
 				AssetProfileEntry.Id = InventoryItemName;
 				AssetProfileEntry.GraphUri = RenderBlueprintUrl;
 				AssetProfileEntry.ResourceManifestUri = ResourceManifestUrl;
+				AssetProfileEntry.ParsingBlueprintUri = ParsingBlueprintUrl;
+				
 				AssetProfileEntries.Add(AssetProfileEntry);
 			}
 		}

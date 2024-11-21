@@ -19,6 +19,11 @@ FString FAssetProfile::GetResourceManifestUri() const
 	return RelativePath + ResourceManifestUri;
 }
 
+FString FAssetProfile::GetParsingBlueprintUri() const
+{
+	return RelativePath + ParsingBlueprintUri;
+}
+
 FAPIGraphProvider::FAPIGraphProvider(const TSharedPtr<ICacheLoader>& NewGraphCacheLoader,
 	const TSharedPtr<ICacheLoader>& NewResourceCacheLoader)
 {

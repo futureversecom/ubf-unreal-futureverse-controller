@@ -19,6 +19,7 @@ public:
 	
 	FString GetGraphUri() const;
 	FString GetResourceManifestUri() const;
+	FString GetParsingBlueprintUri() const;
 	bool IsValid() const {return Id != FString("Invalid");}
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite)
@@ -26,6 +27,8 @@ public:
 	
 	UPROPERTY(EditAnywhere, BlueprintReadWrite)
 	FString GraphUri;
+	UPROPERTY(EditAnywhere, BlueprintReadWrite)
+	FString ParsingBlueprintUri;
 	UPROPERTY(EditAnywhere, BlueprintReadWrite)
 	FString ResourceManifestUri;
 	
