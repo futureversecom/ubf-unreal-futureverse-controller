@@ -47,13 +47,16 @@ void UFutureverseUBFControllerSubsystem::RenderItemTree(UFuturePassInventoryItem
 			UE_LOG(LogFutureverseUBFController, Log, TEXT("UFutureverseUBFControllerSubsystem::RenderItemTree Found Parsing Graph for %s."), *Item->GetAssetProfileRef().Id);
 			
 			FString MetadataJson;
-			Item->GetInventoryItem().OriginalData.JsonObjectToString(MetadataJson);
-
+			//Item->GetInventoryItem().OriginalData.JsonObjectToString(MetadataJson);
+			TSharedPtr<FJsonObject> MetadataObjectField = Item->GetInventoryItem().OriginalData.JsonObject->GetObjectField("node")->GetObjectField("metadata");
+			
+			TSharedRef<TJsonWriter<>> Writer = TJsonWriterFactory<>::Create(&MetadataJson);
+			FJsonSerializer::Serialize(MetadataObjectField.ToSharedRef(), Writer);
+			
+			UE_LOG(LogFutureverseUBFController, Log, TEXT("UFutureverseUBFControllerSubsystem::RenderItemTree MetadataJson: %s"), *MetadataJson);
 			TMap<FString, UBF::FDynamicHandle> ParsingInputs =
 			{
-				{
-					TEXT("metadata"), UBF::FDynamicHandle::String(MetadataJson) 
-				}
+				{TEXT("metadata"), UBF::FDynamicHandle::String(MetadataJson) }
 			};
 			
 			LastParsedGraph = ParsingGraphs[Item->GetAssetProfileRef().Id];
@@ -71,7 +74,7 @@ void UFutureverseUBFControllerSubsystem::RenderItemTree(UFuturePassInventoryItem
 					UE_LOG(LogFutureverseUBFController, Log, TEXT("UFutureverseUBFControllerSubsystem::RenderItemTree TryReadOutput %s"), *Output.Id);
 					if (LastParsingGraphExecutionContextHandle.TryReadOutput(Output.Id, DynamicOutput))
 					{
-						Traits.Add(Output.Id, Output.DynamicPtr);
+						Traits.Add(Output.Id, DynamicOutput);
 					}
 				}
 				
