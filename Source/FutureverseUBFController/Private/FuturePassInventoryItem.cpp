@@ -70,7 +70,6 @@ FString UFuturePassInventoryItem::GetAssetID() const
 	if (MetadataName.IsEmpty())
 	{
 		LogDataString( InventoryItem.OriginalData.JsonObject);
-		return TEXT("InvalidAssetID");
 	}
 	
 	return FString::Printf(TEXT("%s:%s"), *MapCollectionIdToName(InventoryItem.contract), *MetadataName);
