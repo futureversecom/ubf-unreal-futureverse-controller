@@ -33,6 +33,11 @@ public:
 		return Parent->AddChild(SharedThis(this), Relationship);
 	}
 
+	void AddTraits(const TMap<FString, UBF::FDynamicHandle>& NewTraits)
+	{
+		Traits.Append(NewTraits);
+	}
+
 private:
 	FString BlueprintID;
 	TMap<FString, TSharedPtr<FContextData>> Children;
