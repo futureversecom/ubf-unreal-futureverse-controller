@@ -44,6 +44,10 @@ void UFutureverseUBFControllerSubsystem::RenderItemTree(UFuturePassInventoryItem
 		ParseInputs(Item, Controller, InputMap, OnComplete, ContextTree, true);
 		return;
 	}
+
+	// traits come from parsing graphs but we still want to build the tree
+	const TMap<FString, UBF::FDynamicHandle> Traits;
+	BuildContextTreeFromAssetTree(ContextTree, Item->GetAssetTreeRef(), "", Traits);
 	
 	APISubGraphProvider = MakeShared<FAPISubGraphResolver>(ContextTree);
 	ExecuteGraph(Item, Controller, APIGraphProvider.Get(), APISubGraphProvider.Get(), InputMap, OnComplete);
@@ -164,22 +168,34 @@ void UFutureverseUBFControllerSubsystem::BuildContextTreeFromAssetTree(const TSh
 	for (int i = 0; i < ItemAssetTree.Num(); ++i)
 	{
 		if (ItemAssetTree[i].Objects.IsEmpty()) continue;
-		
+
+		if (!AssetTree.LinkedItems.Contains(ItemAssetTree[i].Id))
+		{
+			UE_LOG(LogFutureverseUBFController, Warning, TEXT("UFutureverseUBFControllerSubsystem::BuildContextTreeFromAssetTree AssetTree.LinkedItems does not contain %s."), *ItemAssetTree[i].Id);
+			continue;
+		}
 		const auto RootNode = ContextTree->AddItem(AssetTree.LinkedItems[ItemAssetTree[i].Id]);
+		ContextTree->SetRoot(RootNode);
 		
+		UE_LOG(LogFutureverseUBFController, Verbose, TEXT("UFutureverseUBFControllerSubsystem::BuildContextTreeFromAssetTree Adding Root Node %s."), *AssetTree.LinkedItems[ItemAssetTree[i].Id]);
 		if (!TraitTargetId.IsEmpty() && AssetTree.LinkedItems[ItemAssetTree[i].Id] == TraitTargetId)
 		{
 			RootNode->AddTraits(Traits);
-			ContextTree->SetRoot(RootNode);
 		}
 		
 		for (const auto AssetTreeObject : ItemAssetTree[i].Objects)
 		{
+			if (!AssetTreeObject.Key.Contains(TEXT("path:"))) continue;
+			if (!AssetTree.LinkedItems.Contains(AssetTreeObject.Value.Id))
+			{
+				UE_LOG(LogFutureverseUBFController, Warning, TEXT("UFutureverseUBFControllerSubsystem::BuildContextTreeFromAssetTree AssetTree.LinkedItems does not contain %s."), *ItemAssetTree[i].Id);
+				continue;
+			}
 			const auto ChildNode = ContextTree->AddItem(AssetTree.LinkedItems[AssetTreeObject.Value.Id]);
-
 			FString Relationship = AssetTreeObject.Key;
 			
 			RootNode->AddChild(ChildNode, Relationship);
+			UE_LOG(LogFutureverseUBFController, Verbose, TEXT("UFutureverseUBFControllerSubsystem::BuildContextTreeFromAssetTree Added Child Node %s with Relationship: %s."), *AssetTree.LinkedItems[AssetTreeObject.Value.Id], *Relationship);
 		}
 	}
 }

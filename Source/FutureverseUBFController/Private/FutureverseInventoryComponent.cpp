@@ -137,6 +137,8 @@ void UFutureverseInventoryComponent::HandleGetAssetTree(const TArray<FFuturevers
 				auto LinkedItems = GetLinkedItemsForAssetTree(Tree);
 				
 				// Add root item
+				UE_LOG(LogFutureverseUBFController, Verbose,
+					TEXT("UFutureverseInventoryComponent::HandleGetAssetTree Adding Root Item: %s to Linked Items"), *Item->GetAssetID());
 				LinkedItems.Add(TreePath.Id, Item->GetAssetID());
 				AssetTree.LinkedItems = LinkedItems;
 			
@@ -167,6 +169,8 @@ TMap<FString, FString> UFutureverseInventoryComponent::GetLinkedItemsForAssetTre
 			{
 				if (AssetTreeObject.Value.Id.Contains(Item->GetCombinedID()))
 				{
+					UE_LOG(LogFutureverseUBFController, Verbose,
+					TEXT("UFutureverseInventoryComponent::HandleGetAssetTree Adding Item: %s to Linked Items"), *Item->GetAssetID());
 					LinkedItems.Add(AssetTreeObject.Value.Id, Item->GetAssetID());
 				}
 			}
