@@ -59,7 +59,7 @@ public:
 
 	virtual TFuture<UBF::FLoadTextureResult> GetTextureResource(const FString& BlueprintId, const FString& ResourceId) override;
 
-	virtual TFuture<UBF::FLoadMeshResult> GetMeshResource(const FString& BlueprintId, const FString& ResourceId) override;
+	virtual TFuture<UBF::FLoadDataArrayResult> GetMeshResource(const FString& BlueprintId, const FString& ResourceId) override;
 
 	void RegisterAssetProfile(const FAssetProfile& AssetProfile);
 	void RegisterAssetProfiles(const TArray<FAssetProfile>& AssetProfileEntries);

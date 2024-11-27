@@ -132,7 +132,7 @@ TFuture<UBF::FLoadTextureResult> FAPIGraphProvider::GetTextureResource(const FSt
 	if (!ResourceManifestElementMap.Contains(ResourceId))
 	{
 		UBF::FLoadTextureResult LoadResult;
-		UE_LOG(LogUBFAPIController, Warning, TEXT("FAPIGraphProvider::GetTextureResource UBF BlueprintID %s doesn't have a ResourceId %s entry"), *BlueprintId, *ResourceId);
+		UE_LOG(LogUBFAPIController, Verbose, TEXT("FAPIGraphProvider::GetTextureResource UBF BlueprintID %s doesn't have a ResourceId %s entry"), *BlueprintId, *ResourceId);
 		LoadResult.Result = TPair<bool, UTexture2D*>(false, nullptr);
 		Promise->SetValue(LoadResult);
 		return Future;
@@ -163,18 +163,19 @@ TFuture<UBF::FLoadTextureResult> FAPIGraphProvider::GetTextureResource(const FSt
 	return Future;
 }
 
-TFuture<UBF::FLoadMeshResult> FAPIGraphProvider::GetMeshResource(const FString& BlueprintId, const FString& ResourceId)
+TFuture<UBF::FLoadDataArrayResult> FAPIGraphProvider::GetMeshResource(const FString& BlueprintId, const FString& ResourceId)
 {
-	TSharedPtr<TPromise<UBF::FLoadMeshResult>> Promise = MakeShareable(new TPromise<UBF::FLoadMeshResult>());
-	TFuture<UBF::FLoadMeshResult> Future = Promise->GetFuture();
+	TSharedPtr<TPromise<UBF::FLoadDataArrayResult>> Promise = MakeShareable(new TPromise<UBF::FLoadDataArrayResult>());
+	TFuture<UBF::FLoadDataArrayResult> Future = Promise->GetFuture();
 	
 	//TODO handle download manifest if needed
 
 	if (!ResourceManifests.Contains(BlueprintId))
 	{
-		UBF::FLoadMeshResult LoadResult;
+		UBF::FLoadDataArrayResult LoadResult;
+		TArray<uint8> Data;
 		UE_LOG(LogUBFAPIController, Error, TEXT("FAPIGraphProvider::GetMeshResource UBF BlueprintID %s doesn't have a loaded manifest"), *BlueprintId);
-		LoadResult.Result = TPair<bool, UglTFRuntimeAsset*>(false, nullptr);
+		LoadResult.Result = TPair<bool, TArray<uint8>>(false, Data);
 		Promise->SetValue(LoadResult);
 		return Future;
 	}
@@ -182,9 +183,10 @@ TFuture<UBF::FLoadMeshResult> FAPIGraphProvider::GetMeshResource(const FString& 
 	auto ResourceManifestElementMap = ResourceManifests[BlueprintId];
 	if (!ResourceManifestElementMap.Contains(ResourceId))
 	{
-		UBF::FLoadMeshResult LoadResult;
+		UBF::FLoadDataArrayResult LoadResult;
+		TArray<uint8> Data;
 		UE_LOG(LogUBFAPIController, Error, TEXT("FAPIGraphProvider::GetMeshResource UBF BlueprintID %s doesn't have a ResourceId %s entry."), *BlueprintId, *ResourceId);
-		LoadResult.Result = TPair<bool, UglTFRuntimeAsset*>(false, nullptr);
+		LoadResult.Result = TPair<bool, TArray<uint8>>(false, Data);
 		Promise->SetValue(LoadResult);
 		return Future;
 	}
@@ -194,33 +196,18 @@ TFuture<UBF::FLoadMeshResult> FAPIGraphProvider::GetMeshResource(const FString& 
 	.Next([this, Promise](const UBF::FLoadDataArrayResult& DataResult)
 	{
 		const TArray<uint8> Data = DataResult.Result.Value;
-		UBF::FLoadMeshResult LoadResult;
-		UglTFRuntimeAsset* Asset = NewObject<UglTFRuntimeAsset>();
-				
+		UBF::FLoadDataArrayResult LoadResult;
+			
 		if (Data.Num() == 0 || Data.GetData() == nullptr)
 		{
 			UE_LOG(LogUBF, Error, TEXT("Data is empty"));
-			LoadResult.Result = TPair<bool, UglTFRuntimeAsset*>(false, Asset);
+			LoadResult.Result = TPair<bool, TArray<uint8>>(false, Data);
 			Promise->SetValue(LoadResult);
 			return;
 		}
-				
-		FglTFRuntimeConfig LoaderConfig;
-		LoaderConfig.TransformBaseType = EglTFRuntimeTransformBaseType::YForward;
-		Asset->RuntimeContextObject = LoaderConfig.RuntimeContextObject;
-		Asset->RuntimeContextString = LoaderConfig.RuntimeContextString;
-	
-		if (!Asset->LoadFromData(Data.GetData(), Data.Num(), LoaderConfig))
-		{
-			UE_LOG(LogUBFAPIController, Error, TEXT("FAPIGraphProvider::GetMeshResource Failed to Load Data"));
-			LoadResult.Result = TPair<bool, UglTFRuntimeAsset*>(false, Asset);
-			Promise->SetValue(LoadResult);
-		}
-		else
-		{
-			LoadResult.Result = TPair<bool, UglTFRuntimeAsset*>(true, Asset);
-			Promise->SetValue(LoadResult);
-		}
+		
+		LoadResult.Result = TPair<bool, TArray<uint8>>(true, Data);
+		Promise->SetValue(LoadResult);
 	});
 
 	return Future;
