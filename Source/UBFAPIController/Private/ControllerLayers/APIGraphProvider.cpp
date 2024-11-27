@@ -206,6 +206,7 @@ TFuture<UBF::FLoadMeshResult> FAPIGraphProvider::GetMeshResource(const FString& 
 		}
 				
 		FglTFRuntimeConfig LoaderConfig;
+		LoaderConfig.TransformBaseType = EglTFRuntimeTransformBaseType::YForward;
 		Asset->RuntimeContextObject = LoaderConfig.RuntimeContextObject;
 		Asset->RuntimeContextString = LoaderConfig.RuntimeContextString;
 	
