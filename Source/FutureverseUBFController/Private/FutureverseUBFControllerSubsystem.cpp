@@ -231,7 +231,7 @@ void UFutureverseUBFControllerSubsystem::RegisterAssetProfile(const FAssetProfil
 			UBF::FGraphHandle Graph;
 			if (UBF::FGraphHandle::Load(UBF::FRegistryHandle::Default(), ParsingBlueprintResult.Result.Value, Graph))
 			{
-				UE_LOG(LogUBFAPIController, Log, TEXT("Successfully loaded ParsingGraph for %s"), *AssetProfile.Id);
+				UE_LOG(LogUBFAPIController, Verbose, TEXT("Successfully loaded ParsingGraph for %s"), *AssetProfile.Id);
 				ParsingGraphs.Add(AssetProfile.Id, Graph);
 			}
 			else
