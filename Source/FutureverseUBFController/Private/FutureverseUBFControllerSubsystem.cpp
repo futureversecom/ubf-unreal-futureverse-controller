@@ -45,7 +45,7 @@ void UFutureverseUBFControllerSubsystem::RenderItemTree(UFuturePassInventoryItem
 		return;
 	}
 
-	// traits come from parsing graphs but we still want to build the tree
+	// no traits because this item doesn't have a parsing graph but still build the tree
 	const TMap<FString, UBF::FDynamicHandle> Traits;
 	BuildContextTreeFromAssetTree(ContextTree, Item->GetAssetTreeRef(), "", Traits);
 	
@@ -105,6 +105,11 @@ void UFutureverseUBFControllerSubsystem::ParseInputs(UFuturePassInventoryItem* I
 			{
 				ResolvedInputMap.Add(Trait.Key, BindingObject);
 			}
+		}
+
+		for (auto Input : ResolvedInputMap)
+		{
+			UE_LOG(LogFutureverseUBFController, Verbose, TEXT("UFutureverseUBFControllerSubsystem::ParseInputs ResolvedInput Key: %s Value: %s"), *Input.Key, *Input.Value->ToString());
 		}
 		
 		APISubGraphProvider = MakeShared<FAPISubGraphResolver>(ContextTree);
