@@ -26,12 +26,12 @@ public:
 	static UFutureverseUBFControllerSubsystem* Get(const UObject* WorldContext);
 	
 	// Used for rendering an item by itself without asset tree
-	UFUNCTION(BlueprintCallable)
+	UFUNCTION(BlueprintCallable, meta = (AutoCreateRefTerm = "OnComplete"))
 	void RenderItem(UFuturePassInventoryItem* Item, UUBFRuntimeController* Controller,
 		const TMap<FString, UUBFBindingObject*>& InputMap, const FOnComplete& OnComplete);
 	
 	// Used for rendering an item and other linked items using context tree
-	UFUNCTION(BlueprintCallable)
+	UFUNCTION(BlueprintCallable, meta = (AutoCreateRefTerm = "OnComplete"))
 	void RenderItemTree(UFuturePassInventoryItem* Item, UUBFRuntimeController* Controller,
 		const TMap<FString, UUBFBindingObject*>& InputMap, const FOnComplete& OnComplete);
 
