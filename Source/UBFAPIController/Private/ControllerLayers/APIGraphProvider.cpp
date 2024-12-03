@@ -4,28 +4,31 @@
 #include "ControllerLayers/APIGraphProvider.h"
 
 #include "ControllerLayers/APIUtils.h"
-#include "glTFRuntimeAsset.h"
-#include "glTFRuntimeParser.h"
 #include "ImageUtils.h"
 #include "ControllerLayers/AssetProfileUtils.h"
 
-FString FAssetProfile::GetGraphUri() const
+FString FAssetProfile::GetRenderBlueprintInstanceUri() const
 {
-	return RelativePath + GraphUri;
+	return RelativePath + RenderBlueprintInstanceUri;
 }
 
-FString FAssetProfile::GetResourceManifestUri() const
+FString FAssetProfile::GetRenderCatalogUri() const
 {
-	return RelativePath + ResourceManifestUri;
+	return RelativePath + RenderCatalogUri;
 }
 
-FString FAssetProfile::GetParsingBlueprintUri() const
+FString FAssetProfile::GetParsingBlueprintInstanceUri() const
 {
-	return RelativePath + ParsingBlueprintUri;
+	return RelativePath + ParsingBlueprintInstanceUri;
+}
+
+FString FAssetProfile::GetParsingCatalogUri() const
+{
+	return RelativePath + ParsingCatalogUri;
 }
 
 FAPIGraphProvider::FAPIGraphProvider(const TSharedPtr<ICacheLoader>& NewGraphCacheLoader,
-	const TSharedPtr<ICacheLoader>& NewResourceCacheLoader)
+									const TSharedPtr<ICacheLoader>& NewResourceCacheLoader)
 {
 	GraphCacheLoader = NewGraphCacheLoader;
 	ResourceCacheLoader = NewResourceCacheLoader;
@@ -38,8 +41,8 @@ TFuture<UBF::FLoadGraphResult> FAPIGraphProvider::GetGraph(const FString& Bluepr
 
 	if (AssetProfiles.Contains(BlueprintId))
 	{
-		const FString GraphUri = AssetProfiles[BlueprintId].GetGraphUri();
-		const FString ResourceManifestUri = AssetProfiles[BlueprintId].GetResourceManifestUri();
+		const FString GraphUri = AssetProfiles[BlueprintId].GetRenderBlueprintInstanceUri();
+		const FString ResourceManifestUri = AssetProfiles[BlueprintId].GetRenderCatalogUri();
 
 		UE_LOG(LogUBFAPIController, Verbose, TEXT("Loading BlueprintId %s with GraphURI %s and ResourceManifestUri %s"), *BlueprintId, *GraphUri, *ResourceManifestUri);
 		
@@ -57,13 +60,13 @@ TFuture<UBF::FLoadGraphResult> FAPIGraphProvider::GetGraph(const FString& Bluepr
 		
 		 	TMap<FString, FAssetResourceManifestElement> ResourceManifestElementMap;
 		 	AssetProfileUtils::ParseResourceManifest(ResourceManifestResult.Result.Value, ResourceManifestElementMap);
-		 	if (ResourceManifests.Contains(BlueprintId))
+		 	if (Catalogs.Contains(BlueprintId))
 		 	{
-		 		ResourceManifests[BlueprintId] = ResourceManifestElementMap;
+		 		Catalogs[BlueprintId] = ResourceManifestElementMap;
 		 	}
 		 	else
 		 	{
-		 		ResourceManifests.Add(BlueprintId, ResourceManifestElementMap);
+		 		Catalogs.Add(BlueprintId, ResourceManifestElementMap);
 		 	}
 		 	
 		 	UE_LOG(LogUBFAPIController, Verbose, TEXT("Try Loading Graph  %s from cachewith GraphURI %s"), *BlueprintId, *GraphUri);
@@ -111,6 +114,20 @@ TFuture<UBF::FLoadGraphResult> FAPIGraphProvider::GetGraph(const FString& Bluepr
 	return Future;
 }
 
+TFuture<UBF::FLoadGraphInstanceResult> FAPIGraphProvider::GetGraphInstance(const FString& InstanceId)
+{
+	// TODO: Implement this
+	TSharedPtr<TPromise<UBF::FLoadGraphInstanceResult>> Promise = MakeShareable(new TPromise<UBF::FLoadGraphInstanceResult>());
+	TFuture<UBF::FLoadGraphInstanceResult> Future = Promise->GetFuture();
+	UBF::FLoadGraphInstanceResult LoadResult;
+
+	LoadResult.Result = TPair<bool, IBlueprintInstance*>(false, nullptr);
+	
+	Promise->SetValue(LoadResult);
+		
+	return Future;
+}
+
 TFuture<UBF::FLoadTextureResult> FAPIGraphProvider::GetTextureResource(const FString& BlueprintId,
 	const FString& ResourceId)
 {
@@ -119,7 +136,7 @@ TFuture<UBF::FLoadTextureResult> FAPIGraphProvider::GetTextureResource(const FSt
 	
 	//TODO handle download manifest if needed
 	
-	if (!ResourceManifests.Contains(BlueprintId))
+	if (!Catalogs.Contains(BlueprintId))
 	{
 		UBF::FLoadTextureResult LoadResult;
 		UE_LOG(LogUBFAPIController, Error, TEXT("FAPIGraphProvider::GetTextureResource UBF BlueprintID %s doesn't have a loaded manifest"), *BlueprintId);
@@ -128,7 +145,7 @@ TFuture<UBF::FLoadTextureResult> FAPIGraphProvider::GetTextureResource(const FSt
 		return Future;
 	}
 	
-	auto ResourceManifestElementMap = ResourceManifests[BlueprintId];
+	auto ResourceManifestElementMap = Catalogs[BlueprintId];
 	if (!ResourceManifestElementMap.Contains(ResourceId))
 	{
 		UBF::FLoadTextureResult LoadResult;
@@ -170,7 +187,7 @@ TFuture<UBF::FLoadDataArrayResult> FAPIGraphProvider::GetMeshResource(const FStr
 	
 	//TODO handle download manifest if needed
 
-	if (!ResourceManifests.Contains(BlueprintId))
+	if (!Catalogs.Contains(BlueprintId))
 	{
 		UBF::FLoadDataArrayResult LoadResult;
 		TArray<uint8> Data;
@@ -180,7 +197,7 @@ TFuture<UBF::FLoadDataArrayResult> FAPIGraphProvider::GetMeshResource(const FStr
 		return Future;
 	}
 	
-	auto ResourceManifestElementMap = ResourceManifests[BlueprintId];
+	auto ResourceManifestElementMap = Catalogs[BlueprintId];
 	if (!ResourceManifestElementMap.Contains(ResourceId))
 	{
 		UBF::FLoadDataArrayResult LoadResult;
@@ -231,4 +248,10 @@ void FAPIGraphProvider::RegisterAssetProfiles(const TArray<FAssetProfile>& Asset
 	{
 		RegisterAssetProfile(Entry);
 	}
+}
+
+void FAPIGraphProvider::RegisterBlueprintInstance(const FString& InstanceId,
+	const FBlueprintInstance& BlueprintInstance)
+{
+	
 }

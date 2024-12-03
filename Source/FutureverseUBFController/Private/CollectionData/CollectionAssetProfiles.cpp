@@ -8,8 +8,8 @@ FAssetProfile FAssetProfileData::CreateProfileFromData(const FString& BasePath) 
 	FAssetProfile AssetProfile;
 
 	AssetProfile.Id = Id;
-	AssetProfile.GraphUri = GraphUri;
-	AssetProfile.ResourceManifestUri = ResourceManifestUri;
+	AssetProfile.RenderBlueprintInstanceUri = GraphUri;
+	AssetProfile.RenderCatalogUri = ResourceManifestUri;
 	AssetProfile.RelativePath = BasePath;
 	
 	return AssetProfile;

@@ -104,7 +104,7 @@ TFuture<bool> UFutureverseUBFControllerSubsystem::TryLoadAssetProfile(UFuturePas
 			Promise->SetValue(false);
 		}
 			
-		RegisterAssetProfilesFromJson(AssetProfileResult.Result.Value, Settings->GetDefaultAssetProfilePath());
+		RegisterAssetProfilesFromJson(AssetProfileResult.Result.Value, "");
 		Item->SetAssetProfile(GetAssetProfile(Item->GetAssetID()));
 		Promise->SetValue(true);
 	});
@@ -175,7 +175,7 @@ void UFutureverseUBFControllerSubsystem::ParseInputs(UFuturePassInventoryItem* I
 		ExecuteGraph(Item, Controller, APIGraphProvider.Get(), APISubGraphProvider.Get(), ResolvedInputMap, OnComplete);
 	};
 			
-	LastParsedGraph.Execute("parsing", Controller->RootComponent, nullptr, nullptr, ParsingInputs, nullptr, OnParsingGraphComplete, LastParsingGraphExecutionContextHandle);
+	LastParsedGraph.Execute("parsing", Controller->RootComponent, nullptr,  nullptr, ParsingInputs, OnParsingGraphComplete, LastParsingGraphExecutionContextHandle);
 }
 
 void UFutureverseUBFControllerSubsystem::RegisterAssetProfilesFromData(
@@ -280,15 +280,31 @@ void UFutureverseUBFControllerSubsystem::RegisterAssetProfile(const FAssetProfil
 {
 	AssetProfiles.Add(AssetProfile.Id, AssetProfile);
 	APIGraphProvider->RegisterAssetProfile(AssetProfile);
-	
-	if(!AssetProfile.ParsingBlueprintUri.IsEmpty())
+
+	if(!AssetProfile.RenderBlueprintInstanceUri.IsEmpty())
 	{
-		APIUtils::LoadStringFromURI(AssetProfile.GetParsingBlueprintUri(), AssetProfile.GetParsingBlueprintUri(), TempCacheLoader.Get())
+		APIUtils::LoadStringFromURI(AssetProfile.GetRenderBlueprintInstanceUri(), AssetProfile.GetRenderBlueprintInstanceUri(), TempCacheLoader.Get())
 			.Next([this, AssetProfile](const UBF::FLoadStringResult& ParsingBlueprintResult)
 		{
 			if (!ParsingBlueprintResult.Result.Key)
 			{
-				UE_LOG(LogFutureverseUBFController, Warning, TEXT("Failed to load parsing blueprint from %s"), *AssetProfile.GetParsingBlueprintUri());
+				UE_LOG(LogFutureverseUBFController, Warning, TEXT("Failed to load render blueprint instance from %s"), *AssetProfile.GetParsingBlueprintInstanceUri());
+				return;
+			}
+
+			FBlueprintInstance BlueprintInstance;
+			AssetProfileUtils::ParseBlueprintInstanceJson(ParsingBlueprintResult.Result.Value, BlueprintInstance);
+		});
+	}
+	
+	if(!AssetProfile.ParsingBlueprintInstanceUri.IsEmpty())
+	{
+		APIUtils::LoadStringFromURI(AssetProfile.GetParsingBlueprintInstanceUri(), AssetProfile.GetParsingBlueprintInstanceUri(), TempCacheLoader.Get())
+			.Next([this, AssetProfile](const UBF::FLoadStringResult& ParsingBlueprintResult)
+		{
+			if (!ParsingBlueprintResult.Result.Key)
+			{
+				UE_LOG(LogFutureverseUBFController, Warning, TEXT("Failed to load parsing blueprint from %s"), *AssetProfile.GetParsingBlueprintInstanceUri());
 				return;
 			}
 					

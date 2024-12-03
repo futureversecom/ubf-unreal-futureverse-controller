@@ -35,18 +35,22 @@ namespace AssetProfileUtils
 			if (AssetProfile.IsValid())
 			{
 				// Extract the RenderBlueprintUrl
-				FString RenderBlueprintUrl = AssetProfile->GetStringField(TEXT("RenderBlueprintUrl"));
-				FString ResourceManifestUrl = AssetProfile->GetStringField(TEXT("ResourceManifestUrl"));
-				FString ParsingBlueprintUrl = AssetProfile->HasField(TEXT("ParsingBlueprintUrl"))
-						? AssetProfile->GetStringField(TEXT("ParsingBlueprintUrl"))
+				FString RenderBlueprintInstanceUri = AssetProfile->GetStringField(TEXT("render-instance"));
+				FString RenderCatalogUri = AssetProfile->GetStringField(TEXT("render-catalog"));
+				FString ParsingBlueprintInstanceUri = AssetProfile->HasField(TEXT("parsing-instance"))
+						? AssetProfile->GetStringField(TEXT("parsing-instance"))
+						: "";
+				FString ParsingCatalogUri = AssetProfile->HasField(TEXT("parsing-catalog"))
+						? AssetProfile->GetStringField(TEXT("parsing-catalog"))
 						: "";
 				
-				// Register the graph location using the extracted InventoryItemName and RenderBlueprintUrl
+				// Register the graph and catalog locations
 				FAssetProfile AssetProfileEntry;
 				AssetProfileEntry.Id = InventoryItemName;
-				AssetProfileEntry.GraphUri = RenderBlueprintUrl;
-				AssetProfileEntry.ResourceManifestUri = ResourceManifestUrl;
-				AssetProfileEntry.ParsingBlueprintUri = ParsingBlueprintUrl;
+				AssetProfileEntry.RenderBlueprintInstanceUri = RenderBlueprintInstanceUri;
+				AssetProfileEntry.RenderCatalogUri = RenderCatalogUri;
+				AssetProfileEntry.ParsingBlueprintInstanceUri = ParsingBlueprintInstanceUri;
+				AssetProfileEntry.ParsingCatalogUri = ParsingCatalogUri;
 				
 				AssetProfileEntries.Add(AssetProfileEntry);
 			}
@@ -76,18 +80,21 @@ namespace AssetProfileUtils
 				{
 					if (!ResourceObject->HasField(TEXT("id"))
 						|| !ResourceObject->HasField(TEXT("uri"))
+						|| !ResourceObject->HasField(TEXT("type"))
 						|| !ResourceObject->HasField(TEXT("hash")))
 					{
-						UE_LOG(LogUBFAPIController, Error, TEXT("Cannot parse Json, missing id, uri or hash field in element %s in json %s"), *Value->AsString(), *Json);
+						UE_LOG(LogUBFAPIController, Error, TEXT("Cannot parse Json, missing id, uri, type or hash field in element %s in json %s"), *Value->AsString(), *Json);
 						continue;
 					}
 					FAssetResourceManifestElement ResourceManifestElement;
 					ResourceManifestElement.Id = ResourceObject->GetStringField(TEXT("id"));
+					ResourceManifestElement.Type = ResourceObject->GetStringField(TEXT("type"));
 					ResourceManifestElement.Uri = ResourceObject->GetStringField(TEXT("uri"));
 					ResourceManifestElement.Hash = ResourceObject->GetStringField(TEXT("hash"));
 					ResourceManifestElementMap.Add(ResourceManifestElement.Id, ResourceManifestElement);
-					UE_LOG(LogUBFAPIController, Verbose, TEXT("AssetProfileUtils::ParseResourceManifest Added ResourceManifest Id: %s Uri: %s hash: %s"),
-						*ResourceManifestElement.Id, *ResourceManifestElement.Uri, *ResourceManifestElement.Hash);
+					UE_LOG(LogUBFAPIController, Verbose, TEXT("AssetProfileUtils::ParseResourceManifest "
+						"Added ResourceManifest Id: %s Type: %s Uri: %s hash: %s"),
+						*ResourceManifestElement.Id, *ResourceManifestElement.Type, *ResourceManifestElement.Uri, *ResourceManifestElement.Hash);
 				}
 			}
 		}
@@ -95,5 +102,10 @@ namespace AssetProfileUtils
 		{
 			UE_LOG(LogTemp, Warning, TEXT("Failed to parse JSON string."));
 		}
+	}
+
+	inline void ParseBlueprintInstanceJson(const FString& Json, FBlueprintInstance& BlueprintInstance)
+	{
+		// todo
 	}
 }
