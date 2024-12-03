@@ -5,6 +5,7 @@
 
 #include "EmergenceSingleton.h"
 #include "FutureverseUBFControllerLog.h"
+#include "FutureverseUBFControllerSettings.h"
 #include "CollectionData/CollectionAssetProfiles.h"
 #include "ControllerLayers/AssetProfileUtils.h"
 #include "ControllerLayers/MemoryCacheLoader.h"
@@ -24,14 +25,23 @@ void UFutureverseUBFControllerSubsystem::RenderItem(UFuturePassInventoryItem* It
 {
 	TSharedPtr<FContextTree> ContextTree = MakeShared<FContextTree>();
 
-	if (ParsingGraphs.Contains(Item->GetAssetProfileRef().Id))
+	TryLoadAssetProfile(Item).Next([this, Item, Controller, InputMap, OnComplete, ContextTree](const bool bIsAssetProfileLoaded)
 	{
-		ParseInputs(Item, Controller, InputMap, OnComplete, ContextTree, false);
-		return;
-	}
+		if (!bIsAssetProfileLoaded)
+		{
+			UE_LOG(LogFutureverseUBFController, Warning, TEXT("UFutureverseUBFControllerSubsystem::RenderItem Item %s provided invalid AssetProfile. Cannot render."), *Item->GetAssetID());
+			return;
+		}
+		
+		if (ParsingGraphs.Contains(Item->GetAssetProfileRef().Id))
+		{
+			ParseInputs(Item, Controller, InputMap, OnComplete, ContextTree, false);
+			return;
+		}
 	
-	APISubGraphProvider = MakeShared<FAPISubGraphResolver>(ContextTree);
-	ExecuteGraph(Item, Controller, APIGraphProvider.Get(), APISubGraphProvider.Get(), InputMap, OnComplete);
+		APISubGraphProvider = MakeShared<FAPISubGraphResolver>(ContextTree);
+		ExecuteGraph(Item, Controller, APIGraphProvider.Get(), APISubGraphProvider.Get(), InputMap, OnComplete);
+	});
 }
 
 void UFutureverseUBFControllerSubsystem::RenderItemTree(UFuturePassInventoryItem* Item,
@@ -39,18 +49,67 @@ void UFutureverseUBFControllerSubsystem::RenderItemTree(UFuturePassInventoryItem
 {
 	TSharedPtr<FContextTree> ContextTree = MakeShared<FContextTree>();
 
-	if (ParsingGraphs.Contains(Item->GetAssetProfileRef().Id))
+	TryLoadAssetProfile(Item).Next([this, Item, Controller, InputMap, OnComplete, ContextTree](const bool bIsAssetProfileLoaded)
 	{
-		ParseInputs(Item, Controller, InputMap, OnComplete, ContextTree, true);
-		return;
-	}
+		if (!bIsAssetProfileLoaded)
+		{
+			UE_LOG(LogFutureverseUBFController, Warning, TEXT("UFutureverseUBFControllerSubsystem::RenderItemTree Item %s provided invalid AssetProfile. Cannot render."), *Item->GetAssetID());
+			return;
+		}
+		
+		if (ParsingGraphs.Contains(Item->GetAssetProfileRef().Id))
+		{
+			ParseInputs(Item, Controller, InputMap, OnComplete, ContextTree, true);
+			return;
+		}
 
-	// no traits because this item doesn't have a parsing graph but still build the tree
-	const TMap<FString, UBF::FDynamicHandle> Traits;
-	BuildContextTreeFromAssetTree(ContextTree, Item->GetAssetTreeRef(), "", Traits);
+		// no traits because this item doesn't have a parsing graph but still build the tree
+		const TMap<FString, UBF::FDynamicHandle> Traits;
+		BuildContextTreeFromAssetTree(ContextTree, Item->GetAssetTreeRef(), "", Traits);
 	
-	APISubGraphProvider = MakeShared<FAPISubGraphResolver>(ContextTree);
-	ExecuteGraph(Item, Controller, APIGraphProvider.Get(), APISubGraphProvider.Get(), InputMap, OnComplete);
+		APISubGraphProvider = MakeShared<FAPISubGraphResolver>(ContextTree);
+		ExecuteGraph(Item, Controller, APIGraphProvider.Get(), APISubGraphProvider.Get(), InputMap, OnComplete);
+	});
+}
+
+TFuture<bool> UFutureverseUBFControllerSubsystem::TryLoadAssetProfile(UFuturePassInventoryItem* Item)
+{
+	TSharedPtr<TPromise<bool>> Promise = MakeShareable(new TPromise<bool>());
+	TFuture<bool> Future = Promise->GetFuture();
+
+	if (Item->GetAssetProfile().IsValid())
+	{
+		Promise->SetValue(true);
+		return Future;
+	}
+	
+	FString ProfileRemotePath;
+	const UFutureverseUBFControllerSettings* Settings = GetDefault<UFutureverseUBFControllerSettings>();
+	check(Settings);
+	if (Settings)
+	{
+		ProfileRemotePath = FString::Printf(TEXT("%s/profiles_%s.json"), *Settings->GetDefaultAssetProfilePath(), *Item->GetInventoryItem().contract);
+	}
+	else
+	{
+		Promise->SetValue(false);
+	}
+	
+	APIUtils::LoadStringFromURI(ProfileRemotePath, "", MemoryCacheLoader.Get()).Next(
+		[this, Item, ProfileRemotePath, Promise, Settings](const UBF::FLoadStringResult& AssetProfileResult)
+	{
+		if(!AssetProfileResult.Result.Key)
+		{
+			UE_LOG(LogFutureverseUBFController, Error, TEXT("UFutureverseUBFControllerSubsystem::LoadRemoteAssetProfile failed to load remote AssetProfile from %s"), *ProfileRemotePath);
+			Promise->SetValue(false);
+		}
+			
+		RegisterAssetProfilesFromJson(AssetProfileResult.Result.Value, Settings->GetDefaultAssetProfilePath());
+		Item->SetAssetProfile(GetAssetProfile(Item->GetAssetID()));
+		Promise->SetValue(true);
+	});
+	
+	return Future;
 }
 
 void UFutureverseUBFControllerSubsystem::ParseInputs(UFuturePassInventoryItem* Item, UUBFRuntimeController* Controller,
@@ -143,12 +202,12 @@ void UFutureverseUBFControllerSubsystem::ExecuteGraph(UFuturePassInventoryItem* 
 {
 	if (!Item)
 	{
-		UE_LOG(LogFutureverseUBFController, Warning, TEXT("UFutureverseUBFControllerSubsystem::RenderItem null Item provided. Cannot render."));
+		UE_LOG(LogFutureverseUBFController, Warning, TEXT("UFutureverseUBFControllerSubsystem::ExecuteGraph null Item provided. Cannot render."));
 		return;
 	}
 	if (!Controller)
 	{
-		UE_LOG(LogFutureverseUBFController, Warning, TEXT("UFutureverseUBFControllerSubsystem::RenderItem null Controller provided. Cannot render."));
+		UE_LOG(LogFutureverseUBFController, Warning, TEXT("UFutureverseUBFControllerSubsystem::ExecuteGraph null Controller provided. Cannot render."));
 		return;
 	}
 	
@@ -224,7 +283,7 @@ void UFutureverseUBFControllerSubsystem::RegisterAssetProfile(const FAssetProfil
 	
 	if(!AssetProfile.ParsingBlueprintUri.IsEmpty())
 	{
-		APIUtils::LoadStringFromURI(AssetProfile.GetParsingBlueprintUri(), "ParsingGraph", TempCacheLoader.Get())
+		APIUtils::LoadStringFromURI(AssetProfile.GetParsingBlueprintUri(), AssetProfile.GetParsingBlueprintUri(), TempCacheLoader.Get())
 			.Next([this, AssetProfile](const UBF::FLoadStringResult& ParsingBlueprintResult)
 		{
 			if (!ParsingBlueprintResult.Result.Key)

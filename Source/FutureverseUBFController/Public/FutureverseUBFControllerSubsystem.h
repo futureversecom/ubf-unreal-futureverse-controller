@@ -64,6 +64,8 @@ private:
 	void ParseInputs(UFuturePassInventoryItem* Item, UUBFRuntimeController* Controller,
 		const TMap<FString, UUBFBindingObject*>& InputMap, const FOnComplete& OnComplete,
 		TSharedPtr<FContextTree> ContextTree, const bool bShouldBuildContextTree);
+
+	TFuture<bool> TryLoadAssetProfile(UFuturePassInventoryItem* Item);
 	
 	TSharedPtr<FAPIGraphProvider> APIGraphProvider;
 	TSharedPtr<FAPISubGraphResolver> APISubGraphProvider;

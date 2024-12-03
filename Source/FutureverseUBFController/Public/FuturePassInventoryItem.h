@@ -27,6 +27,7 @@ class FUTUREVERSEUBFCONTROLLER_API UFuturePassInventoryItem : public UObject
 public:
 	void Initialize(const FEmergenceInventoryItem& EmergenceInventoryItem);
 	void SetAssetTree(const FFutureverseAssetTreeData& NewAssetTree) { AssetTree = NewAssetTree; }
+	void SetAssetProfile(const FAssetProfile& NewAssetProfile) { AssetProfile = NewAssetProfile; }
 
 	const FAssetProfile& GetAssetProfileRef() const;
 	const FFutureverseAssetTreeData& GetAssetTreeRef() const { return AssetTree; }

@@ -81,7 +81,7 @@ namespace APIUtils
 		return true;
 	}
 	
-	static TFuture<UBF::FLoadDataArrayResult> LoadDataFromURI(const FString& Path, const FString& Hash, ICacheLoader* CacheLoader)
+	static TFuture<UBF::FLoadDataArrayResult> LoadDataFromURI(const FString& Path, const FString& Hash, ICacheLoader* CacheLoader = nullptr)
 	{
 		TSharedPtr<TPromise<UBF::FLoadDataArrayResult>> Promise = MakeShareable(new TPromise<UBF::FLoadDataArrayResult>());
 		TFuture<UBF::FLoadDataArrayResult> Future = Promise->GetFuture();
@@ -155,7 +155,7 @@ namespace APIUtils
 		return Future;
 	}
 
-	static TFuture<UBF::FLoadStringResult> LoadStringFromURI(const FString& Path, const FString& Hash, ICacheLoader* CacheLoader)
+	static TFuture<UBF::FLoadStringResult> LoadStringFromURI(const FString& Path, const FString& Hash, ICacheLoader* CacheLoader = nullptr)
 	{
 		TSharedPtr<TPromise<UBF::FLoadStringResult>> Promise = MakeShareable(new TPromise<UBF::FLoadStringResult>());
 		TFuture<UBF::FLoadStringResult> Future = Promise->GetFuture();
