@@ -40,6 +40,7 @@ public class FutureverseUBFController : ModuleRules
 				"SlateCore",
 				"Json",
 				"JsonUtilities",
+				"DeveloperSettings"
 				// ... add private dependencies that you statically link with here ...	
 			}
 			);
