@@ -27,6 +27,13 @@ FString FAssetProfile::GetParsingCatalogUri() const
 	return RelativePath + ParsingCatalogUri;
 }
 
+TMap<FString, UBF::FDynamicHandle>& FBlueprintInstance::GetVariables()
+{
+	TMap<FString, UBF::FDynamicHandle> Variables;
+	// todo
+	return Variables;
+}
+
 FAPIGraphProvider::FAPIGraphProvider(const TSharedPtr<ICacheLoader>& NewGraphCacheLoader,
 									const TSharedPtr<ICacheLoader>& NewResourceCacheLoader)
 {
@@ -41,14 +48,13 @@ TFuture<UBF::FLoadGraphResult> FAPIGraphProvider::GetGraph(const FString& Bluepr
 
 	if (AssetProfiles.Contains(BlueprintId))
 	{
-		const FString GraphUri = AssetProfiles[BlueprintId].GetRenderBlueprintInstanceUri();
-		const FString ResourceManifestUri = AssetProfiles[BlueprintId].GetRenderCatalogUri();
-
-		UE_LOG(LogUBFAPIController, Verbose, TEXT("Loading BlueprintId %s with GraphURI %s and ResourceManifestUri %s"), *BlueprintId, *GraphUri, *ResourceManifestUri);
+		const FString RenderBlueprintInstanceUri = AssetProfiles[BlueprintId].GetRenderBlueprintInstanceUri();
+		const FString RenderCatalogUri = AssetProfiles[BlueprintId].GetRenderCatalogUri();
 		
-		// TODO don't block Graph download while downloading manifest
-		 APIUtils::LoadStringFromURI(ResourceManifestUri, "", GraphCacheLoader.Get())
-		 .Next([this, BlueprintId, GraphUri, Promise](const UBF::FLoadStringResult& ResourceManifestResult)
+		// don't block Graph download while downloading manifest
+		UE_LOG(LogUBFAPIController, Verbose, TEXT("Loading BlueprintId %s with RenderBlueprintInstanceUri %s and RenderCatalogUri %s"), *BlueprintId, *RenderBlueprintInstanceUri, *RenderCatalogUri); 
+		 APIUtils::LoadStringFromURI(RenderCatalogUri, "", GraphCacheLoader.Get())
+		 .Next([this, BlueprintId, RenderBlueprintInstanceUri, Promise](const UBF::FLoadStringResult& ResourceManifestResult)
 		 {
 		 	if (!ResourceManifestResult.Result.Key)
 		 	{
@@ -58,20 +64,20 @@ TFuture<UBF::FLoadGraphResult> FAPIGraphProvider::GetGraph(const FString& Bluepr
 		 		return;
 		 	}
 		
-		 	TMap<FString, FAssetResourceManifestElement> ResourceManifestElementMap;
-		 	AssetProfileUtils::ParseResourceManifest(ResourceManifestResult.Result.Value, ResourceManifestElementMap);
+		 	TMap<FString, FCatalogElement> CatalogMap;
+		 	AssetProfileUtils::ParseCatalog(ResourceManifestResult.Result.Value, CatalogMap);
 		 	if (Catalogs.Contains(BlueprintId))
 		 	{
-		 		Catalogs[BlueprintId] = ResourceManifestElementMap;
+		 		Catalogs[BlueprintId] = CatalogMap;
 		 	}
 		 	else
 		 	{
-		 		Catalogs.Add(BlueprintId, ResourceManifestElementMap);
+		 		Catalogs.Add(BlueprintId, CatalogMap);
 		 	}
 		 	
-		 	UE_LOG(LogUBFAPIController, Verbose, TEXT("Try Loading Graph  %s from cachewith GraphURI %s"), *BlueprintId, *GraphUri);
+		 	UE_LOG(LogUBFAPIController, Verbose, TEXT("Try Loading Graph %s from cachewith RenderBlueprintInstanceUri %s"), *BlueprintId, *RenderBlueprintInstanceUri);
 		
-		 	APIUtils::LoadStringFromURI(GraphUri, "", GraphCacheLoader.Get())
+		 	APIUtils::LoadStringFromURI(RenderBlueprintInstanceUri, "", GraphCacheLoader.Get())
 		 	.Next([this, BlueprintId, Promise](const UBF::FLoadStringResult& GraphResult)
 		 	{
 		 		UBF::FLoadGraphResult LoadResult;
@@ -250,8 +256,45 @@ void FAPIGraphProvider::RegisterAssetProfiles(const TArray<FAssetProfile>& Asset
 	}
 }
 
+void FAPIGraphProvider::RegisterCatalog(const FString& InstanceId, const FCatalogElement& Catalog)
+{
+	if (Catalogs.Contains(InstanceId))
+	{
+		auto CatalogMap = Catalogs[InstanceId];
+		if (CatalogMap.Contains(Catalog.Id))
+		{
+			CatalogMap[Catalog.Id] = Catalog;
+		}
+		else
+		{
+			CatalogMap.Add(Catalog.Id, Catalog);
+		}
+	}
+	else
+	{
+		TMap<FString, FCatalogElement> NewCatalogMap;
+		NewCatalogMap.Add(Catalog.Id, Catalog);
+		Catalogs.Add(InstanceId, NewCatalogMap);
+	}
+}
+
+void FAPIGraphProvider::RegisterCatalogs(const FString& InstanceId, const TMap<FString, FCatalogElement>& CatalogMap)
+{
+	for (const auto& Catalog : CatalogMap)
+	{
+		RegisterCatalog(InstanceId, Catalog.Value);
+	}
+}
+
 void FAPIGraphProvider::RegisterBlueprintInstance(const FString& InstanceId,
 	const FBlueprintInstance& BlueprintInstance)
 {
-	
+	if (BlueprintInstances.Contains(InstanceId))
+	{
+		BlueprintInstances[InstanceId] = BlueprintInstance;
+	}
+	else
+	{
+		BlueprintInstances.Add(InstanceId, BlueprintInstance);
+	}
 }

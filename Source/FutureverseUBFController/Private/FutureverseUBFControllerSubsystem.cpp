@@ -284,41 +284,69 @@ void UFutureverseUBFControllerSubsystem::RegisterAssetProfile(const FAssetProfil
 	if(!AssetProfile.RenderBlueprintInstanceUri.IsEmpty())
 	{
 		APIUtils::LoadStringFromURI(AssetProfile.GetRenderBlueprintInstanceUri(), AssetProfile.GetRenderBlueprintInstanceUri(), TempCacheLoader.Get())
-			.Next([this, AssetProfile](const UBF::FLoadStringResult& ParsingBlueprintResult)
+			.Next([this, AssetProfile](const UBF::FLoadStringResult& LoadResult)
 		{
-			if (!ParsingBlueprintResult.Result.Key)
+			if (!LoadResult.Result.Key)
 			{
 				UE_LOG(LogFutureverseUBFController, Warning, TEXT("Failed to load render blueprint instance from %s"), *AssetProfile.GetParsingBlueprintInstanceUri());
 				return;
 			}
 
 			FBlueprintInstance BlueprintInstance;
-			AssetProfileUtils::ParseBlueprintInstanceJson(ParsingBlueprintResult.Result.Value, BlueprintInstance);
+			AssetProfileUtils::ParseBlueprintInstanceJson(LoadResult.Result.Value, BlueprintInstance);
+			APIGraphProvider->RegisterBlueprintInstance(AssetProfile.Id, BlueprintInstance);
 		});
+		
+		if(!AssetProfile.RenderCatalogUri.IsEmpty())
+		{
+			APIUtils::LoadStringFromURI(AssetProfile.GetRenderCatalogUri(), AssetProfile.GetRenderCatalogUri(), TempCacheLoader.Get())
+				.Next([this, AssetProfile](const UBF::FLoadStringResult& LoadResult)
+			{
+				if (!LoadResult.Result.Key)
+				{
+					UE_LOG(LogFutureverseUBFController, Warning, TEXT("Failed to load render catalog from %s"), *AssetProfile.GetRenderCatalogUri());
+					return;
+				}
+					
+				TMap<FString, FCatalogElement> CatalogMap;
+				AssetProfileUtils::ParseCatalog(LoadResult.Result.Value, CatalogMap);
+				APIGraphProvider->RegisterCatalogs(AssetProfile.RenderBlueprintInstanceUri, CatalogMap);
+			});
+		}
 	}
 	
 	if(!AssetProfile.ParsingBlueprintInstanceUri.IsEmpty())
 	{
 		APIUtils::LoadStringFromURI(AssetProfile.GetParsingBlueprintInstanceUri(), AssetProfile.GetParsingBlueprintInstanceUri(), TempCacheLoader.Get())
-			.Next([this, AssetProfile](const UBF::FLoadStringResult& ParsingBlueprintResult)
+			.Next([this, AssetProfile](const UBF::FLoadStringResult& LoadResult)
 		{
-			if (!ParsingBlueprintResult.Result.Key)
+			if (!LoadResult.Result.Key)
 			{
 				UE_LOG(LogFutureverseUBFController, Warning, TEXT("Failed to load parsing blueprint from %s"), *AssetProfile.GetParsingBlueprintInstanceUri());
 				return;
 			}
 					
-			UBF::FGraphHandle Graph;
-			if (UBF::FGraphHandle::Load(UBF::FRegistryHandle::Default(), ParsingBlueprintResult.Result.Value, Graph))
-			{
-				UE_LOG(LogUBFAPIController, Verbose, TEXT("Successfully loaded ParsingGraph for %s"), *AssetProfile.Id);
-				ParsingGraphs.Add(AssetProfile.Id, Graph);
-			}
-			else
-			{
-				UE_LOG(LogUBFAPIController, Warning, TEXT("Unable to load ParsingGraph for %s"), *AssetProfile.Id);
-			}
+			FBlueprintInstance BlueprintInstance;
+			AssetProfileUtils::ParseBlueprintInstanceJson(LoadResult.Result.Value, BlueprintInstance);
+			APIGraphProvider->RegisterBlueprintInstance(BlueprintInstance.GetId(), BlueprintInstance);
 		});
+		
+		if(!AssetProfile.ParsingCatalogUri.IsEmpty())
+		{
+			APIUtils::LoadStringFromURI(AssetProfile.GetParsingCatalogUri(), AssetProfile.GetParsingCatalogUri(), TempCacheLoader.Get())
+				.Next([this, AssetProfile](const UBF::FLoadStringResult& LoadResult)
+			{
+				if (!LoadResult.Result.Key)
+				{
+					UE_LOG(LogFutureverseUBFController, Warning, TEXT("Failed to load parsing catalog from %s"), *AssetProfile.GetParsingCatalogUri());
+					return;
+				}
+					
+				TMap<FString, FCatalogElement> CatalogMap;
+				AssetProfileUtils::ParseCatalog(LoadResult.Result.Value, CatalogMap);
+				APIGraphProvider->RegisterCatalogs(AssetProfile.RenderBlueprintInstanceUri, CatalogMap);
+			});
+		}
 	}
 }
 

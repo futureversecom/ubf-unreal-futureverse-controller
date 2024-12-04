@@ -40,36 +40,38 @@ public:
 	FString RelativePath;
 };
 
-struct UBFAPICONTROLLER_API FBlueprintInstance : IBlueprintInstance
+struct UBFAPICONTROLLER_API FBlueprintInstance final : IBlueprintInstance
 {
 	
 public:
 	FBlueprintInstance() {}
-	FBlueprintInstance(const FString& NewBlueprintId, const TMap<FString, UBF::FDynamicHandle>& NewVariables)
+	FBlueprintInstance(const FString& NewBlueprintId, const TMap<FString, FBlueprintInstanceBinding>& NewBindings)
 	{
 		BlueprintId = NewBlueprintId;
-		Variables = NewVariables;
+		Bindings = NewBindings;
 	}
 	
 	virtual FString GetId() override { return Id; }
 	virtual FString GetBlueprintId() override { return BlueprintId; }
-	virtual TMap<FString, UBF::FDynamicHandle>& GetVariables() override { return Variables; }
+	virtual TMap<FString, UBF::FDynamicHandle>& GetVariables() override;
+	TMap<FString, FBlueprintInstanceBinding>& GetBindingsRef() { return Bindings; }
 
 private:
 	FString Id = FGuid::NewGuid().ToString();
 	FString BlueprintId;
-	TMap<FString, UBF::FDynamicHandle> Variables;
+	TMap<FString, FBlueprintInstanceBinding> Bindings;
 };
 
-struct FAssetResourceManifestElement
+struct FCatalogElement
 {
-	FAssetResourceManifestElement(){}
+	FCatalogElement(){}
 	
 	FString Id;
 	FString Type;
 	FString Uri;
 	FString Hash;
 };
+
 
 /**
  * 
@@ -92,7 +94,8 @@ public:
 	void RegisterAssetProfile(const FAssetProfile& AssetProfile);
 	void RegisterAssetProfiles(const TArray<FAssetProfile>& AssetProfileEntries);
 
-	void RegisterCatalog(const FString InstanceId, const FAssetResourceManifestElement& Catalog);
+	void RegisterCatalog(const FString& InstanceId, const FCatalogElement& Catalog);
+	void RegisterCatalogs(const FString& InstanceId, const TMap<FString, FCatalogElement>& CatalogMap);
 	void RegisterBlueprintInstance(const FString& InstanceId, const FBlueprintInstance& BlueprintInstance);
 	
 	virtual ~FAPIGraphProvider() override = default;
@@ -100,7 +103,7 @@ private:
 	// These are records of id's and locations. 
 	// They are used to download graphs and resources as needed
 	TMap<FString, FAssetProfile> AssetProfiles;
-	TMap<FString, TMap<FString, FAssetResourceManifestElement>> Catalogs;
+	TMap<FString, TMap<FString, FCatalogElement>> Catalogs;
 	TMap<FString, FBlueprintInstance> BlueprintInstances;
 
 	TSharedPtr<ICacheLoader> GraphCacheLoader;
