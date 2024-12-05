@@ -40,28 +40,6 @@ public:
 	FString RelativePath;
 };
 
-struct UBFAPICONTROLLER_API FBlueprintInstance final : IBlueprintInstance
-{
-	
-public:
-	FBlueprintInstance() {}
-	FBlueprintInstance(const FString& NewBlueprintId, const TMap<FString, FBlueprintInstanceBinding>& NewBindings)
-	{
-		BlueprintId = NewBlueprintId;
-		Bindings = NewBindings;
-	}
-	
-	virtual FString GetId() override { return Id; }
-	virtual FString GetBlueprintId() override { return BlueprintId; }
-	virtual TMap<FString, UBF::FDynamicHandle>& GetVariables() override;
-	TMap<FString, FBlueprintInstanceBinding>& GetBindingsRef() { return Bindings; }
-
-private:
-	FString Id = FGuid::NewGuid().ToString();
-	FString BlueprintId;
-	TMap<FString, FBlueprintInstanceBinding> Bindings;
-};
-
 struct FCatalogElement
 {
 	FCatalogElement(){}
@@ -83,7 +61,7 @@ public:
 
 	explicit FAPIGraphProvider(const TSharedPtr<ICacheLoader>& NewGraphCacheLoader, const TSharedPtr<ICacheLoader>& NewResourceCacheLoader);
 	
-	virtual TFuture<UBF::FLoadGraphResult> GetGraph(const FString& BlueprintId) override;
+	virtual TFuture<UBF::FLoadGraphResult> GetGraph(const FString& InstanceId) override;
 	
 	virtual TFuture<UBF::FLoadGraphInstanceResult> GetGraphInstance(const FString& InstanceId) override;
 

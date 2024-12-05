@@ -294,7 +294,7 @@ void UFutureverseUBFControllerSubsystem::RegisterAssetProfile(const FAssetProfil
 
 			FBlueprintInstance BlueprintInstance;
 			AssetProfileUtils::ParseBlueprintInstanceJson(LoadResult.Result.Value, BlueprintInstance);
-			APIGraphProvider->RegisterBlueprintInstance(AssetProfile.Id, BlueprintInstance);
+			APIGraphProvider->RegisterBlueprintInstance(BlueprintInstance.GetId(), BlueprintInstance);
 		});
 		
 		if(!AssetProfile.RenderCatalogUri.IsEmpty())

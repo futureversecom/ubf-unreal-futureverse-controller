@@ -60,7 +60,7 @@ namespace AssetProfileUtils
 		}
 	}
 	
-	inline void ParseCatalog(const FString& Json, TMap<FString, FCatalogElement>& ResourceManifestElementMap)
+	inline void ParseCatalog(const FString& Json, TMap<FString, FCatalogElement>& CatalogElementMap)
 	{
 		// Create a shared pointer to hold the JSON object
 		TSharedPtr<FJsonObject> JsonObject;
@@ -98,7 +98,7 @@ namespace AssetProfileUtils
 				CatalogElement.Type = ResourceObject->GetStringField(TEXT("type"));
 				CatalogElement.Uri = ResourceObject->GetStringField(TEXT("uri"));
 				CatalogElement.Hash = ResourceObject->GetStringField(TEXT("hash"));
-				ResourceManifestElementMap.Add(CatalogElement.Id, CatalogElement);
+				CatalogElementMap.Add(CatalogElement.Id, CatalogElement);
 				UE_LOG(LogUBFAPIController, Verbose, TEXT("AssetProfileUtils::ParseCatalog "
 					"Added CatalogElement Id: %s Type: %s Uri: %s hash: %s"),
 					*CatalogElement.Id, *CatalogElement.Type, *CatalogElement.Uri, *CatalogElement.Hash);
@@ -122,8 +122,9 @@ namespace AssetProfileUtils
 		}
 		FString BlueprintID = JsonObject->HasField(TEXT("id"))
 				? JsonObject->GetStringField(TEXT("blueprintId"))
-				: TEXT("InvalidBlueprintId");
-			
+				: TEXT("");
+
+		BlueprintInstance.SetBlueprintId(BlueprintID);
 		// Get the "bindings" array from the JSON
 		TArray<TSharedPtr<FJsonValue>> BindingsArray = JsonObject->GetArrayField(TEXT("bindings"));
 
@@ -145,7 +146,7 @@ namespace AssetProfileUtils
 				Binding.Id = BindingObject->GetStringField(TEXT("id"));
 				Binding.Type = BindingObject->GetStringField(TEXT("type"));
 				Binding.Value = BindingObject->GetStringField(TEXT("uri"));
-				BlueprintInstance.GetBindingsRef().Add(Binding.Id, Binding);
+				BlueprintInstance.AddBinding(Binding.Id, Binding);
 				UE_LOG(LogUBFAPIController, Verbose, TEXT("AssetProfileUtils::ParseBlueprintInstanceJson "
 					"Added FBlueprintInstanceBidning Id: %s Type: %s Value: %s"),
 					*Binding.Id, *Binding.Type, *Binding.Value);

@@ -27,13 +27,6 @@ FString FAssetProfile::GetParsingCatalogUri() const
 	return RelativePath + ParsingCatalogUri;
 }
 
-TMap<FString, UBF::FDynamicHandle>& FBlueprintInstance::GetVariables()
-{
-	TMap<FString, UBF::FDynamicHandle> Variables;
-	// todo
-	return Variables;
-}
-
 FAPIGraphProvider::FAPIGraphProvider(const TSharedPtr<ICacheLoader>& NewGraphCacheLoader,
 									const TSharedPtr<ICacheLoader>& NewResourceCacheLoader)
 {
@@ -41,96 +34,94 @@ FAPIGraphProvider::FAPIGraphProvider(const TSharedPtr<ICacheLoader>& NewGraphCac
 	ResourceCacheLoader = NewResourceCacheLoader;
 }
 
-TFuture<UBF::FLoadGraphResult> FAPIGraphProvider::GetGraph(const FString& BlueprintId)
+TFuture<UBF::FLoadGraphResult> FAPIGraphProvider::GetGraph(const FString& InstanceId)
 {
 	TSharedPtr<TPromise<UBF::FLoadGraphResult>> Promise = MakeShareable(new TPromise<UBF::FLoadGraphResult>());
 	TFuture<UBF::FLoadGraphResult> Future = Promise->GetFuture();
 
-	if (AssetProfiles.Contains(BlueprintId))
+	UBF::FLoadGraphResult LoadResult;
+	LoadResult.Result = TPair<bool, UBF::FGraphHandle>(false, UBF::FGraphHandle());
+	// todo: should downloading and parsing instances and catalog happen here instead?
+	
+	// get graph from catalog using graph instance's blueprint id
+	if (!BlueprintInstances.Contains(InstanceId))
 	{
-		const FString RenderBlueprintInstanceUri = AssetProfiles[BlueprintId].GetRenderBlueprintInstanceUri();
-		const FString RenderCatalogUri = AssetProfiles[BlueprintId].GetRenderCatalogUri();
-		
-		// don't block Graph download while downloading manifest
-		UE_LOG(LogUBFAPIController, Verbose, TEXT("Loading BlueprintId %s with RenderBlueprintInstanceUri %s and RenderCatalogUri %s"), *BlueprintId, *RenderBlueprintInstanceUri, *RenderCatalogUri); 
-		 APIUtils::LoadStringFromURI(RenderCatalogUri, "", GraphCacheLoader.Get())
-		 .Next([this, BlueprintId, RenderBlueprintInstanceUri, Promise](const UBF::FLoadStringResult& ResourceManifestResult)
-		 {
-		 	if (!ResourceManifestResult.Result.Key)
-		 	{
-		 		UBF::FLoadGraphResult LoadResult;
-		 		LoadResult.Result = TPair<bool, UBF::FGraphHandle>(false, UBF::FGraphHandle());
-		 		Promise->SetValue(LoadResult);	
-		 		return;
-		 	}
-		
-		 	TMap<FString, FCatalogElement> CatalogMap;
-		 	AssetProfileUtils::ParseCatalog(ResourceManifestResult.Result.Value, CatalogMap);
-		 	if (Catalogs.Contains(BlueprintId))
-		 	{
-		 		Catalogs[BlueprintId] = CatalogMap;
-		 	}
-		 	else
-		 	{
-		 		Catalogs.Add(BlueprintId, CatalogMap);
-		 	}
-		 	
-		 	UE_LOG(LogUBFAPIController, Verbose, TEXT("Try Loading Graph %s from cachewith RenderBlueprintInstanceUri %s"), *BlueprintId, *RenderBlueprintInstanceUri);
-		
-		 	APIUtils::LoadStringFromURI(RenderBlueprintInstanceUri, "", GraphCacheLoader.Get())
-		 	.Next([this, BlueprintId, Promise](const UBF::FLoadStringResult& GraphResult)
-		 	{
-		 		UBF::FLoadGraphResult LoadResult;
-		
-		 		if (!GraphResult.Result.Key)
-		 		{
-		 			LoadResult.Result = TPair<bool, UBF::FGraphHandle>(false, UBF::FGraphHandle());
-		 			Promise->SetValue(LoadResult);
-		 		}
-		 		else
-		 		{
-		 			UE_LOG(LogUBFAPIController, VeryVerbose, TEXT("Graph downloaded with json: %s"), *GraphResult.Result.Value);
-		 			
-		 			UBF::FGraphHandle Graph;
-		 			if (UBF::FGraphHandle::Load(UBF::FRegistryHandle::Default(), GraphResult.Result.Value, Graph))
-		 			{
-		 				UE_LOG(LogUBFAPIController, Verbose, TEXT("Successfully loaded Graph %s"), *BlueprintId);
-		 				LoadResult.Result = TPair<bool,UBF::FGraphHandle>(true, Graph);
-		 				Promise->SetValue(LoadResult);
-		 			}
-		 			else
-		 			{
-		 				UE_LOG(LogUBFAPIController, Error, TEXT("Unable to load Graph BlueprintId %s"), *BlueprintId);
-		 				LoadResult.Result = TPair<bool, UBF::FGraphHandle>(false, UBF::FGraphHandle());
-		 				Promise->SetValue(LoadResult);
-		 			}
-		 		}
-		 	});
-		});
-	}
-	else
-	{
-		UBF::FLoadGraphResult LoadResult;
-		UE_LOG(LogUBFAPIController, Warning, TEXT("No AssetProfile found for BlueprintId %s"), *BlueprintId);
-		LoadResult.Result = TPair<bool, UBF::FGraphHandle>(false, UBF::FGraphHandle());
+		UE_LOG(LogUBFAPIController, Warning, TEXT("FAPIGraphProvider::GetGraph No BlueprintInstance found for InstanceId %s"), *InstanceId);
 		Promise->SetValue(LoadResult);
 		return Future;
 	}
+	
+	auto BlueprintId = BlueprintInstances[InstanceId].GetBlueprintId();
+	if (BlueprintId.IsEmpty())
+	{
+		UE_LOG(LogUBFAPIController, Error, TEXT("FAPIGraphProvider::GetGraph Failed to get graph because graph instance's Blueprint Id was invalid!"));
+		Promise->SetValue(LoadResult);
+		return Future;
+	}
+
+	if (!Catalogs.Contains(BlueprintId))
+	{
+		UE_LOG(LogUBFAPIController, Error, TEXT("FAPIGraphProvider::GetGraph Failed to get graph because no catalog found for Blueprint Id: %s"), *BlueprintId);
+		Promise->SetValue(LoadResult);
+		return Future;
+	}
+
+	auto Catalog = Catalogs[BlueprintId];
+	if (!Catalog.Contains(BlueprintId))
+	{
+		UE_LOG(LogUBFAPIController, Error, TEXT("FAPIGraphProvider::GetGraph Failed to get graph because no graph catalog element found for Blueprint Id: %s"), *BlueprintId);
+		Promise->SetValue(LoadResult);
+		return Future;
+	}
+	
+	const auto GraphResource = Catalog[BlueprintId];
+	UE_LOG(LogUBFAPIController, Verbose, TEXT("Try Loading Graph %s from Uri %s"), *BlueprintId, *GraphResource.Uri);
+	
+	APIUtils::LoadStringFromURI(GraphResource.Uri, GraphResource.Hash, GraphCacheLoader.Get())
+	.Next([this, &LoadResult, BlueprintId, Promise](const UBF::FLoadStringResult& LoadGraphResult)
+	{
+		if (!LoadGraphResult.Result.Key)
+		{
+			Promise->SetValue(LoadResult);	
+			return;
+		}
+		
+		UE_LOG(LogUBFAPIController, VeryVerbose, TEXT("Graph downloaded with json: %s"), *LoadGraphResult.Result.Value);
+		 			
+		UBF::FGraphHandle Graph;
+		if (UBF::FGraphHandle::Load(UBF::FRegistryHandle::Default(), LoadGraphResult.Result.Value, Graph))
+		{
+			UE_LOG(LogUBFAPIController, Verbose, TEXT("Successfully loaded Graph %s"), *BlueprintId);
+			LoadResult.Result = TPair<bool,UBF::FGraphHandle>(true, Graph);
+			Promise->SetValue(LoadResult);
+		}
+		else
+		{
+			UE_LOG(LogUBFAPIController, Error, TEXT("Unable to load Graph BlueprintId %s"), *BlueprintId);
+			Promise->SetValue(LoadResult);
+		}
+	});
 	
 	return Future;
 }
 
 TFuture<UBF::FLoadGraphInstanceResult> FAPIGraphProvider::GetGraphInstance(const FString& InstanceId)
 {
-	// TODO: Implement this
 	TSharedPtr<TPromise<UBF::FLoadGraphInstanceResult>> Promise = MakeShareable(new TPromise<UBF::FLoadGraphInstanceResult>());
 	TFuture<UBF::FLoadGraphInstanceResult> Future = Promise->GetFuture();
+	
 	UBF::FLoadGraphInstanceResult LoadResult;
-
-	LoadResult.Result = TPair<bool, IBlueprintInstance*>(false, nullptr);
+	
+	if (!BlueprintInstances.Contains(InstanceId))
+	{
+		UE_LOG(LogUBFAPIController, Warning, TEXT("FAPIGraphProvider::GetGraphInstance No BlueprintInstance found for InstanceId %s"), *InstanceId);
+	}
+	
+	LoadResult.Result = BlueprintInstances.Contains(InstanceId)
+		? TPair<bool, FBlueprintInstance>(true, BlueprintInstances[InstanceId])
+		: TPair<bool, FBlueprintInstance>(false, FBlueprintInstance());
 	
 	Promise->SetValue(LoadResult);
-		
 	return Future;
 }
 
