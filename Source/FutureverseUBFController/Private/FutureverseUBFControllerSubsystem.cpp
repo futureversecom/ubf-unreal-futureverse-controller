@@ -25,13 +25,29 @@ void UFutureverseUBFControllerSubsystem::RenderItem(UFuturePassInventoryItem* It
 {
 	TSharedPtr<FContextTree> ContextTree = MakeShared<FContextTree>();
 
-	TryLoadAssetProfile(Item).Next([this, Item, Controller, InputMap, OnComplete, ContextTree](const bool bIsAssetProfileLoaded)
+	if (Item->GetAssetProfile().IsValid())
+	{
+		// todo: get bindings from blueprint instance and smosh variables with parsed inputs
+		if (ParsingGraphs.Contains(Item->GetAssetProfileRef().Id))
+		{
+			ParseInputs(Item, Controller, InputMap, OnComplete, ContextTree, false);
+			return;
+		}
+	
+		APISubGraphProvider = MakeShared<FAPISubGraphResolver>(ContextTree);
+		ExecuteGraph(Item, Controller, APIGraphProvider.Get(), APISubGraphProvider.Get(), InputMap, OnComplete);
+		return;
+	}
+
+	TryLoadAssetProfile(Item->GetInventoryItem().contract).Next([this, Item, Controller, InputMap, OnComplete, ContextTree](const bool bIsAssetProfileLoaded)
 	{
 		if (!bIsAssetProfileLoaded)
 		{
 			UE_LOG(LogFutureverseUBFController, Warning, TEXT("UFutureverseUBFControllerSubsystem::RenderItem Item %s provided invalid AssetProfile. Cannot render."), *Item->GetAssetID());
 			return;
 		}
+		
+		Item->SetAssetProfile(GetAssetProfile(Item->GetAssetID()));
 		
 		if (ParsingGraphs.Contains(Item->GetAssetProfileRef().Id))
 		{
@@ -49,7 +65,24 @@ void UFutureverseUBFControllerSubsystem::RenderItemTree(UFuturePassInventoryItem
 {
 	TSharedPtr<FContextTree> ContextTree = MakeShared<FContextTree>();
 
-	TryLoadAssetProfile(Item).Next([this, Item, Controller, InputMap, OnComplete, ContextTree](const bool bIsAssetProfileLoaded)
+	if (Item->GetAssetProfile().IsValid())
+	{
+		if (!ParsingGraphs.Contains(Item->GetAssetProfileRef().Id))
+		{
+			ParseInputs(Item, Controller, InputMap, OnComplete, ContextTree, true);
+			return;
+		}
+
+		// no traits because this item doesn't have a parsing graph but still build the tree
+		const TMap<FString, UBF::FDynamicHandle> Traits;
+		BuildContextTreeFromAssetTree(ContextTree, Item->GetAssetTreeRef(), "", Traits);
+	
+		APISubGraphProvider = MakeShared<FAPISubGraphResolver>(ContextTree);
+		ExecuteGraph(Item, Controller, APIGraphProvider.Get(), APISubGraphProvider.Get(), InputMap, OnComplete);
+		return;
+	}
+	
+	TryLoadAssetProfile(Item->GetInventoryItem().contract).Next([this, Item, Controller, InputMap, OnComplete, ContextTree](const bool bIsAssetProfileLoaded)
 	{
 		if (!bIsAssetProfileLoaded)
 		{
@@ -57,7 +90,9 @@ void UFutureverseUBFControllerSubsystem::RenderItemTree(UFuturePassInventoryItem
 			return;
 		}
 		
-		if (ParsingGraphs.Contains(Item->GetAssetProfileRef().Id))
+		Item->SetAssetProfile(GetAssetProfile(Item->GetAssetID()));
+		
+		if (!ParsingGraphs.Contains(Item->GetAssetProfileRef().Id))
 		{
 			ParseInputs(Item, Controller, InputMap, OnComplete, ContextTree, true);
 			return;
@@ -72,31 +107,26 @@ void UFutureverseUBFControllerSubsystem::RenderItemTree(UFuturePassInventoryItem
 	});
 }
 
-TFuture<bool> UFutureverseUBFControllerSubsystem::TryLoadAssetProfile(UFuturePassInventoryItem* Item)
+TFuture<bool> UFutureverseUBFControllerSubsystem::TryLoadAssetProfile(const FString& ContractId)
 {
 	TSharedPtr<TPromise<bool>> Promise = MakeShareable(new TPromise<bool>());
 	TFuture<bool> Future = Promise->GetFuture();
 
-	if (Item->GetAssetProfile().IsValid())
-	{
-		Promise->SetValue(true);
-		return Future;
-	}
-	
 	FString ProfileRemotePath;
 	const UFutureverseUBFControllerSettings* Settings = GetDefault<UFutureverseUBFControllerSettings>();
 	check(Settings);
 	if (Settings)
 	{
-		ProfileRemotePath = FString::Printf(TEXT("%s/profiles_%s.json"), *Settings->GetDefaultAssetProfilePath(), *Item->GetInventoryItem().contract);
+		ProfileRemotePath = FString::Printf(TEXT("%s/profiles_%s.json"), *Settings->GetDefaultAssetProfilePath(), *ContractId);
 	}
 	else
 	{
 		Promise->SetValue(false);
 	}
-	
+
+	// fetch remote asset profile, then parse and register all the blueprint instances and catalogs
 	APIUtils::LoadStringFromURI(ProfileRemotePath, "", MemoryCacheLoader.Get()).Next(
-		[this, Item, ProfileRemotePath, Promise, Settings](const UBF::FLoadStringResult& AssetProfileResult)
+		[this, ProfileRemotePath, Promise](const UBF::FLoadStringResult& AssetProfileResult)
 	{
 		if(!AssetProfileResult.Result.Key)
 		{
@@ -104,8 +134,86 @@ TFuture<bool> UFutureverseUBFControllerSubsystem::TryLoadAssetProfile(UFuturePas
 			Promise->SetValue(false);
 		}
 			
-		RegisterAssetProfilesFromJson(AssetProfileResult.Result.Value, "");
-		Item->SetAssetProfile(GetAssetProfile(Item->GetAssetID()));
+		TArray<FAssetProfile> AssetProfileEntries;
+		AssetProfileUtils::ParseAssetProfileJson(AssetProfileResult.Result.Value, AssetProfileEntries);
+
+		//  todo: decide whether it's better to leave downloading these blocking or non-blocking 
+		for (FAssetProfile& AssetProfile : AssetProfileEntries)
+		{
+			// no need to provide base path here as the values are remote not local
+			AssetProfile.RelativePath = "";
+			AssetProfiles.Add(AssetProfile.Id, AssetProfile);
+			APIGraphProvider->RegisterAssetProfile(AssetProfile);
+
+			if(!AssetProfile.RenderBlueprintInstanceUri.IsEmpty())
+			{
+				APIUtils::LoadStringFromURI(AssetProfile.GetRenderBlueprintInstanceUri(), AssetProfile.GetRenderBlueprintInstanceUri(), TempCacheLoader.Get())
+					.Next([this, AssetProfile](const UBF::FLoadStringResult& LoadResult)
+				{
+					if (!LoadResult.Result.Key)
+					{
+						UE_LOG(LogFutureverseUBFController, Warning, TEXT("Failed to load render blueprint instance from %s"), *AssetProfile.GetParsingBlueprintInstanceUri());
+						return;
+					}
+
+					FBlueprintInstance BlueprintInstance;
+					AssetProfileUtils::ParseBlueprintInstanceJson(LoadResult.Result.Value, BlueprintInstance);
+					APIGraphProvider->RegisterBlueprintInstance(BlueprintInstance.GetId(), BlueprintInstance);
+				});
+			
+				if(!AssetProfile.RenderCatalogUri.IsEmpty())
+				{
+					APIUtils::LoadStringFromURI(AssetProfile.GetRenderCatalogUri(), AssetProfile.GetRenderCatalogUri(), TempCacheLoader.Get())
+						.Next([this, AssetProfile](const UBF::FLoadStringResult& LoadResult)
+					{
+						if (!LoadResult.Result.Key)
+						{
+							UE_LOG(LogFutureverseUBFController, Warning, TEXT("Failed to load render catalog from %s"), *AssetProfile.GetRenderCatalogUri());
+							return;
+						}
+							
+						TMap<FString, FCatalogElement> CatalogMap;
+						AssetProfileUtils::ParseCatalog(LoadResult.Result.Value, CatalogMap);
+						APIGraphProvider->RegisterCatalogs(AssetProfile.RenderBlueprintInstanceUri, CatalogMap);
+					});
+				}
+			}
+		
+			if(!AssetProfile.ParsingBlueprintInstanceUri.IsEmpty())
+			{
+				APIUtils::LoadStringFromURI(AssetProfile.GetParsingBlueprintInstanceUri(), AssetProfile.GetParsingBlueprintInstanceUri(), TempCacheLoader.Get())
+					.Next([this, AssetProfile](const UBF::FLoadStringResult& LoadResult)
+				{
+					if (!LoadResult.Result.Key)
+					{
+						UE_LOG(LogFutureverseUBFController, Warning, TEXT("Failed to load parsing blueprint from %s"), *AssetProfile.GetParsingBlueprintInstanceUri());
+						return;
+					}
+							
+					FBlueprintInstance BlueprintInstance;
+					AssetProfileUtils::ParseBlueprintInstanceJson(LoadResult.Result.Value, BlueprintInstance);
+					APIGraphProvider->RegisterBlueprintInstance(BlueprintInstance.GetId(), BlueprintInstance);
+				});
+				
+				if(!AssetProfile.ParsingCatalogUri.IsEmpty())
+				{
+					APIUtils::LoadStringFromURI(AssetProfile.GetParsingCatalogUri(), AssetProfile.GetParsingCatalogUri(), TempCacheLoader.Get())
+						.Next([this, AssetProfile](const UBF::FLoadStringResult& LoadResult)
+					{
+						if (!LoadResult.Result.Key)
+						{
+							UE_LOG(LogFutureverseUBFController, Warning, TEXT("Failed to load parsing catalog from %s"), *AssetProfile.GetParsingCatalogUri());
+							return;
+						}
+							
+						TMap<FString, FCatalogElement> CatalogMap;
+						AssetProfileUtils::ParseCatalog(LoadResult.Result.Value, CatalogMap);
+						APIGraphProvider->RegisterCatalogs(AssetProfile.RenderBlueprintInstanceUri, CatalogMap);
+					});
+				}
+			}
+		}
+			
 		Promise->SetValue(true);
 	});
 	
@@ -280,74 +388,6 @@ void UFutureverseUBFControllerSubsystem::RegisterAssetProfile(const FAssetProfil
 {
 	AssetProfiles.Add(AssetProfile.Id, AssetProfile);
 	APIGraphProvider->RegisterAssetProfile(AssetProfile);
-
-	if(!AssetProfile.RenderBlueprintInstanceUri.IsEmpty())
-	{
-		APIUtils::LoadStringFromURI(AssetProfile.GetRenderBlueprintInstanceUri(), AssetProfile.GetRenderBlueprintInstanceUri(), TempCacheLoader.Get())
-			.Next([this, AssetProfile](const UBF::FLoadStringResult& LoadResult)
-		{
-			if (!LoadResult.Result.Key)
-			{
-				UE_LOG(LogFutureverseUBFController, Warning, TEXT("Failed to load render blueprint instance from %s"), *AssetProfile.GetParsingBlueprintInstanceUri());
-				return;
-			}
-
-			FBlueprintInstance BlueprintInstance;
-			AssetProfileUtils::ParseBlueprintInstanceJson(LoadResult.Result.Value, BlueprintInstance);
-			APIGraphProvider->RegisterBlueprintInstance(BlueprintInstance.GetId(), BlueprintInstance);
-		});
-		
-		if(!AssetProfile.RenderCatalogUri.IsEmpty())
-		{
-			APIUtils::LoadStringFromURI(AssetProfile.GetRenderCatalogUri(), AssetProfile.GetRenderCatalogUri(), TempCacheLoader.Get())
-				.Next([this, AssetProfile](const UBF::FLoadStringResult& LoadResult)
-			{
-				if (!LoadResult.Result.Key)
-				{
-					UE_LOG(LogFutureverseUBFController, Warning, TEXT("Failed to load render catalog from %s"), *AssetProfile.GetRenderCatalogUri());
-					return;
-				}
-					
-				TMap<FString, FCatalogElement> CatalogMap;
-				AssetProfileUtils::ParseCatalog(LoadResult.Result.Value, CatalogMap);
-				APIGraphProvider->RegisterCatalogs(AssetProfile.RenderBlueprintInstanceUri, CatalogMap);
-			});
-		}
-	}
-	
-	if(!AssetProfile.ParsingBlueprintInstanceUri.IsEmpty())
-	{
-		APIUtils::LoadStringFromURI(AssetProfile.GetParsingBlueprintInstanceUri(), AssetProfile.GetParsingBlueprintInstanceUri(), TempCacheLoader.Get())
-			.Next([this, AssetProfile](const UBF::FLoadStringResult& LoadResult)
-		{
-			if (!LoadResult.Result.Key)
-			{
-				UE_LOG(LogFutureverseUBFController, Warning, TEXT("Failed to load parsing blueprint from %s"), *AssetProfile.GetParsingBlueprintInstanceUri());
-				return;
-			}
-					
-			FBlueprintInstance BlueprintInstance;
-			AssetProfileUtils::ParseBlueprintInstanceJson(LoadResult.Result.Value, BlueprintInstance);
-			APIGraphProvider->RegisterBlueprintInstance(BlueprintInstance.GetId(), BlueprintInstance);
-		});
-		
-		if(!AssetProfile.ParsingCatalogUri.IsEmpty())
-		{
-			APIUtils::LoadStringFromURI(AssetProfile.GetParsingCatalogUri(), AssetProfile.GetParsingCatalogUri(), TempCacheLoader.Get())
-				.Next([this, AssetProfile](const UBF::FLoadStringResult& LoadResult)
-			{
-				if (!LoadResult.Result.Key)
-				{
-					UE_LOG(LogFutureverseUBFController, Warning, TEXT("Failed to load parsing catalog from %s"), *AssetProfile.GetParsingCatalogUri());
-					return;
-				}
-					
-				TMap<FString, FCatalogElement> CatalogMap;
-				AssetProfileUtils::ParseCatalog(LoadResult.Result.Value, CatalogMap);
-				APIGraphProvider->RegisterCatalogs(AssetProfile.RenderBlueprintInstanceUri, CatalogMap);
-			});
-		}
-	}
 }
 
 void UFutureverseUBFControllerSubsystem::ClearAssetProfiles()

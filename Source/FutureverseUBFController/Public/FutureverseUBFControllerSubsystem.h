@@ -65,7 +65,7 @@ private:
 		const TMap<FString, UUBFBindingObject*>& InputMap, const FOnComplete& OnComplete,
 		TSharedPtr<FContextTree> ContextTree, const bool bShouldBuildContextTree);
 
-	TFuture<bool> TryLoadAssetProfile(UFuturePassInventoryItem* Item);
+	TFuture<bool> TryLoadAssetProfile(const FString& ContractId);
 	
 	TSharedPtr<FAPIGraphProvider> APIGraphProvider;
 	TSharedPtr<FAPISubGraphResolver> APISubGraphProvider;
