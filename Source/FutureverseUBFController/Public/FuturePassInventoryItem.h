@@ -27,14 +27,8 @@ class FUTUREVERSEUBFCONTROLLER_API UFuturePassInventoryItem : public UObject
 public:
 	void Initialize(const FEmergenceInventoryItem& EmergenceInventoryItem);
 	void SetAssetTree(const FFutureverseAssetTreeData& NewAssetTree) { AssetTree = NewAssetTree; }
-	void SetAssetProfile(const FAssetProfile& NewAssetProfile) { AssetProfile = NewAssetProfile; }
-
-	const FAssetProfile& GetAssetProfileRef() const;
+	
 	const FFutureverseAssetTreeData& GetAssetTreeRef() const { return AssetTree; }
-
-	// Get current cached asset profile, should be valid once Initialize() is called
-	UFUNCTION(BlueprintCallable)
-	FAssetProfile GetAssetProfile() const {return AssetProfile;}
 
 	// Get associated AssetTreeData
 	UFUNCTION(BlueprintCallable)
@@ -62,5 +56,4 @@ private:
 	
 	FEmergenceInventoryItem InventoryItem;
 	FFutureverseAssetTreeData AssetTree;
-	mutable FAssetProfile AssetProfile;
 };

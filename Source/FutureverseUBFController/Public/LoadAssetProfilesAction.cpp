@@ -28,7 +28,7 @@ TFuture<bool> FLoadAssetProfilesAction::TryLoadAssetProfile(const FString& Contr
 
 	// fetch remote asset profile, then parse and register all the blueprint instances and catalogs
 	APIUtils::LoadStringFromURI(ProfileRemotePath, "", MemoryCacheLoader.Get()).Next(
-		[this, ProfileRemotePath, TempCacheLoader](const UBF::FLoadStringResult& AssetProfileResult)
+		[this, ProfileRemotePath, MemoryCacheLoader](const UBF::FLoadStringResult& AssetProfileResult)
 	{
 		if(!AssetProfileResult.Result.Key)
 		{
@@ -45,12 +45,14 @@ TFuture<bool> FLoadAssetProfilesAction::TryLoadAssetProfile(const FString& Contr
 			// no need to provide base path here as the values are remote not local
 			AssetProfile.RelativePath = "";
 			AssetProfiles.Add(AssetProfile.Id, AssetProfile);
-
+			
+			FFutureverseAssetData AssetData;
+			AssetDataMap.Add(AssetProfile.Id, AssetData);
 			if(!AssetProfile.RenderBlueprintInstanceUri.IsEmpty())
 			{
 				AddPendingLoad();
-				APIUtils::LoadStringFromURI(AssetProfile.GetRenderBlueprintInstanceUri(), AssetProfile.GetRenderBlueprintInstanceUri(), TempCacheLoader.Get())
-					.Next([this, AssetProfile](const UBF::FLoadStringResult& LoadResult)
+				APIUtils::LoadStringFromURI(AssetProfile.GetRenderBlueprintInstanceUri(), AssetProfile.GetRenderBlueprintInstanceUri(), MemoryCacheLoader.Get())
+					.Next([this, AssetProfile, MemoryCacheLoader](const UBF::FLoadStringResult& LoadResult)
 				{
 					if (!LoadResult.Result.Key)
 					{
@@ -62,35 +64,36 @@ TFuture<bool> FLoadAssetProfilesAction::TryLoadAssetProfile(const FString& Contr
 					FBlueprintInstance BlueprintInstance;
 					AssetProfileUtils::ParseBlueprintInstanceJson(LoadResult.Result.Value, BlueprintInstance);
 					BlueprintInstances.Add(BlueprintInstance.GetId(), BlueprintInstance);
+					AssetDataMap[AssetProfile.Id].RenderGraphInstance = BlueprintInstance;
 					CompletePendingLoad();
-				});
-			
-				if(!AssetProfile.RenderCatalogUri.IsEmpty())
-				{
-					AddPendingLoad();
-					APIUtils::LoadStringFromURI(AssetProfile.GetRenderCatalogUri(), AssetProfile.GetRenderCatalogUri(), TempCacheLoader.Get())
-						.Next([this, AssetProfile](const UBF::FLoadStringResult& LoadResult)
+
+					if(!AssetProfile.RenderCatalogUri.IsEmpty())
 					{
-						if (!LoadResult.Result.Key)
+						AddPendingLoad();
+						APIUtils::LoadStringFromURI(AssetProfile.GetRenderCatalogUri(), AssetProfile.GetRenderCatalogUri(), MemoryCacheLoader.Get())
+							.Next([this, AssetProfile, BlueprintInstance](const UBF::FLoadStringResult& LoadResult)
 						{
-							UE_LOG(LogFutureverseUBFController, Warning, TEXT("Failed to load render catalog from %s"), *AssetProfile.GetRenderCatalogUri());
+							if (!LoadResult.Result.Key)
+							{
+								UE_LOG(LogFutureverseUBFController, Warning, TEXT("Failed to load render catalog from %s"), *AssetProfile.GetRenderCatalogUri());
+								CompletePendingLoad();
+								return;
+							}
+						
+							TMap<FString, FCatalogElement> CatalogMap;
+							AssetProfileUtils::ParseCatalog(LoadResult.Result.Value, CatalogMap);
+							Catalogs.Add(BlueprintInstance.GetId(), CatalogMap);
 							CompletePendingLoad();
-							return;
-						}
-							
-						TMap<FString, FCatalogElement> CatalogMap;
-						AssetProfileUtils::ParseCatalog(LoadResult.Result.Value, CatalogMap);
-						Catalogs.Add(AssetProfile.RenderBlueprintInstanceUri, CatalogMap);
-						CompletePendingLoad();
-					});
-				}
+						});
+					}
+				});
 			}
 		
 			if(!AssetProfile.ParsingBlueprintInstanceUri.IsEmpty())
 			{
 				AddPendingLoad();
-				APIUtils::LoadStringFromURI(AssetProfile.GetParsingBlueprintInstanceUri(), AssetProfile.GetParsingBlueprintInstanceUri(), TempCacheLoader.Get())
-					.Next([this, AssetProfile](const UBF::FLoadStringResult& LoadResult)
+				APIUtils::LoadStringFromURI(AssetProfile.GetParsingBlueprintInstanceUri(), AssetProfile.GetParsingBlueprintInstanceUri(), MemoryCacheLoader.Get())
+					.Next([this, AssetProfile, MemoryCacheLoader](const UBF::FLoadStringResult& LoadResult)
 				{
 					if (!LoadResult.Result.Key)
 					{
@@ -102,29 +105,30 @@ TFuture<bool> FLoadAssetProfilesAction::TryLoadAssetProfile(const FString& Contr
 					FBlueprintInstance BlueprintInstance;
 					AssetProfileUtils::ParseBlueprintInstanceJson(LoadResult.Result.Value, BlueprintInstance);
 					BlueprintInstances.Add(BlueprintInstance.GetId(), BlueprintInstance);
+					AssetDataMap[AssetProfile.Id].ParsingGraphInstance = BlueprintInstance;
 					CompletePendingLoad();
-				});
-				
-				if(!AssetProfile.ParsingCatalogUri.IsEmpty())
-				{
-					AddPendingLoad();
-					APIUtils::LoadStringFromURI(AssetProfile.GetParsingCatalogUri(), AssetProfile.GetParsingCatalogUri(), TempCacheLoader.Get())
-						.Next([this, AssetProfile](const UBF::FLoadStringResult& LoadResult)
+						
+					if(!AssetProfile.ParsingCatalogUri.IsEmpty())
 					{
-						if (!LoadResult.Result.Key)
+						AddPendingLoad();
+						APIUtils::LoadStringFromURI(AssetProfile.GetParsingCatalogUri(), AssetProfile.GetParsingCatalogUri(), MemoryCacheLoader.Get())
+							.Next([this, AssetProfile, BlueprintInstance](const UBF::FLoadStringResult& LoadResult)
 						{
-							UE_LOG(LogFutureverseUBFController, Warning, TEXT("Failed to load parsing catalog from %s"), *AssetProfile.GetParsingCatalogUri());
+							if (!LoadResult.Result.Key)
+							{
+								UE_LOG(LogFutureverseUBFController, Warning, TEXT("Failed to load parsing catalog from %s"), *AssetProfile.GetParsingCatalogUri());
+								CompletePendingLoad();
+								return;
+							}
+						
+							TMap<FString, FCatalogElement> CatalogMap;
+							AssetProfileUtils::ParseCatalog(LoadResult.Result.Value, CatalogMap);
+							Catalogs.Add(BlueprintInstance.GetId(), CatalogMap);
 							CompletePendingLoad();
-							return;
-						}
-							
-						TMap<FString, FCatalogElement> CatalogMap;
-						AssetProfileUtils::ParseCatalog(LoadResult.Result.Value, CatalogMap);
-						Catalogs.Add(AssetProfile.ParsingBlueprintInstanceUri, CatalogMap);
-						CompletePendingLoad();
-							
-					});
-				}
+						
+						});
+					}
+				});
 			}
 		};
 

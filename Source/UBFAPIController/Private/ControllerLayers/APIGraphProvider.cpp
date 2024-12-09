@@ -41,7 +41,6 @@ TFuture<UBF::FLoadGraphResult> FAPIGraphProvider::GetGraph(const FString& Instan
 
 	UBF::FLoadGraphResult LoadResult;
 	LoadResult.Result = TPair<bool, UBF::FGraphHandle>(false, UBF::FGraphHandle());
-	// todo: should downloading and parsing instances and catalog happen here instead?
 	
 	// get graph from catalog using graph instance's blueprint id
 	if (!BlueprintInstances.Contains(InstanceId))
@@ -59,14 +58,14 @@ TFuture<UBF::FLoadGraphResult> FAPIGraphProvider::GetGraph(const FString& Instan
 		return Future;
 	}
 
-	if (!Catalogs.Contains(BlueprintId))
+	if (!Catalogs.Contains(InstanceId))
 	{
 		UE_LOG(LogUBFAPIController, Error, TEXT("FAPIGraphProvider::GetGraph Failed to get graph because no catalog found for Blueprint Id: %s"), *BlueprintId);
 		Promise->SetValue(LoadResult);
 		return Future;
 	}
 
-	auto Catalog = Catalogs[BlueprintId];
+	auto Catalog = Catalogs[InstanceId];
 	if (!Catalog.Contains(BlueprintId))
 	{
 		UE_LOG(LogUBFAPIController, Error, TEXT("FAPIGraphProvider::GetGraph Failed to get graph because no graph catalog element found for Blueprint Id: %s"), *BlueprintId);
@@ -225,26 +224,6 @@ TFuture<UBF::FLoadDataArrayResult> FAPIGraphProvider::GetMeshResource(const FStr
 	});
 
 	return Future;
-}
-
-void FAPIGraphProvider::RegisterAssetProfile(const FAssetProfile& AssetProfile)
-{
-	if (AssetProfiles.Contains(AssetProfile.Id))
-	{
-		AssetProfiles[AssetProfile.Id] = AssetProfile;
-	}
-	else
-	{
-		AssetProfiles.Add(AssetProfile.Id, AssetProfile);
-	}
-}
-
-void FAPIGraphProvider::RegisterAssetProfiles(const TArray<FAssetProfile>& AssetProfileEntries)
-{
-	for (const FAssetProfile& Entry : AssetProfileEntries)
-	{
-		RegisterAssetProfile(Entry);
-	}
 }
 
 void FAPIGraphProvider::RegisterCatalog(const FString& InstanceId, const FCatalogElement& Catalog)

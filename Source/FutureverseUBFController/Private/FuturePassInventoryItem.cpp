@@ -4,21 +4,10 @@
 #include "FuturePassInventoryItem.h"
 
 #include "FutureverseUBFControllerLog.h"
-#include "FutureverseUBFControllerSubsystem.h"
 
 void UFuturePassInventoryItem::Initialize(const FEmergenceInventoryItem& EmergenceInventoryItem)
 {
 	InventoryItem = EmergenceInventoryItem;
-
-	if (UFutureverseUBFControllerSubsystem* Subsystem = UFutureverseUBFControllerSubsystem::Get(this))
-	{
-		AssetProfile = Subsystem->GetAssetProfile(GetAssetID());
-	}
-}
-
-const FAssetProfile& UFuturePassInventoryItem::GetAssetProfileRef() const
-{
-	return AssetProfile;
 }
 
 FString UFuturePassInventoryItem::GetCollectionID() const

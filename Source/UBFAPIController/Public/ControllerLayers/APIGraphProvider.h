@@ -69,18 +69,12 @@ public:
 
 	virtual TFuture<UBF::FLoadDataArrayResult> GetMeshResource(const FString& BlueprintId, const FString& ResourceId) override;
 
-	void RegisterAssetProfile(const FAssetProfile& AssetProfile);
-	void RegisterAssetProfiles(const TArray<FAssetProfile>& AssetProfileEntries);
-
 	void RegisterCatalog(const FString& InstanceId, const FCatalogElement& Catalog);
 	void RegisterCatalogs(const FString& InstanceId, const TMap<FString, FCatalogElement>& CatalogMap);
 	void RegisterBlueprintInstance(const FString& InstanceId, const FBlueprintInstance& BlueprintInstance);
 	
 	virtual ~FAPIGraphProvider() override = default;
 private:
-	// These are records of id's and locations. 
-	// They are used to download graphs and resources as needed
-	TMap<FString, FAssetProfile> AssetProfiles;
 	TMap<FString, TMap<FString, FCatalogElement>> Catalogs;
 	TMap<FString, FBlueprintInstance> BlueprintInstances;
 

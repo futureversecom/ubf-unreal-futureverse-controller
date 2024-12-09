@@ -13,6 +13,15 @@
 
 class UCollectionRemappings;
 class UCollectionAssetProfiles;
+
+struct FFutureverseAssetData
+{
+	FFutureverseAssetData(){}
+	
+	FBlueprintInstance RenderGraphInstance;
+	FBlueprintInstance ParsingGraphInstance;
+};
+
 /**
  * 
  */
@@ -51,21 +60,25 @@ public:
 	UFUNCTION(BlueprintCallable)
 	void ClearAssetProfiles();
 
-private:
-	FAssetProfile GetAssetProfile(const FString& AssetID) const;
+	// Asset data contains the actual blueprint instances that were fetched using the urls from asset profiles
+	void RegisterAssetData(const FString& AssetId, const FFutureverseAssetData& AssetData);
 
-	void ExecuteGraph(UFuturePassInventoryItem* Item, UUBFRuntimeController* Controller,
+private:
+	void ExecuteGraph(const FString& GraphId, UUBFRuntimeController* Controller,
 		IGraphProvider* GraphProvider, ISubGraphResolver* SubGraphResolver,
 		const TMap<FString, UUBFBindingObject*>& InputMap, const FOnComplete& OnComplete);
 	
 	void BuildContextTreeFromAssetTree(const TSharedPtr<FContextTree>& ContextTree, const FFutureverseAssetTreeData& AssetTree,
-										const FString& TraitTargetId, const TMap<FString, UBF::FDynamicHandle>& Traits) const;
+		const FString& TraitTargetId, const TMap<FString, UBF::FDynamicHandle>& Traits) const;
 
 	void ParseInputs(UFuturePassInventoryItem* Item, UUBFRuntimeController* Controller,
 		const TMap<FString, UUBFBindingObject*>& InputMap, const FOnComplete& OnComplete,
 		TSharedPtr<FContextTree> ContextTree, const bool bShouldBuildContextTree);
 
-	TFuture<bool> TryLoadAssetProfile(const FString& ContractId);
+	TFuture<bool> TryLoadAssetProfile(const FString& AssetId, const FString& ContractId);
+	
+	TFuture<TMap<FString, UUBFBindingObject*>> GetTraitsForItem(const FString& ParsingGraphId,
+		UUBFRuntimeController* Controller, const TMap<FString, UBF::FDynamicHandle>& ParsingInputs) const;
 	
 	TSharedPtr<FAPIGraphProvider> APIGraphProvider;
 	TSharedPtr<FAPISubGraphResolver> APISubGraphProvider;
@@ -74,10 +87,10 @@ private:
 	TSharedPtr<FTempCacheLoader> TempCacheLoader;
 
 	TMap<FString, FAssetProfile> AssetProfiles;
-	TMap<FString, UBF::FGraphHandle> ParsingGraphs;
+	TMap<FString, FFutureverseAssetData> AssetDataMap;
 	
-	UBF::FExecutionContextHandle LastParsingGraphExecutionContextHandle;
-	UBF::FGraphHandle LastParsedGraph;
+	mutable UBF::FExecutionContextHandle LastParsingGraphExecutionContextHandle;
+	mutable UBF::FGraphHandle LastParsedGraph;
 	
 	friend class UFuturePassInventoryItem;
 };

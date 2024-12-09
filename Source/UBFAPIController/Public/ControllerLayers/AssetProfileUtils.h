@@ -120,7 +120,7 @@ namespace AssetProfileUtils
 			UE_LOG(LogUBFAPIController, Warning, TEXT("AssetProfileUtils::ParseBlueprintInstanceJson Failed to parse JSON string\n %s."), *Json);
 			return;
 		}
-		FString BlueprintID = JsonObject->HasField(TEXT("id"))
+		FString BlueprintID = JsonObject->HasField(TEXT("blueprintId"))
 				? JsonObject->GetStringField(TEXT("blueprintId"))
 				: TEXT("");
 
