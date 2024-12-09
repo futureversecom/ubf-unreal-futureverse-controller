@@ -6,6 +6,7 @@
 #include "EmergenceSingleton.h"
 #include "FutureverseUBFControllerLog.h"
 #include "FutureverseUBFControllerSettings.h"
+#include "LoadAssetProfilesAction.h"
 #include "CollectionData/CollectionAssetProfiles.h"
 #include "ControllerLayers/AssetProfileUtils.h"
 #include "ControllerLayers/MemoryCacheLoader.h"
@@ -112,111 +113,32 @@ TFuture<bool> UFutureverseUBFControllerSubsystem::TryLoadAssetProfile(const FStr
 	TSharedPtr<TPromise<bool>> Promise = MakeShareable(new TPromise<bool>());
 	TFuture<bool> Future = Promise->GetFuture();
 
-	FString ProfileRemotePath;
-	const UFutureverseUBFControllerSettings* Settings = GetDefault<UFutureverseUBFControllerSettings>();
-	check(Settings);
-	if (Settings)
-	{
-		ProfileRemotePath = FString::Printf(TEXT("%s/profiles_%s.json"), *Settings->GetDefaultAssetProfilePath(), *ContractId);
-	}
-	else
-	{
-		Promise->SetValue(false);
-	}
+	TSharedPtr<FLoadAssetProfilesAction> LoadAssetProfilesAction = MakeShared<FLoadAssetProfilesAction>();
 
-	// fetch remote asset profile, then parse and register all the blueprint instances and catalogs
-	APIUtils::LoadStringFromURI(ProfileRemotePath, "", MemoryCacheLoader.Get()).Next(
-		[this, ProfileRemotePath, Promise](const UBF::FLoadStringResult& AssetProfileResult)
+	LoadAssetProfilesAction->TryLoadAssetProfile(ContractId, MemoryCacheLoader, TempCacheLoader).Next([this, Promise, LoadAssetProfilesAction](bool bSuccess)
 	{
-		if(!AssetProfileResult.Result.Key)
+		if (bSuccess)
 		{
-			UE_LOG(LogFutureverseUBFController, Error, TEXT("UFutureverseUBFControllerSubsystem::LoadRemoteAssetProfile failed to load remote AssetProfile from %s"), *ProfileRemotePath);
+			for (const auto& Element : LoadAssetProfilesAction->AssetProfiles)
+			{
+				RegisterAssetProfile(Element.Value);
+			}
+			for (const auto& Element : LoadAssetProfilesAction->BlueprintInstances)
+			{
+				APIGraphProvider->RegisterBlueprintInstance(Element.Key, Element.Value);
+			}
+			for (const auto& Element : LoadAssetProfilesAction->Catalogs)
+			{
+				APIGraphProvider->RegisterCatalogs(Element.Key, Element.Value);
+			}
+			Promise->SetValue(true);
+		}
+		else
+		{
 			Promise->SetValue(false);
 		}
-			
-		TArray<FAssetProfile> AssetProfileEntries;
-		AssetProfileUtils::ParseAssetProfileJson(AssetProfileResult.Result.Value, AssetProfileEntries);
-
-		//  todo: decide whether it's better to leave downloading these blocking or non-blocking 
-		for (FAssetProfile& AssetProfile : AssetProfileEntries)
-		{
-			// no need to provide base path here as the values are remote not local
-			AssetProfile.RelativePath = "";
-			AssetProfiles.Add(AssetProfile.Id, AssetProfile);
-			APIGraphProvider->RegisterAssetProfile(AssetProfile);
-
-			if(!AssetProfile.RenderBlueprintInstanceUri.IsEmpty())
-			{
-				APIUtils::LoadStringFromURI(AssetProfile.GetRenderBlueprintInstanceUri(), AssetProfile.GetRenderBlueprintInstanceUri(), TempCacheLoader.Get())
-					.Next([this, AssetProfile](const UBF::FLoadStringResult& LoadResult)
-				{
-					if (!LoadResult.Result.Key)
-					{
-						UE_LOG(LogFutureverseUBFController, Warning, TEXT("Failed to load render blueprint instance from %s"), *AssetProfile.GetParsingBlueprintInstanceUri());
-						return;
-					}
-
-					FBlueprintInstance BlueprintInstance;
-					AssetProfileUtils::ParseBlueprintInstanceJson(LoadResult.Result.Value, BlueprintInstance);
-					APIGraphProvider->RegisterBlueprintInstance(BlueprintInstance.GetId(), BlueprintInstance);
-				});
-			
-				if(!AssetProfile.RenderCatalogUri.IsEmpty())
-				{
-					APIUtils::LoadStringFromURI(AssetProfile.GetRenderCatalogUri(), AssetProfile.GetRenderCatalogUri(), TempCacheLoader.Get())
-						.Next([this, AssetProfile](const UBF::FLoadStringResult& LoadResult)
-					{
-						if (!LoadResult.Result.Key)
-						{
-							UE_LOG(LogFutureverseUBFController, Warning, TEXT("Failed to load render catalog from %s"), *AssetProfile.GetRenderCatalogUri());
-							return;
-						}
-							
-						TMap<FString, FCatalogElement> CatalogMap;
-						AssetProfileUtils::ParseCatalog(LoadResult.Result.Value, CatalogMap);
-						APIGraphProvider->RegisterCatalogs(AssetProfile.RenderBlueprintInstanceUri, CatalogMap);
-					});
-				}
-			}
-		
-			if(!AssetProfile.ParsingBlueprintInstanceUri.IsEmpty())
-			{
-				APIUtils::LoadStringFromURI(AssetProfile.GetParsingBlueprintInstanceUri(), AssetProfile.GetParsingBlueprintInstanceUri(), TempCacheLoader.Get())
-					.Next([this, AssetProfile](const UBF::FLoadStringResult& LoadResult)
-				{
-					if (!LoadResult.Result.Key)
-					{
-						UE_LOG(LogFutureverseUBFController, Warning, TEXT("Failed to load parsing blueprint from %s"), *AssetProfile.GetParsingBlueprintInstanceUri());
-						return;
-					}
-							
-					FBlueprintInstance BlueprintInstance;
-					AssetProfileUtils::ParseBlueprintInstanceJson(LoadResult.Result.Value, BlueprintInstance);
-					APIGraphProvider->RegisterBlueprintInstance(BlueprintInstance.GetId(), BlueprintInstance);
-				});
-				
-				if(!AssetProfile.ParsingCatalogUri.IsEmpty())
-				{
-					APIUtils::LoadStringFromURI(AssetProfile.GetParsingCatalogUri(), AssetProfile.GetParsingCatalogUri(), TempCacheLoader.Get())
-						.Next([this, AssetProfile](const UBF::FLoadStringResult& LoadResult)
-					{
-						if (!LoadResult.Result.Key)
-						{
-							UE_LOG(LogFutureverseUBFController, Warning, TEXT("Failed to load parsing catalog from %s"), *AssetProfile.GetParsingCatalogUri());
-							return;
-						}
-							
-						TMap<FString, FCatalogElement> CatalogMap;
-						AssetProfileUtils::ParseCatalog(LoadResult.Result.Value, CatalogMap);
-						APIGraphProvider->RegisterCatalogs(AssetProfile.RenderBlueprintInstanceUri, CatalogMap);
-					});
-				}
-			}
-		}
-			
-		Promise->SetValue(true);
 	});
-	
+
 	return Future;
 }
 
