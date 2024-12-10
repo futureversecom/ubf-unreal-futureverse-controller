@@ -60,7 +60,7 @@ TFuture<UBF::FLoadGraphResult> FAPIGraphProvider::GetGraph(const FString& Instan
 
 	if (!Catalogs.Contains(InstanceId))
 	{
-		UE_LOG(LogUBFAPIController, Error, TEXT("FAPIGraphProvider::GetGraph Failed to get graph because no catalog found for Blueprint Id: %s"), *BlueprintId);
+		UE_LOG(LogUBFAPIController, Error, TEXT("FAPIGraphProvider::GetGraph Failed to get graph because no catalog found for InstanceId: %s Blueprint Id: %s"), *InstanceId, *BlueprintId);
 		Promise->SetValue(LoadResult);
 		return Future;
 	}

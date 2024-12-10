@@ -82,6 +82,7 @@ TFuture<bool> FLoadAssetProfilesAction::TryLoadAssetProfile(const FString& Contr
 						
 							TMap<FString, FCatalogElement> CatalogMap;
 							AssetProfileUtils::ParseCatalog(LoadResult.Result.Value, CatalogMap);
+							UE_LOG(LogFutureverseUBFController, Verbose, TEXT("Adding rendering catalog from %s"), *AssetProfile.GetRenderCatalogUri());
 							Catalogs.Add(BlueprintInstance.GetId(), CatalogMap);
 							CompletePendingLoad();
 						});
@@ -123,6 +124,7 @@ TFuture<bool> FLoadAssetProfilesAction::TryLoadAssetProfile(const FString& Contr
 						
 							TMap<FString, FCatalogElement> CatalogMap;
 							AssetProfileUtils::ParseCatalog(LoadResult.Result.Value, CatalogMap);
+							UE_LOG(LogFutureverseUBFController, Verbose, TEXT("Adding parsing catalog from %s"), *AssetProfile.GetParsingCatalogUri());
 							Catalogs.Add(BlueprintInstance.GetId(), CatalogMap);
 							CompletePendingLoad();
 						
