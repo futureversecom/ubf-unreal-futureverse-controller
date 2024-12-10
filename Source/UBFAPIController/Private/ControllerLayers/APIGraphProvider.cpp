@@ -77,11 +77,14 @@ TFuture<UBF::FLoadGraphResult> FAPIGraphProvider::GetGraph(const FString& Instan
 	UE_LOG(LogUBFAPIController, Verbose, TEXT("Try Loading Graph %s from Uri %s"), *BlueprintId, *GraphResource.Uri);
 	
 	APIUtils::LoadStringFromURI(GraphResource.Uri, GraphResource.Hash, GraphCacheLoader.Get())
-	.Next([this, &LoadResult, BlueprintId, Promise](const UBF::FLoadStringResult& LoadGraphResult)
+	.Next([this, BlueprintId, Promise](const UBF::FLoadStringResult& LoadGraphResult)
 	{
+		UBF::FLoadGraphResult PromiseResult;
+		PromiseResult.Result = TPair<bool,UBF::FGraphHandle>(false, UBF::FGraphHandle());
+		
 		if (!LoadGraphResult.Result.Key)
 		{
-			Promise->SetValue(LoadResult);	
+			Promise->SetValue(PromiseResult);	
 			return;
 		}
 		
@@ -91,13 +94,14 @@ TFuture<UBF::FLoadGraphResult> FAPIGraphProvider::GetGraph(const FString& Instan
 		if (UBF::FGraphHandle::Load(UBF::FRegistryHandle::Default(), LoadGraphResult.Result.Value, Graph))
 		{
 			UE_LOG(LogUBFAPIController, Verbose, TEXT("Successfully loaded Graph %s"), *BlueprintId);
-			LoadResult.Result = TPair<bool,UBF::FGraphHandle>(true, Graph);
-			Promise->SetValue(LoadResult);
+		
+			PromiseResult.Result = TPair<bool,UBF::FGraphHandle>(true, Graph);
+			Promise->SetValue(PromiseResult);	
 		}
 		else
 		{
 			UE_LOG(LogUBFAPIController, Error, TEXT("Unable to load Graph BlueprintId %s"), *BlueprintId);
-			Promise->SetValue(LoadResult);
+			Promise->SetValue(PromiseResult);
 		}
 	});
 	

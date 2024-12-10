@@ -41,7 +41,7 @@ void UFutureverseUBFControllerSubsystem::RenderItem(UFuturePassInventoryItem* It
 		}
 		
 		APISubGraphProvider = MakeShared<FAPISubGraphResolver>(ContextTree);
-		ExecuteGraph(Item->GetAssetID(), Controller, APIGraphProvider.Get(), APISubGraphProvider.Get(), InputMap, OnComplete);
+		ExecuteGraph(AssetData.RenderGraphInstance.GetId(), Controller, APIGraphProvider.Get(), APISubGraphProvider.Get(), InputMap, OnComplete);
 		return;
 	}
 
@@ -67,7 +67,7 @@ void UFutureverseUBFControllerSubsystem::RenderItem(UFuturePassInventoryItem* It
 		}
 	
 		APISubGraphProvider = MakeShared<FAPISubGraphResolver>(ContextTree);
-		ExecuteGraph(Item->GetAssetID(), Controller, APIGraphProvider.Get(), APISubGraphProvider.Get(), InputMap, OnComplete);
+		ExecuteGraph(AssetData.RenderGraphInstance.GetId(), Controller, APIGraphProvider.Get(), APISubGraphProvider.Get(), InputMap, OnComplete);
 	});
 }
 
@@ -90,7 +90,7 @@ void UFutureverseUBFControllerSubsystem::RenderItemTree(UFuturePassInventoryItem
 		BuildContextTreeFromAssetTree(ContextTree, Item->GetAssetTreeRef(), "", Traits);
 	
 		APISubGraphProvider = MakeShared<FAPISubGraphResolver>(ContextTree);
-		ExecuteGraph(Item->GetAssetID(), Controller, APIGraphProvider.Get(), APISubGraphProvider.Get(), InputMap, OnComplete);
+		ExecuteGraph(AssetData.RenderGraphInstance.GetId(), Controller, APIGraphProvider.Get(), APISubGraphProvider.Get(), InputMap, OnComplete);
 		return;
 	}
 	
@@ -263,7 +263,7 @@ void UFutureverseUBFControllerSubsystem::ParseInputs(UFuturePassInventoryItem* I
 			}
 					
 			APISubGraphProvider = MakeShared<FAPISubGraphResolver>(ContextTree);
-			ExecuteGraph(Item->GetAssetID(), Controller, APIGraphProvider.Get(), APISubGraphProvider.Get(), VariableMap, OnComplete);
+			ExecuteGraph(AssetDataMap[Item->GetAssetID()].RenderGraphInstance.GetId(), Controller, APIGraphProvider.Get(), APISubGraphProvider.Get(), VariableMap, OnComplete);
 		});
 	});
 }
