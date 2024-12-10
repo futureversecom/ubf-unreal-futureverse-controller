@@ -1,10 +1,11 @@
 #pragma once
+
 #include "FutureverseUBFControllerSubsystem.h"
 #include "ControllerLayers/APIGraphProvider.h"
 #include "ControllerLayers/MemoryCacheLoader.h"
 #include "ControllerLayers/TempCacheLoader.h"
 
-class FLoadAssetProfilesAction
+class FLoadAssetProfilesAction : public TSharedFromThis<FLoadAssetProfilesAction>
 {
 public:
 	FLoadAssetProfilesAction() {}
@@ -21,6 +22,6 @@ private:
 	void AddPendingLoad();
 	
 	int PendingLoads = 0;
-
+	FCriticalSection CriticalSection;
 	TSharedPtr<TPromise<bool>> Promise;
 };

@@ -131,9 +131,10 @@ TFuture<bool> UFutureverseUBFControllerSubsystem::TryLoadAssetProfile(const FStr
 	TFuture<bool> Future = Promise->GetFuture();
 
 	TSharedPtr<FLoadAssetProfilesAction> LoadAssetProfilesAction = MakeShared<FLoadAssetProfilesAction>();
+	PendingActions.Add(LoadAssetProfilesAction);
 
 	LoadAssetProfilesAction->TryLoadAssetProfile(ContractId, MemoryCacheLoader, TempCacheLoader)
-	.Next([this, AssetId, Promise, LoadAssetProfilesAction](bool bSuccess)
+	.Next([this, Promise, LoadAssetProfilesAction](bool bSuccess)
 	{
 		if (bSuccess)
 		{
@@ -160,6 +161,8 @@ TFuture<bool> UFutureverseUBFControllerSubsystem::TryLoadAssetProfile(const FStr
 		{
 			Promise->SetValue(false);
 		}
+
+		PendingActions.Remove(LoadAssetProfilesAction);
 	});
 
 	return Future;

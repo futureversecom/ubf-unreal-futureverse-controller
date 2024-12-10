@@ -11,6 +11,7 @@
 #include "Subsystems/GameInstanceSubsystem.h"
 #include "FutureverseUBFControllerSubsystem.generated.h"
 
+class FLoadAssetProfilesAction;
 class UCollectionRemappings;
 class UCollectionAssetProfiles;
 
@@ -88,6 +89,8 @@ private:
 
 	TMap<FString, FAssetProfile> AssetProfiles;
 	TMap<FString, FFutureverseAssetData> AssetDataMap;
+
+	TSet<TSharedPtr<FLoadAssetProfilesAction>> PendingActions;
 	
 	mutable UBF::FExecutionContextHandle LastParsingGraphExecutionContextHandle;
 	mutable UBF::FGraphHandle LastParsedGraph;
