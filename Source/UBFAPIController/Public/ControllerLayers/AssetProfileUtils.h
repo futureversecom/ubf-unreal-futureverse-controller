@@ -4,6 +4,28 @@
 
 namespace AssetProfileUtils
 {
+	const FString RenderInstance = TEXT("render-instance");
+	const FString RenderCatalog = TEXT("render-catalog");
+	
+	const FString ParsingInstance = TEXT("parsing-instance");
+	const FString ParsingCatalog = TEXT("parsing-catalog");
+	
+	inline FString JsonObjectToString(const FJsonObject& JsonObject)
+	{
+		FString OutputString;
+		// Create a writer for the JSON string
+		TSharedRef<TJsonWriter<>> Writer = TJsonWriterFactory<>::Create(&OutputString);
+
+		// Serialize the FJsonObject to a string
+		if (FJsonSerializer::Serialize(MakeShared<FJsonObject>(JsonObject), Writer))
+		{
+			return OutputString;
+		}
+
+		// If serialization fails, return an empty string or an error message
+		return TEXT("Failed to serialize JSON object.");
+	}
+	
 	inline void ParseAssetProfileJson(const FString& Json, TArray<FAssetProfile>& AssetProfileEntries)
 	{
 		// Create a JSON Reader
@@ -37,14 +59,20 @@ namespace AssetProfileUtils
 			
 			if (AssetProfile.IsValid())
 			{
+				if (!AssetProfile->HasField(RenderInstance) || !AssetProfile->HasField(RenderCatalog))
+				{
+					UE_LOG(LogUBFAPIController, Warning, TEXT("AssetProfile json: \n %s \n doesn't have required '%s' or '%s' fields. Source Json: \n %s")
+						, *JsonObjectToString(*AssetProfile.Get()), *RenderInstance, *RenderCatalog, *Json);
+				}
+				
 				// Extract the RenderBlueprintUrl
-				FString RenderBlueprintInstanceUri = AssetProfile->GetStringField(TEXT("render-instance"));
-				FString RenderCatalogUri = AssetProfile->GetStringField(TEXT("render-catalog"));
-				FString ParsingBlueprintInstanceUri = AssetProfile->HasField(TEXT("parsing-instance"))
-						? AssetProfile->GetStringField(TEXT("parsing-instance"))
+				FString RenderBlueprintInstanceUri = AssetProfile->GetStringField(RenderInstance);
+				FString RenderCatalogUri = AssetProfile->GetStringField(RenderCatalog);
+				FString ParsingBlueprintInstanceUri = AssetProfile->HasField(ParsingInstance)
+						? AssetProfile->GetStringField(ParsingInstance)
 						: "";
-				FString ParsingCatalogUri = AssetProfile->HasField(TEXT("parsing-catalog"))
-						? AssetProfile->GetStringField(TEXT("parsing-catalog"))
+				FString ParsingCatalogUri = AssetProfile->HasField(ParsingCatalog)
+						? AssetProfile->GetStringField(ParsingCatalog)
 						: "";
 				
 				// Register the graph and catalog locations
