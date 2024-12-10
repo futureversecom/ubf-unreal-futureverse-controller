@@ -174,13 +174,13 @@ TFuture<TMap<FString, UUBFBindingObject*>> UFutureverseUBFControllerSubsystem::G
 	TSharedPtr<TPromise<TMap<FString, UUBFBindingObject*>>> Promise = MakeShareable(new TPromise<TMap<FString, UUBFBindingObject*>>());
 	TFuture<TMap<FString, UUBFBindingObject*>> Future = Promise->GetFuture();
 	
-	TMap<FString, UBF::FDynamicHandle> Traits;
-	const auto OnParsingGraphComplete = [this, Promise, &Traits]
+	const auto OnParsingGraphComplete = [this, Promise]
 	{
 		// inject outputs of the parsing graph as the inputs of the graph to execute
 		TArray<UBF::FBindingInfo> Outputs;
 		LastParsedGraph.GetOutputs(Outputs);
-			
+		
+		TMap<FString, UBF::FDynamicHandle> Traits;
 		for (auto Output : Outputs)
 		{
 			UBF::FDynamicHandle DynamicOutput;
@@ -193,12 +193,13 @@ TFuture<TMap<FString, UUBFBindingObject*>> UFutureverseUBFControllerSubsystem::G
 	};
 	
 	APIGraphProvider->GetGraph(ParsingGraphId)
-		.Next([this, ParsingInputs, ParsingGraphId, OnParsingGraphComplete, Controller, Promise, &Traits]
+		.Next([this, ParsingInputs, ParsingGraphId, OnParsingGraphComplete, Controller, Promise]
 		(const UBF::FLoadGraphResult& Result)
 	{
 		if (!Result.Result.Key)
 		{
 			UE_LOG(LogUBF, Error, TEXT("Aborting execution: graph '%s' is invalid"), *ParsingGraphId);
+			TMap<FString, UBF::FDynamicHandle> Traits;
 			Promise->SetValue(UBFUtils::AsBindingObjectMap(Traits));
 			return;
 		}
@@ -224,7 +225,7 @@ void UFutureverseUBFControllerSubsystem::ParseInputs(UFuturePassInventoryItem* I
 	{
 		if(!LoadResult.Result.Key)
 		{
-			UE_LOG(LogFutureverseUBFController, Warning, TEXT("UFutureverseUBFControllerSubsystem::RenderItem Item %s failed to get parsing graph instance. Cannot render."), *Item->GetAssetID());
+			UE_LOG(LogFutureverseUBFController, Warning, TEXT("UFutureverseUBFControllerSubsystem::ParseInputs Item %s failed to get parsing graph instance. Cannot render."), *Item->GetAssetID());
 			return;
 		}
 			
@@ -240,7 +241,8 @@ void UFutureverseUBFControllerSubsystem::ParseInputs(UFuturePassInventoryItem* I
 				
 		TSharedRef<TJsonWriter<>> Writer = TJsonWriterFactory<>::Create(&MetadataJson);
 		FJsonSerializer::Serialize(MetadataObjectField.ToSharedRef(), Writer);
-		
+			
+		UE_LOG(LogFutureverseUBFController, Verbose, TEXT("UFutureverseUBFControllerSubsystem::ParseInputs Parsing Metadata: %s"), *MetadataJson);
 		TMap<FString, UBF::FDynamicHandle> ParsingInputs =
 		{
 			{TEXT("metadata"), UBF::FDynamicHandle::String(MetadataJson) }
@@ -248,25 +250,26 @@ void UFutureverseUBFControllerSubsystem::ParseInputs(UFuturePassInventoryItem* I
 				
 		const auto ParsingGraphId = AssetDataMap[Item->GetAssetID()].ParsingGraphInstance.GetId();
 		GetTraitsForItem(ParsingGraphId, Controller, ParsingInputs).Next(
-			[this, Item, ContextTree, bShouldBuildContextTree, &VariableMap, InputMap, Controller, OnComplete]
+			[this, Item, ContextTree, bShouldBuildContextTree, VariableMap, InputMap, Controller, OnComplete]
 			(const TMap<FString, UUBFBindingObject*>& Traits)
 		{
 			if (bShouldBuildContextTree)
 			{
 				BuildContextTreeFromAssetTree(ContextTree, Item->GetAssetTreeRef(), Item->GetAssetID(), UBFUtils::AsDynamicMap(Traits));
 			}
-
+				
 			// input priorities in order (inputs, traits, blueprint variables)
-			VariableMap.Append(Traits);
-			VariableMap.Append(InputMap);
+			TMap<FString, UUBFBindingObject*> ResolvedInputs = VariableMap;
+			ResolvedInputs.Append(Traits);
+			ResolvedInputs.Append(InputMap);
 					
-			for (auto Input : VariableMap)
+			for (auto Input : ResolvedInputs)
 			{
 				UE_LOG(LogFutureverseUBFController, Verbose, TEXT("UFutureverseUBFControllerSubsystem::ParseInputs ResolvedInput Key: %s Value: %s"), *Input.Key, *Input.Value->ToString());
 			}
 					
 			APISubGraphProvider = MakeShared<FAPISubGraphResolver>(ContextTree);
-			ExecuteGraph(AssetDataMap[Item->GetAssetID()].RenderGraphInstance.GetId(), Controller, APIGraphProvider.Get(), APISubGraphProvider.Get(), VariableMap, OnComplete);
+			ExecuteGraph(AssetDataMap[Item->GetAssetID()].RenderGraphInstance.GetId(), Controller, APIGraphProvider.Get(), APISubGraphProvider.Get(), ResolvedInputs, OnComplete);
 		});
 	});
 }
