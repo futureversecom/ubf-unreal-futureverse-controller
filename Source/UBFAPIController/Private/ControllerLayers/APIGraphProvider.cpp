@@ -234,7 +234,7 @@ void FAPIGraphProvider::RegisterCatalog(const FString& InstanceId, const FCatalo
 {
 	if (Catalogs.Contains(InstanceId))
 	{
-		auto CatalogMap = Catalogs[InstanceId];
+		TMap<FString, FCatalogElement>& CatalogMap = Catalogs[InstanceId];
 		if (CatalogMap.Contains(Catalog.Id))
 		{
 			CatalogMap[Catalog.Id] = Catalog;
