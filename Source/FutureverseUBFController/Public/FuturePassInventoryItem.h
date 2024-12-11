@@ -3,7 +3,6 @@
 #pragma once
 
 #include "CoreMinimal.h"
-#include "ControllerLayers/APIGraphProvider.h"
 #include "Futurepass/GetAssetTree.h"
 #include "InventoryService/EmergenceInventoryServiceStructs.h"
 #include "FuturePassInventoryItem.generated.h"
@@ -17,6 +16,23 @@ struct FUTUREVERSEUBFCONTROLLER_API FFutureverseAssetTreeData
 	
 	UPROPERTY()
 	TMap<FString, FString> LinkedItems;
+	
+	TArray<FString> GetLinkedContractIds() const
+	{
+		TArray<FString> OutContractIds;
+		
+		for (auto& LinkedItem : LinkedItems)
+		{
+			TArray<FString> Out;
+			LinkedItem.Value.ParseIntoArray(Out, TEXT(":"), true);
+			
+			if (Out.IsEmpty()) continue;
+			
+			OutContractIds.Add(Out[0]);
+		}
+		
+		return OutContractIds;
+	}
 };
 
 UCLASS(BlueprintType)

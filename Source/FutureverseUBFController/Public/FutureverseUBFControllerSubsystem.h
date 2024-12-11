@@ -77,7 +77,7 @@ private:
 		const TMap<FString, UUBFBindingObject*>& InputMap, const FOnComplete& OnComplete,
 		TSharedPtr<FContextTree> ContextTree, const bool bShouldBuildContextTree);
 
-	TFuture<bool> TryLoadAssetProfile(const FString& AssetId, const FString& ContractId);
+	TFuture<bool> TryLoadAssetProfile(const FString& ContractId);
 	TFuture<bool> TryLoadAssetProfiles(const TArray<FString>& ContractIds);
 	
 	TFuture<TMap<FString, UUBFBindingObject*>> GetTraitsForItem(const FString& ParsingGraphId,

@@ -25,6 +25,7 @@ void UFutureverseUBFControllerSubsystem::RenderItem(UFuturePassInventoryItem* It
 {
 	TSharedPtr<FContextTree> ContextTree = MakeShared<FContextTree>();
 
+	// TODO: add variables for each linked item in the context tree as traits
 	if (AssetDataMap.Contains(Item->GetAssetID()))
 	{
 		const auto AssetData = AssetDataMap[Item->GetAssetID()];
@@ -46,7 +47,7 @@ void UFutureverseUBFControllerSubsystem::RenderItem(UFuturePassInventoryItem* It
 		return;
 	}
 
-	TryLoadAssetProfile(Item->GetAssetID(), Item->GetInventoryItem().contract).Next([this, Item, Controller, InputMap, OnComplete, ContextTree](const bool bIsAssetProfileLoaded)
+	TryLoadAssetProfile(Item->GetInventoryItem().contract).Next([this, Item, Controller, InputMap, OnComplete, ContextTree](const bool bIsAssetProfileLoaded)
 	{
 		if (!bIsAssetProfileLoaded)
 		{
@@ -95,7 +96,7 @@ void UFutureverseUBFControllerSubsystem::RenderItemTree(UFuturePassInventoryItem
 		return;
 	}
 	
-	TryLoadAssetProfile(Item->GetAssetID(), Item->GetInventoryItem().contract).Next([this, Item, Controller, InputMap, OnComplete, ContextTree](const bool bIsAssetProfileLoaded)
+	TryLoadAssetProfiles(Item->GetAssetTreeRef().GetLinkedContractIds()).Next([this, Item, Controller, InputMap, OnComplete, ContextTree](const bool bIsAssetProfileLoaded)
 	{
 		if (!bIsAssetProfileLoaded)
 		{
@@ -126,7 +127,7 @@ void UFutureverseUBFControllerSubsystem::RenderItemTree(UFuturePassInventoryItem
 	});
 }
 
-TFuture<bool> UFutureverseUBFControllerSubsystem::TryLoadAssetProfile(const FString& AssetId, const FString& ContractId)
+TFuture<bool> UFutureverseUBFControllerSubsystem::TryLoadAssetProfile(const FString& ContractId)
 {
 	TSharedPtr<TPromise<bool>> Promise = MakeShareable(new TPromise<bool>());
 	TFuture<bool> Future = Promise->GetFuture();
@@ -289,7 +290,7 @@ void UFutureverseUBFControllerSubsystem::ParseInputs(UFuturePassInventoryItem* I
 		TSharedRef<TJsonWriter<>> Writer = TJsonWriterFactory<>::Create(&MetadataJson);
 		FJsonSerializer::Serialize(MetadataObjectField.ToSharedRef(), Writer);
 			
-		UE_LOG(LogFutureverseUBFController, Verbose, TEXT("UFutureverseUBFControllerSubsystem::ParseInputs Parsing Metadata: %s"), *MetadataJson);
+		UE_LOG(LogFutureverseUBFController, VeryVerbose, TEXT("UFutureverseUBFControllerSubsystem::ParseInputs Parsing Metadata: %s"), *MetadataJson);
 		TMap<FString, UBF::FDynamicHandle> ParsingInputs =
 		{
 			{TEXT("metadata"), UBF::FDynamicHandle::String(MetadataJson) }
@@ -312,7 +313,7 @@ void UFutureverseUBFControllerSubsystem::ParseInputs(UFuturePassInventoryItem* I
 					
 			for (auto Input : ResolvedInputs)
 			{
-				UE_LOG(LogFutureverseUBFController, Verbose, TEXT("UFutureverseUBFControllerSubsystem::ParseInputs ResolvedInput Key: %s Value: %s"), *Input.Key, *Input.Value->ToString());
+				UE_LOG(LogFutureverseUBFController, VeryVerbose, TEXT("UFutureverseUBFControllerSubsystem::ParseInputs ResolvedInput %s"), *Input.Value->ToString());
 			}
 					
 			APISubGraphProvider = MakeShared<FAPISubGraphResolver>(ContextTree);
@@ -368,7 +369,13 @@ void UFutureverseUBFControllerSubsystem::BuildContextTreeFromAssetTree(const TSh
 			UE_LOG(LogFutureverseUBFController, Warning, TEXT("UFutureverseUBFControllerSubsystem::BuildContextTreeFromAssetTree AssetTree.LinkedItems does not contain %s."), *ItemAssetTree[i].Id);
 			continue;
 		}
-		const auto RootNode = ContextTree->AddItem(AssetTree.LinkedItems[ItemAssetTree[i].Id]);
+		if (!AssetDataMap.Contains(AssetTree.LinkedItems[ItemAssetTree[i].Id]))
+		{
+			UE_LOG(LogFutureverseUBFController, Warning, TEXT("UFutureverseUBFControllerSubsystem::BuildContextTreeFromAssetTree AssetDataMap does not contain %s."), *AssetTree.LinkedItems[ItemAssetTree[i].Id]);
+			continue;
+		}
+		auto RootRenderGraphInstanceId = AssetDataMap[AssetTree.LinkedItems[ItemAssetTree[i].Id]].RenderGraphInstance.GetId();
+		const auto RootNode = ContextTree->AddItem(RootRenderGraphInstanceId);
 		ContextTree->SetRoot(RootNode);
 		
 		UE_LOG(LogFutureverseUBFController, Verbose, TEXT("UFutureverseUBFControllerSubsystem::BuildContextTreeFromAssetTree Adding Root Node %s."), *AssetTree.LinkedItems[ItemAssetTree[i].Id]);
@@ -380,12 +387,20 @@ void UFutureverseUBFControllerSubsystem::BuildContextTreeFromAssetTree(const TSh
 		for (const auto AssetTreeObject : ItemAssetTree[i].Objects)
 		{
 			if (!AssetTreeObject.Key.Contains(TEXT("path:"))) continue;
+			
 			if (!AssetTree.LinkedItems.Contains(AssetTreeObject.Value.Id))
 			{
 				UE_LOG(LogFutureverseUBFController, Warning, TEXT("UFutureverseUBFControllerSubsystem::BuildContextTreeFromAssetTree AssetTree.LinkedItems does not contain %s."), *ItemAssetTree[i].Id);
 				continue;
 			}
-			const auto ChildNode = ContextTree->AddItem(AssetTree.LinkedItems[AssetTreeObject.Value.Id]);
+
+			if (!AssetDataMap.Contains(AssetTree.LinkedItems[AssetTreeObject.Value.Id]))
+			{
+				UE_LOG(LogFutureverseUBFController, Warning, TEXT("UFutureverseUBFControllerSubsystem::BuildContextTreeFromAssetTree AssetDataMap does not contain %s."), *AssetTree.LinkedItems[AssetTreeObject.Value.Id]);
+				continue;
+			}
+			auto NodeRenderGraphInstanceId = AssetDataMap[AssetTree.LinkedItems[AssetTreeObject.Value.Id]].RenderGraphInstance.GetId();
+			const auto ChildNode = ContextTree->AddItem(NodeRenderGraphInstanceId);
 			FString Relationship = AssetTreeObject.Key;
 			
 			RootNode->AddChild(ChildNode, Relationship);

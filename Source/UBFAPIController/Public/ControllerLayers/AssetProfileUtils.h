@@ -127,7 +127,7 @@ namespace AssetProfileUtils
 				CatalogElement.Uri = ResourceObject->GetStringField(TEXT("uri"));
 				CatalogElement.Hash = ResourceObject->GetStringField(TEXT("hash"));
 				CatalogElementMap.Add(CatalogElement.Id, CatalogElement);
-				UE_LOG(LogUBFAPIController, Verbose, TEXT("AssetProfileUtils::ParseCatalog "
+				UE_LOG(LogUBFAPIController, VeryVerbose, TEXT("AssetProfileUtils::ParseCatalog "
 					"Added CatalogElement Id: %s Type: %s Uri: %s hash: %s"),
 					*CatalogElement.Id, *CatalogElement.Type, *CatalogElement.Uri, *CatalogElement.Hash);
 			}
@@ -175,7 +175,7 @@ namespace AssetProfileUtils
 				Binding.Type = BindingObject->GetStringField(TEXT("type"));
 				Binding.Value = BindingObject->GetStringField(TEXT("value"));
 				BlueprintInstance.AddBinding(Binding.Id, Binding);
-				UE_LOG(LogUBFAPIController, Verbose, TEXT("AssetProfileUtils::ParseBlueprintInstanceJson "
+				UE_LOG(LogUBFAPIController, VeryVerbose, TEXT("AssetProfileUtils::ParseBlueprintInstanceJson "
 					"Added FBlueprintInstanceBidning Id: %s Type: %s Value: %s"),
 					*Binding.Id, *Binding.Type, *Binding.Value);
 			}
