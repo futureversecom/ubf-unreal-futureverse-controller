@@ -7,6 +7,15 @@
 #include "ImageUtils.h"
 #include "ControllerLayers/AssetProfileUtils.h"
 
+namespace APIGraphProvider
+{
+	bool bLogUBFJson = false;
+	static TAutoConsoleVariable<bool> CVarLogUBFJson(
+	TEXT("UBFAPIController.Logging.LogUBFJson"),
+	bLogUBFJson,
+	TEXT("Enable logging UBF json when downloaded in GetGraph()"));
+}
+
 FString FAssetProfile::GetRenderBlueprintInstanceUri() const
 {
 	return RelativePath + RenderBlueprintInstanceUri;
@@ -87,8 +96,9 @@ TFuture<UBF::FLoadGraphResult> FAPIGraphProvider::GetGraph(const FString& Instan
 			Promise->SetValue(PromiseResult);	
 			return;
 		}
-		
-		UE_LOG(LogUBFAPIController, VeryVerbose, TEXT("Graph downloaded with json: %s"), *LoadGraphResult.Result.Value);
+
+		if (APIGraphProvider::CVarLogUBFJson.GetValueOnAnyThread())
+			UE_LOG(LogUBFAPIController, Log, TEXT("Graph downloaded with json: \n\n %s \n\n"), *LoadGraphResult.Result.Value);
 		 			
 		UBF::FGraphHandle Graph;
 		if (UBF::FGraphHandle::Load(UBF::FRegistryHandle::Default(), LoadGraphResult.Result.Value, Graph))
