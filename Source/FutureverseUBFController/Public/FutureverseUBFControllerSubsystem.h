@@ -11,6 +11,7 @@
 #include "Subsystems/GameInstanceSubsystem.h"
 #include "FutureverseUBFControllerSubsystem.generated.h"
 
+class FLoadMultipleAssetProfilesAction;
 class FLoadAssetProfilesAction;
 class UCollectionRemappings;
 class UCollectionAssetProfiles;
@@ -77,6 +78,7 @@ private:
 		TSharedPtr<FContextTree> ContextTree, const bool bShouldBuildContextTree);
 
 	TFuture<bool> TryLoadAssetProfile(const FString& AssetId, const FString& ContractId);
+	TFuture<bool> TryLoadAssetProfiles(const TArray<FString>& ContractIds);
 	
 	TFuture<TMap<FString, UUBFBindingObject*>> GetTraitsForItem(const FString& ParsingGraphId,
 		UUBFRuntimeController* Controller, const TMap<FString, UBF::FDynamicHandle>& ParsingInputs) const;
@@ -91,6 +93,7 @@ private:
 	TMap<FString, FFutureverseAssetData> AssetDataMap;
 
 	TSet<TSharedPtr<FLoadAssetProfilesAction>> PendingActions;
+	TSet<TSharedPtr<FLoadMultipleAssetProfilesAction>> PendingMultiLoadActions;
 	
 	mutable UBF::FExecutionContextHandle LastParsingGraphExecutionContextHandle;
 	mutable UBF::FGraphHandle LastParsedGraph;

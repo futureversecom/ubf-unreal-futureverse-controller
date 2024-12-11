@@ -6,6 +6,7 @@
 #include "EmergenceSingleton.h"
 #include "FutureverseUBFControllerLog.h"
 #include "LoadAssetProfilesAction.h"
+#include "LoadMultipleAssetProfilesAction.h"
 #include "CollectionData/CollectionAssetProfiles.h"
 #include "ControllerLayers/AssetProfileUtils.h"
 #include "ControllerLayers/MemoryCacheLoader.h"
@@ -163,6 +164,52 @@ TFuture<bool> UFutureverseUBFControllerSubsystem::TryLoadAssetProfile(const FStr
 		}
 
 		PendingActions.Remove(LoadAssetProfilesAction);
+	});
+
+	return Future;
+}
+
+TFuture<bool> UFutureverseUBFControllerSubsystem::TryLoadAssetProfiles(const TArray<FString>& ContractIds)
+{
+	TSharedPtr<TPromise<bool>> Promise = MakeShareable(new TPromise<bool>());
+	TFuture<bool> Future = Promise->GetFuture();
+
+	TSharedPtr<FLoadMultipleAssetProfilesAction> LoadMultipleAssetProfilesAction = MakeShared<FLoadMultipleAssetProfilesAction>();
+	PendingMultiLoadActions.Add(LoadMultipleAssetProfilesAction);
+
+	LoadMultipleAssetProfilesAction->TryLoadAssetProfiles(ContractIds, MemoryCacheLoader, TempCacheLoader)
+	.Next([this, Promise, LoadMultipleAssetProfilesAction](bool bSuccess)
+	{
+		if (bSuccess)
+		{
+			for (auto LoadAssetProfilesAction : LoadMultipleAssetProfilesAction->LoadAssetProfilesActions)
+			{
+				for (const auto& Element : LoadAssetProfilesAction->AssetProfiles)
+				{
+					RegisterAssetProfile(Element.Value);
+				}
+				for (const auto& Element : LoadAssetProfilesAction->BlueprintInstances)
+				{
+					APIGraphProvider->RegisterBlueprintInstance(Element.Key, Element.Value);
+				}
+				for (const auto& Element : LoadAssetProfilesAction->Catalogs)
+				{
+					APIGraphProvider->RegisterCatalogs(Element.Key, Element.Value);
+				}
+				for (const auto& Element : LoadAssetProfilesAction->AssetDataMap)
+				{
+					RegisterAssetData(Element.Key, Element.Value);
+				}
+			}
+			
+			Promise->SetValue(true);
+		}
+		else
+		{
+			Promise->SetValue(false);
+		}
+
+		PendingMultiLoadActions.Remove(LoadMultipleAssetProfilesAction);
 	});
 
 	return Future;
