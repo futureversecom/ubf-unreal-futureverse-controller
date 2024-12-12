@@ -24,8 +24,7 @@ void UFutureverseUBFControllerSubsystem::RenderItem(UFuturePassInventoryItem* It
 	const TMap<FString, UUBFBindingObject*>& InputMap, const FOnComplete& OnComplete)
 {
 	TSharedPtr<FContextTree> ContextTree = MakeShared<FContextTree>();
-
-	// TODO: add variables for each linked item in the context tree as traits
+	
 	if (AssetDataMap.Contains(Item->GetAssetID()))
 	{
 		const auto AssetData = AssetDataMap[Item->GetAssetID()];
@@ -267,58 +266,44 @@ void UFutureverseUBFControllerSubsystem::ParseInputs(UFuturePassInventoryItem* I
 	const auto AssetData = AssetDataMap[Item->GetAssetID()];
 
 	// get variables from rendering graph instance
-	APIGraphProvider->GetGraphInstance(AssetData.RenderGraphInstance.GetId()).Next(
-		[this, Item, Controller, InputMap, OnComplete, ContextTree, bShouldBuildContextTree]
-		(const UBF::FLoadGraphInstanceResult& LoadResult)
+	TMap<FString, UUBFBindingObject*> VariableMap = UBFUtils::AsBindingObjectMap(AssetData.RenderGraphInstance.GetVariables());
+	
+	// get metadata json string from original json
+	FString MetadataJson;
+	TSharedPtr<FJsonObject> MetadataObjectField = Item->GetInventoryItem().OriginalData.JsonObject
+		->GetObjectField(TEXT("node"))->GetObjectField(TEXT("metadata"));
+				
+	TSharedRef<TJsonWriter<>> Writer = TJsonWriterFactory<>::Create(&MetadataJson);
+	FJsonSerializer::Serialize(MetadataObjectField.ToSharedRef(), Writer);
+			
+	UE_LOG(LogFutureverseUBFController, VeryVerbose, TEXT("UFutureverseUBFControllerSubsystem::ParseInputs Parsing Metadata: %s"), *MetadataJson);
+	TMap<FString, UBF::FDynamicHandle> ParsingInputs =
 	{
-		if(!LoadResult.Result.Key)
+		{TEXT("metadata"), UBF::FDynamicHandle::String(MetadataJson) }
+	};
+				
+	const auto ParsingGraphId = AssetDataMap[Item->GetAssetID()].ParsingGraphInstance.GetId();
+	GetTraitsForItem(ParsingGraphId, Controller, ParsingInputs).Next(
+		[this, Item, ContextTree, bShouldBuildContextTree, VariableMap, InputMap, Controller, OnComplete]
+		(const TMap<FString, UUBFBindingObject*>& Traits)
+	{
+		if (bShouldBuildContextTree)
 		{
-			UE_LOG(LogFutureverseUBFController, Warning, TEXT("UFutureverseUBFControllerSubsystem::ParseInputs Item %s failed to get parsing graph instance. Cannot render."), *Item->GetAssetID());
-			return;
+			BuildContextTreeFromAssetTree(ContextTree, Item->GetAssetTreeRef(), Item->GetAssetID(), UBFUtils::AsDynamicMap(Traits));
 		}
-			
-		TMap<FString, UBF::FDynamicHandle> Variables;
-		LoadResult.Result.Value.GetVariables(Variables);
-			
-		TMap<FString, UUBFBindingObject*> VariableMap = UBFUtils::AsBindingObjectMap(Variables);
-					
-		// get metadata json string from original json
-		FString MetadataJson;
-		TSharedPtr<FJsonObject> MetadataObjectField = Item->GetInventoryItem().OriginalData.JsonObject
-			->GetObjectField(TEXT("node"))->GetObjectField(TEXT("metadata"));
 				
-		TSharedRef<TJsonWriter<>> Writer = TJsonWriterFactory<>::Create(&MetadataJson);
-		FJsonSerializer::Serialize(MetadataObjectField.ToSharedRef(), Writer);
-			
-		UE_LOG(LogFutureverseUBFController, VeryVerbose, TEXT("UFutureverseUBFControllerSubsystem::ParseInputs Parsing Metadata: %s"), *MetadataJson);
-		TMap<FString, UBF::FDynamicHandle> ParsingInputs =
+		// input priorities in order (inputs, traits, blueprint variables)
+		TMap<FString, UUBFBindingObject*> ResolvedInputs = VariableMap;
+		ResolvedInputs.Append(Traits);
+		ResolvedInputs.Append(InputMap);
+					
+		for (auto Input : ResolvedInputs)
 		{
-			{TEXT("metadata"), UBF::FDynamicHandle::String(MetadataJson) }
-		};
-				
-		const auto ParsingGraphId = AssetDataMap[Item->GetAssetID()].ParsingGraphInstance.GetId();
-		GetTraitsForItem(ParsingGraphId, Controller, ParsingInputs).Next(
-			[this, Item, ContextTree, bShouldBuildContextTree, VariableMap, InputMap, Controller, OnComplete]
-			(const TMap<FString, UUBFBindingObject*>& Traits)
-		{
-			if (bShouldBuildContextTree)
-			{
-				BuildContextTreeFromAssetTree(ContextTree, Item->GetAssetTreeRef(), Item->GetAssetID(), UBFUtils::AsDynamicMap(Traits));
-			}
-				
-			// input priorities in order (inputs, traits, blueprint variables)
-			TMap<FString, UUBFBindingObject*> ResolvedInputs = VariableMap;
-			ResolvedInputs.Append(Traits);
-			ResolvedInputs.Append(InputMap);
+			UE_LOG(LogFutureverseUBFController, VeryVerbose, TEXT("UFutureverseUBFControllerSubsystem::ParseInputs ResolvedInput %s"), *Input.Value->ToString());
+		}
 					
-			for (auto Input : ResolvedInputs)
-			{
-				UE_LOG(LogFutureverseUBFController, VeryVerbose, TEXT("UFutureverseUBFControllerSubsystem::ParseInputs ResolvedInput %s"), *Input.Value->ToString());
-			}
-					
-			APISubGraphProvider = MakeShared<FAPISubGraphResolver>(ContextTree);
-			ExecuteGraph(AssetDataMap[Item->GetAssetID()].RenderGraphInstance.GetId(), Controller, APIGraphProvider.Get(), APISubGraphProvider.Get(), ResolvedInputs, OnComplete);
-		});
+		APISubGraphProvider = MakeShared<FAPISubGraphResolver>(ContextTree);
+		ExecuteGraph(AssetDataMap[Item->GetAssetID()].RenderGraphInstance.GetId(), Controller, APIGraphProvider.Get(), APISubGraphProvider.Get(), ResolvedInputs, OnComplete);
 	});
 }
 
@@ -376,9 +361,11 @@ void UFutureverseUBFControllerSubsystem::BuildContextTreeFromAssetTree(const TSh
 		}
 		auto RootRenderGraphInstanceId = AssetDataMap[AssetTree.LinkedItems[ItemAssetTree[i].Id]].RenderGraphInstance.GetId();
 		const auto RootNode = ContextTree->AddItem(RootRenderGraphInstanceId);
+		RootNode->AddTraits(AssetDataMap[AssetTree.LinkedItems[ItemAssetTree[i].Id]].RenderGraphInstance.GetVariables());
 		ContextTree->SetRoot(RootNode);
-		
+
 		UE_LOG(LogFutureverseUBFController, Verbose, TEXT("UFutureverseUBFControllerSubsystem::BuildContextTreeFromAssetTree Adding Root Node %s."), *AssetTree.LinkedItems[ItemAssetTree[i].Id]);
+		// traits overwrite graph variables
 		if (!TraitTargetId.IsEmpty() && AssetTree.LinkedItems[ItemAssetTree[i].Id] == TraitTargetId)
 		{
 			RootNode->AddTraits(Traits);
@@ -401,8 +388,9 @@ void UFutureverseUBFControllerSubsystem::BuildContextTreeFromAssetTree(const TSh
 			}
 			auto NodeRenderGraphInstanceId = AssetDataMap[AssetTree.LinkedItems[AssetTreeObject.Value.Id]].RenderGraphInstance.GetId();
 			const auto ChildNode = ContextTree->AddItem(NodeRenderGraphInstanceId);
-			FString Relationship = AssetTreeObject.Key;
+			ChildNode->AddTraits( AssetDataMap[AssetTree.LinkedItems[AssetTreeObject.Value.Id]].RenderGraphInstance.GetVariables());
 			
+			FString Relationship = AssetTreeObject.Key;
 			RootNode->AddChild(ChildNode, Relationship);
 			UE_LOG(LogFutureverseUBFController, Verbose, TEXT("UFutureverseUBFControllerSubsystem::BuildContextTreeFromAssetTree Added Child Node %s with Relationship: %s."), *AssetTree.LinkedItems[AssetTreeObject.Value.Id], *Relationship);
 		}

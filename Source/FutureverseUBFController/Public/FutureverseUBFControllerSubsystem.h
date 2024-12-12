@@ -5,6 +5,7 @@
 #include "CoreMinimal.h"
 #include "FuturePassInventoryItem.h"
 #include "UBFRuntimeController.h"
+#include "ControllerLayers/APIGraphProvider.h"
 #include "ControllerLayers/APISubGraphResolver.h"
 #include "ControllerLayers/MemoryCacheLoader.h"
 #include "ControllerLayers/TempCacheLoader.h"
