@@ -50,6 +50,16 @@ namespace AssetProfileUtils
 			
 			if (!AssetProfileObject.IsValid())
 				continue;
+
+			if (!AssetProfileObject->HasField(TEXT("InventoryItemName")))
+			{
+				UE_LOG(LogUBFAPIController, Warning, TEXT("ParseAssetProfileJson() missing 'InventoryItemName' field. Source Json: \n %s"), *Json);
+			}
+
+			if (!AssetProfileObject->HasField(TEXT("AssetProfile")))
+			{
+				UE_LOG(LogUBFAPIController, Warning, TEXT("ParseAssetProfileJson() missing 'AssetProfile' field. Source Json: \n %s"), *Json);
+			}
 			
 			// Extract the InventoryItemName
 			FString InventoryItemName = AssetProfileObject->GetStringField(TEXT("InventoryItemName"));
@@ -66,11 +76,18 @@ namespace AssetProfileUtils
 				}
 				
 				// Extract the RenderBlueprintUrl
-				FString RenderBlueprintInstanceUri = AssetProfile->GetStringField(RenderInstance);
-				FString RenderCatalogUri = AssetProfile->GetStringField(RenderCatalog);
+				FString RenderBlueprintInstanceUri = AssetProfile->HasField(RenderInstance)
+						? AssetProfile->GetStringField(RenderInstance)
+						: "";
+				
+				FString RenderCatalogUri = AssetProfile->HasField(RenderCatalog)
+						? AssetProfile->GetStringField(RenderCatalog)
+						: "";
+				
 				FString ParsingBlueprintInstanceUri = AssetProfile->HasField(ParsingInstance)
 						? AssetProfile->GetStringField(ParsingInstance)
 						: "";
+				
 				FString ParsingCatalogUri = AssetProfile->HasField(ParsingCatalog)
 						? AssetProfile->GetStringField(ParsingCatalog)
 						: "";
@@ -173,7 +190,7 @@ namespace AssetProfileUtils
 				FBlueprintInstanceBinding Binding;
 				Binding.Id = BindingObject->GetStringField(TEXT("id"));
 				Binding.Type = BindingObject->GetStringField(TEXT("type"));
-				Binding.Value = BindingObject->GetStringField(TEXT("value"));
+				BindingObject->TryGetStringField(TEXT("value"), Binding.Value);
 				BlueprintInstance.AddBinding(Binding.Id, Binding);
 				UE_LOG(LogUBFAPIController, VeryVerbose, TEXT("AssetProfileUtils::ParseBlueprintInstanceJson "
 					"Added FBlueprintInstanceBidning Id: %s Type: %s Value: %s"),

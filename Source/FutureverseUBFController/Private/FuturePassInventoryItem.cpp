@@ -49,18 +49,44 @@ void UFuturePassInventoryItem::LogDataString(TSharedPtr<FJsonObject> JsonObject)
 
 FString UFuturePassInventoryItem::GetAssetID() const
 {
-	// Retrieve the "name" field as a string, ensuring it exists
-	FString MetadataName = InventoryItem.OriginalData.JsonObject
-														->GetObjectField(TEXT("node"))
-														->GetObjectField(TEXT("metadata"))
-														->GetObjectField(TEXT("properties"))
-														->GetStringField(TEXT("name"));
-
-	if (MetadataName.IsEmpty())
+	// Check if the main JSON object exists
+	if (!InventoryItem.OriginalData.JsonObject.IsValid())
 	{
-		LogDataString( InventoryItem.OriginalData.JsonObject);
+		UE_LOG(LogTemp, Warning, TEXT("UFuturePassInventoryItem::GetAssetID Invalid JsonObject in InventoryItem"));
 	}
-	
+
+	// Check if the "node" field exists
+	const TSharedPtr<FJsonObject>* NodeObject;
+	if (!InventoryItem.OriginalData.JsonObject->TryGetObjectField(TEXT("node"), NodeObject) || !NodeObject->IsValid())
+	{
+		UE_LOG(LogFutureverseUBFController, Warning, TEXT("UFuturePassInventoryItem::GetAssetID Missing or invalid 'node' field in JsonObject"));
+		LogDataString(InventoryItem.OriginalData.JsonObject);
+	}
+
+	// Check if the "metadata" field exists
+	const TSharedPtr<FJsonObject>* MetadataObject;
+	if (!(*NodeObject)->TryGetObjectField(TEXT("metadata"), MetadataObject) || !MetadataObject->IsValid())
+	{
+		UE_LOG(LogFutureverseUBFController, Warning, TEXT("UFuturePassInventoryItem::GetAssetID Missing or invalid 'metadata' field in node object"));
+		LogDataString(InventoryItem.OriginalData.JsonObject);
+	}
+
+	// Check if the "properties" field exists
+	const TSharedPtr<FJsonObject>* PropertiesObject;
+	if (!(*MetadataObject)->TryGetObjectField(TEXT("properties"), PropertiesObject) || !PropertiesObject->IsValid())
+	{
+		UE_LOG(LogFutureverseUBFController, Warning, TEXT("UFuturePassInventoryItem::GetAssetID Missing or invalid 'properties' field in metadata object"));
+		LogDataString(InventoryItem.OriginalData.JsonObject);
+	}
+
+	// Check if the "name" field exists and retrieve its value
+	FString MetadataName;
+	if (!(*PropertiesObject)->TryGetStringField(TEXT("name"), MetadataName) || MetadataName.IsEmpty())
+	{
+		UE_LOG(LogFutureverseUBFController, Warning, TEXT("UFuturePassInventoryItem::GetAssetID Missing or empty 'name' field in properties object"));
+		LogDataString(InventoryItem.OriginalData.JsonObject);
+	}
+
+	// Safely generate the asset ID string
 	return FString::Printf(TEXT("%s:%s"), *MapCollectionIdToName(InventoryItem.contract), *MetadataName);
 }
-
