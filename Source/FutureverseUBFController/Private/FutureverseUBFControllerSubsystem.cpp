@@ -54,6 +54,12 @@ void UFutureverseUBFControllerSubsystem::RenderItem(UFuturePassInventoryItem* It
 			return;
 		}
 		
+		if (!AssetDataMap.Contains(Item->GetAssetID()))
+		{
+			UE_LOG(LogFutureverseUBFController, Warning, TEXT("UFutureverseUBFControllerSubsystem::RenderItem AssetDataMap does not contian Item %s. Cannot render."), *Item->GetAssetID());
+			return;
+		}
+		
 		const auto AssetData = AssetDataMap[Item->GetAssetID()];
 		if (AssetData.ParsingGraphInstance.IsValid())
 		{
@@ -100,6 +106,12 @@ void UFutureverseUBFControllerSubsystem::RenderItemTree(UFuturePassInventoryItem
 		if (!bIsAssetProfileLoaded)
 		{
 			UE_LOG(LogFutureverseUBFController, Warning, TEXT("UFutureverseUBFControllerSubsystem::RenderItemTree Item %s provided invalid AssetProfile. Cannot render."), *Item->GetAssetID());
+			return;
+		}
+
+		if (!AssetDataMap.Contains(Item->GetAssetID()))
+		{
+			UE_LOG(LogFutureverseUBFController, Warning, TEXT("UFutureverseUBFControllerSubsystem::RenderItemTree AssetDataMap does not contian Item %s. Cannot render."), *Item->GetAssetID());
 			return;
 		}
 		
@@ -343,7 +355,11 @@ void UFutureverseUBFControllerSubsystem::BuildContextTreeFromAssetTree(const TSh
 	const FFutureverseAssetTreeData& AssetTree, const FString& TraitTargetId, const TMap<FString, UBF::FDynamicHandle>& Traits) const
 {
 	const auto ItemAssetTree = AssetTree.TreePaths;
-	if (ItemAssetTree.IsEmpty()) return;
+	if (ItemAssetTree.IsEmpty())
+	{
+		UE_LOG(LogFutureverseUBFController, Warning, TEXT("UFutureverseUBFControllerSubsystem::BuildContextTreeFromAssetTree Can't build context tree beacuse ItemAssetTree is empty."));
+		return;
+	}
 	
 	for (int i = 0; i < ItemAssetTree.Num(); ++i)
 	{
