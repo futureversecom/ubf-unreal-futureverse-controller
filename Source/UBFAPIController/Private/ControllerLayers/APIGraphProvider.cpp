@@ -6,6 +6,7 @@
 #include "ControllerLayers/APIUtils.h"
 #include "ImageUtils.h"
 #include "ControllerLayers/AssetProfileUtils.h"
+#include "ControllerLayers/DownloadRequestManager.h"
 
 namespace APIGraphProvider
 {
@@ -85,7 +86,7 @@ TFuture<UBF::FLoadGraphResult> FAPIGraphProvider::GetGraph(const FString& Instan
 	const auto GraphResource = Catalog[BlueprintId];
 	UE_LOG(LogUBFAPIController, Verbose, TEXT("Try Loading Graph %s from Uri %s"), *BlueprintId, *GraphResource.Uri);
 	
-	APIUtils::LoadStringFromURI(GraphResource.Uri, GraphResource.Hash, GraphCacheLoader.Get())
+	FDownloadRequestManager::GetInstance()->LoadStringFromURI(TEXT("Graph"),GraphResource.Uri, GraphResource.Hash, GraphCacheLoader.Get())
 	.Next([this, BlueprintId, Promise](const UBF::FLoadStringResult& LoadGraphResult)
 	{
 		UBF::FLoadGraphResult PromiseResult;
@@ -166,7 +167,7 @@ TFuture<UBF::FLoadTextureResult> FAPIGraphProvider::GetTextureResource(const FSt
 	}
 
 	const auto ResourceManifestElement = ResourceManifestElementMap[ResourceId];
-	APIUtils::LoadDataFromURI(ResourceManifestElement.Uri, ResourceManifestElement.Hash, ResourceCacheLoader.Get())
+	FDownloadRequestManager::GetInstance()->LoadDataFromURI(TEXT("Texture"),ResourceManifestElement.Uri, ResourceManifestElement.Hash, ResourceCacheLoader.Get())
 	.Next([this, Promise](const UBF::FLoadDataArrayResult& DataResult)
 	{
 		const TArray<uint8> Data = DataResult.Result.Value;
@@ -219,7 +220,7 @@ TFuture<UBF::FLoadDataArrayResult> FAPIGraphProvider::GetMeshResource(const FStr
 	}
 
 	const auto ResourceManifestElement = ResourceManifestElementMap[ResourceId];
-	APIUtils::LoadDataFromURI(ResourceManifestElement.Uri, ResourceManifestElement.Hash, ResourceCacheLoader.Get())
+	FDownloadRequestManager::GetInstance()->LoadDataFromURI(TEXT("Mesh"),ResourceManifestElement.Uri, ResourceManifestElement.Hash, ResourceCacheLoader.Get())
 	.Next([this, Promise](const UBF::FLoadDataArrayResult& DataResult)
 	{
 		const TArray<uint8> Data = DataResult.Result.Value;

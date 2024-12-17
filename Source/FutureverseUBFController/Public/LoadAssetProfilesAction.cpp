@@ -6,6 +6,7 @@
 #include "ControllerLayers/APIGraphProvider.h"
 #include "ControllerLayers/APIUtils.h"
 #include "ControllerLayers/AssetProfileUtils.h"
+#include "ControllerLayers/DownloadRequestManager.h"
 #include "ControllerLayers/MemoryCacheLoader.h"
 #include "ControllerLayers/TempCacheLoader.h"
 
@@ -28,7 +29,7 @@ TFuture<bool> FLoadAssetProfilesAction::TryLoadAssetProfile(const FString& Contr
 
 	TSharedPtr<FLoadAssetProfilesAction> SharedThis = AsShared();
 	// fetch remote asset profile, then parse and register all the blueprint instances and catalogs
-	APIUtils::LoadStringFromURI(ProfileRemotePath, "", MemoryCacheLoader.Get()).Next(
+	FDownloadRequestManager::GetInstance()->LoadStringFromURI(TEXT("AssetProfile"), ProfileRemotePath, "", MemoryCacheLoader.Get()).Next(
 		[SharedThis, ProfileRemotePath, MemoryCacheLoader](const UBF::FLoadStringResult& AssetProfileResult)
 	{
 		if(!AssetProfileResult.Result.Key)
@@ -52,7 +53,7 @@ TFuture<bool> FLoadAssetProfilesAction::TryLoadAssetProfile(const FString& Contr
 			if(!AssetProfile.RenderBlueprintInstanceUri.IsEmpty())
 			{
 				SharedThis->AddPendingLoad();
-				APIUtils::LoadStringFromURI(AssetProfile.GetRenderBlueprintInstanceUri(), AssetProfile.GetRenderBlueprintInstanceUri(), MemoryCacheLoader.Get())
+				FDownloadRequestManager::GetInstance()->LoadStringFromURI(TEXT("Blueprint"),AssetProfile.GetRenderBlueprintInstanceUri(), AssetProfile.GetRenderBlueprintInstanceUri(), MemoryCacheLoader.Get())
 					.Next([SharedThis, AssetProfile, MemoryCacheLoader](const UBF::FLoadStringResult& LoadResult)
 				{
 					if (!LoadResult.Result.Key)
@@ -70,7 +71,7 @@ TFuture<bool> FLoadAssetProfilesAction::TryLoadAssetProfile(const FString& Contr
 					if(!AssetProfile.RenderCatalogUri.IsEmpty())
 					{
 						SharedThis->AddPendingLoad();
-						APIUtils::LoadStringFromURI(AssetProfile.GetRenderCatalogUri(), AssetProfile.GetRenderCatalogUri(), MemoryCacheLoader.Get())
+						FDownloadRequestManager::GetInstance()->LoadStringFromURI(TEXT("Catalog"),AssetProfile.GetRenderCatalogUri(), AssetProfile.GetRenderCatalogUri(), MemoryCacheLoader.Get())
 							.Next([SharedThis, AssetProfile, BlueprintInstance](const UBF::FLoadStringResult& LoadResult)
 						{
 							if (!LoadResult.Result.Key)
@@ -95,7 +96,7 @@ TFuture<bool> FLoadAssetProfilesAction::TryLoadAssetProfile(const FString& Contr
 			if(!AssetProfile.ParsingBlueprintInstanceUri.IsEmpty())
 			{
 				SharedThis->AddPendingLoad();
-				APIUtils::LoadStringFromURI(AssetProfile.GetParsingBlueprintInstanceUri(), AssetProfile.GetParsingBlueprintInstanceUri(), MemoryCacheLoader.Get())
+				FDownloadRequestManager::GetInstance()->LoadStringFromURI(TEXT("Blueprint"),AssetProfile.GetParsingBlueprintInstanceUri(), AssetProfile.GetParsingBlueprintInstanceUri(), MemoryCacheLoader.Get())
 					.Next([SharedThis, AssetProfile, MemoryCacheLoader](const UBF::FLoadStringResult& LoadResult)
 				{
 					if (!LoadResult.Result.Key)
@@ -113,7 +114,7 @@ TFuture<bool> FLoadAssetProfilesAction::TryLoadAssetProfile(const FString& Contr
 					if(!AssetProfile.ParsingCatalogUri.IsEmpty())
 					{
 						SharedThis->AddPendingLoad();
-						APIUtils::LoadStringFromURI(AssetProfile.GetParsingCatalogUri(), AssetProfile.GetParsingCatalogUri(), MemoryCacheLoader.Get())
+						FDownloadRequestManager::GetInstance()->LoadStringFromURI(TEXT("Catalog"), AssetProfile.GetParsingCatalogUri(), AssetProfile.GetParsingCatalogUri(), MemoryCacheLoader.Get())
 							.Next([SharedThis, AssetProfile, BlueprintInstance](const UBF::FLoadStringResult& LoadResult)
 						{
 							if (!LoadResult.Result.Key)
