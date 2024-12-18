@@ -128,12 +128,19 @@ void UFutureverseInventoryComponent::HandleGetAssetTree(const TArray<FFuturevers
 	{
 		for (const auto Item : Inventory)
 		{
-			if(TreePath.Objects.IsEmpty()) continue;
-			
 			if (TreePath.Id.Contains(Item->GetCombinedID()))
 			{
 				FFutureverseAssetTreeData AssetTree;
 				AssetTree.TreePaths = Tree;
+				
+				if(TreePath.Objects.IsEmpty())
+				{
+					// still add itself as a linked item
+					AssetTree.LinkedItems = TMap<FString, FString>{{TreePath.Id, Item->GetAssetID()}};
+					Item->SetAssetTree(AssetTree);
+					continue;
+				}
+				
 				auto LinkedItems = GetLinkedItemsForAssetTree(Tree);
 				
 				// Add root item
