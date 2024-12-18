@@ -4,6 +4,7 @@
 
 #include "CoreMinimal.h"
 #include "Futurepass/GetAssetTree.h"
+#include "FutureverseAssetLoadData.h"
 #include "InventoryService/EmergenceInventoryServiceStructs.h"
 #include "FuturePassInventoryItem.generated.h"
 
@@ -17,9 +18,9 @@ struct FUTUREVERSEUBFCONTROLLER_API FFutureverseAssetTreeData
 	UPROPERTY()
 	TMap<FString, FString> LinkedItems;
 	
-	TArray<FString> GetLinkedContractIds() const
+	TArray<FFutureverseAssetLoadData> GetLinkedAssetLoadData() const
 	{
-		TArray<FString> OutContractIds;
+		TArray<FFutureverseAssetLoadData> OutContractIds;
 		
 		for (auto& LinkedItem : LinkedItems)
 		{
@@ -28,7 +29,7 @@ struct FUTUREVERSEUBFCONTROLLER_API FFutureverseAssetTreeData
 			
 			if (Out.IsEmpty()) continue;
 			
-			OutContractIds.Add(Out[0]);
+			OutContractIds.Add(FFutureverseAssetLoadData(LinkedItem.Value, Out[0]));
 		}
 		
 		return OutContractIds;

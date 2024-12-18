@@ -12,7 +12,7 @@
 #include "Subsystems/GameInstanceSubsystem.h"
 #include "FutureverseUBFControllerSubsystem.generated.h"
 
-class FLoadMultipleAssetProfilesAction;
+class FLoadMultipleAssetDatasAction;
 class FLoadAssetProfilesAction;
 class UCollectionRemappings;
 class UCollectionAssetProfiles;
@@ -78,8 +78,11 @@ private:
 		const TMap<FString, UUBFBindingObject*>& InputMap, const FOnComplete& OnComplete,
 		TSharedPtr<FContextTree> ContextTree, const bool bShouldBuildContextTree);
 
+	TFuture<bool> TryLoadAssetDatas(const TArray<struct FFutureverseAssetLoadData>& LoadDatas);
+	
+	TFuture<bool> TryLoadAssetData(const FFutureverseAssetLoadData& LoadData);
+	TFuture<bool> TryLoadAssetProfileData(const FString& AssetID);
 	TFuture<bool> TryLoadAssetProfile(const FString& ContractId);
-	TFuture<bool> TryLoadAssetProfiles(const TArray<FString>& ContractIds);
 	
 	TFuture<TMap<FString, UUBFBindingObject*>> GetTraitsForItem(const FString& ParsingGraphId,
 		UUBFRuntimeController* Controller, const TMap<FString, UBF::FDynamicHandle>& ParsingInputs) const;
@@ -94,10 +97,12 @@ private:
 	TMap<FString, FFutureverseAssetData> AssetDataMap;
 
 	TSet<TSharedPtr<FLoadAssetProfilesAction>> PendingActions;
-	TSet<TSharedPtr<FLoadMultipleAssetProfilesAction>> PendingMultiLoadActions;
+	TSet<TSharedPtr<class FLoadAssetProfileDataAction>> PendingDataActions;
+	TSet<TSharedPtr<FLoadMultipleAssetDatasAction>> PendingMultiLoadActions;
 	
 	mutable UBF::FExecutionContextHandle LastParsingGraphExecutionContextHandle;
 	mutable UBF::FGraphHandle LastParsedGraph;
 	
 	friend class UFuturePassInventoryItem;
+	friend class FLoadMultipleAssetDatasAction;
 };

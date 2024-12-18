@@ -24,6 +24,19 @@ public:
 	FString GetParsingCatalogUri() const;
 	bool IsValid() const {return Id != FString("Invalid");}
 
+	FString ToString() const
+	{
+		return FString::Printf(
+			TEXT("Id: %s\nRenderBlueprintInstanceUri: %s\nParsingBlueprintInstanceUri: %s\nRenderCatalogUri: %s\nParsingCatalogUri: %s\nRelativePath: %s"),
+			*Id,
+			*RenderBlueprintInstanceUri,
+			*ParsingBlueprintInstanceUri,
+			*RenderCatalogUri,
+			*ParsingCatalogUri,
+			*RelativePath
+		);
+	}
+
 	UPROPERTY(EditAnywhere, BlueprintReadWrite)
 	FString Id = FString("Invalid");
 	
@@ -71,7 +84,7 @@ public:
 
 	void RegisterCatalog(const FString& InstanceId, const FCatalogElement& Catalog);
 	void RegisterCatalogs(const FString& InstanceId, const TMap<FString, FCatalogElement>& CatalogMap);
-	void RegisterBlueprintInstance(const FString& InstanceId, const FBlueprintInstance& BlueprintInstance);
+	void RegisterBlueprintInstance(const FBlueprintInstance& BlueprintInstance);
 	
 	virtual ~FAPIGraphProvider() override = default;
 private:

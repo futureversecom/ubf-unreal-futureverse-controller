@@ -271,15 +271,14 @@ void FAPIGraphProvider::RegisterCatalogs(const FString& InstanceId, const TMap<F
 	}
 }
 
-void FAPIGraphProvider::RegisterBlueprintInstance(const FString& InstanceId,
-	const FBlueprintInstance& BlueprintInstance)
+void FAPIGraphProvider::RegisterBlueprintInstance(const FBlueprintInstance& BlueprintInstance)
 {
-	if (BlueprintInstances.Contains(InstanceId))
+	if (BlueprintInstances.Contains(BlueprintInstance.GetId()))
 	{
-		BlueprintInstances[InstanceId] = BlueprintInstance;
+		BlueprintInstances[BlueprintInstance.GetId()] = BlueprintInstance;
 	}
 	else
 	{
-		BlueprintInstances.Add(InstanceId, BlueprintInstance);
+		BlueprintInstances.Add(BlueprintInstance.GetId(), BlueprintInstance);
 	}
 }
