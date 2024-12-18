@@ -12,6 +12,7 @@ protected:
 	TSharedPtr<TPromise<bool>> Promise;
 
 	std::atomic<bool> bFailure = false;
+	std::atomic<bool> bBlockCompletion = false;
 private:
 	
 	int PendingLoads = 0;
@@ -36,6 +37,8 @@ template <class T>
 void TLoadAction<T>::CheckPendingLoadsComplete()
 {
 	if (!ensure(!bPromiseSet)) return;
+
+	if (bBlockCompletion) return;
 	
 	bool bShouldSetValue = false;
 

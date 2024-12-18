@@ -6,7 +6,8 @@ TFuture<bool> FLoadMultipleAssetDatasAction::TryLoadAssetProfiles(const TArray<F
 	TFuture<bool> Future = Promise->GetFuture();
 
 	TSharedPtr<FLoadMultipleAssetDatasAction> SharedThis = AsShared();
-	
+
+	bBlockCompletion = true;
 	for (const FFutureverseAssetLoadData& AssetLoadData : AssetLoadDatas)
 	{
 		AddPendingLoad();
@@ -18,6 +19,7 @@ TFuture<bool> FLoadMultipleAssetDatasAction::TryLoadAssetProfiles(const TArray<F
 			SharedThis->CompletePendingLoad();
 		});
 	}
+	bBlockCompletion = false;
 
 	CheckPendingLoadsComplete();
 

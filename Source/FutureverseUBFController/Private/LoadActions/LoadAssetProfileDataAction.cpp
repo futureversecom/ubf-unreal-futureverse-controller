@@ -9,6 +9,8 @@ TFuture<bool> FLoadAssetProfileDataAction::TryLoadAssetProfileData(const FAssetP
 	Promise = MakeShareable(new TPromise<bool>());
 	TFuture<bool> Future = Promise->GetFuture();
 
+	bBlockCompletion = true;
+
 	TSharedPtr<FLoadAssetProfileDataAction> SharedThis = AsShared();
 	AssetProfileLoaded = AssetProfile;
 	if(!AssetProfile.RenderBlueprintInstanceUri.IsEmpty())
@@ -92,6 +94,9 @@ TFuture<bool> FLoadAssetProfileDataAction::TryLoadAssetProfileData(const FAssetP
 			SharedThis->CompletePendingLoad();
 		});
 	}
+
+	bBlockCompletion = false;
+	CheckPendingLoadsComplete();
 
 	return Future;
 }
