@@ -193,7 +193,7 @@ namespace AssetProfileUtils
 				BindingObject->TryGetStringField(TEXT("value"), Binding.Value);
 				BlueprintInstance.AddBinding(Binding.Id, Binding);
 				UE_LOG(LogUBFAPIController, VeryVerbose, TEXT("AssetProfileUtils::ParseBlueprintInstanceJson "
-					"Added FBlueprintInstanceBidning Id: %s Type: %s Value: %s"),
+					"Added FBlueprintInstanceBinding Id: %s Type: %s Value: %s"),
 					*Binding.Id, *Binding.Type, *Binding.Value);
 			}
 		}
