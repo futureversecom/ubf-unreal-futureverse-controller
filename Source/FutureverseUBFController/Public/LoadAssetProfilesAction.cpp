@@ -57,7 +57,7 @@ TFuture<bool> FLoadAssetProfilesAction::TryLoadAssetProfile(const FString& Contr
 				{
 					if (!LoadResult.Result.Key)
 					{
-						UE_LOG(LogFutureverseUBFController, Warning, TEXT("Failed to load render blueprint instance from %s"), *AssetProfile.GetParsingBlueprintInstanceUri());
+						UE_LOG(LogFutureverseUBFController, Warning, TEXT("Failed to load render blueprint instance from %s"), *AssetProfile.GetRenderBlueprintInstanceUri());
 						SharedThis->CompletePendingLoad();
 						return;
 					}

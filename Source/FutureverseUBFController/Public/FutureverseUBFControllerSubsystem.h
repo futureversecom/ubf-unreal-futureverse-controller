@@ -67,14 +67,14 @@ public:
 	void RegisterAssetData(const FString& AssetId, const FFutureverseAssetData& AssetData);
 
 private:
-	void ExecuteGraph(const FString& GraphId, UUBFRuntimeController* Controller,
-		IGraphProvider* GraphProvider, ISubGraphResolver* SubGraphResolver,
-		const TMap<FString, UUBFBindingObject*>& InputMap, const FOnComplete& OnComplete);
+	void ExecuteGraph(UFuturePassInventoryItem* Item, const TSharedPtr<FContextTree>& ContextTree,
+	UUBFRuntimeController* Controller, const bool bShouldBuildContextTree, IGraphProvider* GraphProvider, ISubGraphResolver* SubGraphResolver,
+	const TMap<FString, UUBFBindingObject*>& InputMap, const FOnComplete& OnComplete);
 	
 	void BuildContextTreeFromAssetTree(const TSharedPtr<FContextTree>& ContextTree, const FFutureverseAssetTreeData& AssetTree,
-		const FString& TraitTargetId, const TMap<FString, UBF::FDynamicHandle>& Traits) const;
+		const TSharedPtr<FContextData>& RootNode) const;
 
-	void ParseInputs(UFuturePassInventoryItem* Item, UUBFRuntimeController* Controller,
+	void ParseInputsThenExecute(UFuturePassInventoryItem* Item, UUBFRuntimeController* Controller,
 		const TMap<FString, UUBFBindingObject*>& InputMap, const FOnComplete& OnComplete,
 		TSharedPtr<FContextTree> ContextTree, const bool bShouldBuildContextTree);
 
