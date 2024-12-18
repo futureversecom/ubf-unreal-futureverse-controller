@@ -72,7 +72,7 @@ private:
 	const TMap<FString, UUBFBindingObject*>& InputMap, const FOnComplete& OnComplete);
 	
 	void BuildContextTreeFromAssetTree(const TSharedPtr<FContextTree>& ContextTree, const FFutureverseAssetTreeData& AssetTree,
-		const TSharedPtr<FContextData>& RootNode) const;
+		const FString& RootAssetId, const TMap<FString, UBF::FDynamicHandle>& RootTraits) const;
 
 	void ParseInputsThenExecute(UFuturePassInventoryItem* Item, UUBFRuntimeController* Controller,
 		const TMap<FString, UUBFBindingObject*>& InputMap, const FOnComplete& OnComplete,
