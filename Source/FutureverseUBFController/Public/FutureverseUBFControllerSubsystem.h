@@ -3,12 +3,12 @@
 #pragma once
 
 #include "CoreMinimal.h"
-#include "FuturePassInventoryItem.h"
 #include "UBFRuntimeController.h"
 #include "ControllerLayers/APIGraphProvider.h"
 #include "ControllerLayers/APISubGraphResolver.h"
 #include "ControllerLayers/MemoryCacheLoader.h"
 #include "ControllerLayers/TempCacheLoader.h"
+#include "Items/UBFInventoryItem.h"
 #include "Subsystems/GameInstanceSubsystem.h"
 #include "FutureverseUBFControllerSubsystem.generated.h"
 
@@ -39,12 +39,12 @@ public:
 	
 	// Used for rendering an item by itself without asset tree
 	UFUNCTION(BlueprintCallable, meta = (AutoCreateRefTerm = "OnComplete"))
-	void RenderItem(UFuturePassInventoryItem* Item, UUBFRuntimeController* Controller,
+	void RenderItem(UUBFInventoryItem* Item, UUBFRuntimeController* Controller,
 		const TMap<FString, UUBFBindingObject*>& InputMap, const FOnComplete& OnComplete);
 	
 	// Used for rendering an item and other linked items using context tree
 	UFUNCTION(BlueprintCallable, meta = (AutoCreateRefTerm = "OnComplete"))
-	void RenderItemTree(UFuturePassInventoryItem* Item, UUBFRuntimeController* Controller,
+	void RenderItemTree(UUBFInventoryItem* Item, UUBFRuntimeController* Controller,
 		const TMap<FString, UUBFBindingObject*>& InputMap, const FOnComplete& OnComplete);
 
 	// Asset profiles contain the path for Blueprints, Parsing Blueprints and ResourceManifests associated with an UFuturePassInventoryItem
@@ -67,14 +67,14 @@ public:
 	void RegisterAssetData(const FString& AssetId, const FFutureverseAssetData& AssetData);
 
 private:
-	void ExecuteGraph(UFuturePassInventoryItem* Item, const TSharedPtr<FContextTree>& ContextTree,
+	void ExecuteGraph(UUBFInventoryItem* Item, const TSharedPtr<FContextTree>& ContextTree,
 	UUBFRuntimeController* Controller, const bool bShouldBuildContextTree, IGraphProvider* GraphProvider, ISubGraphResolver* SubGraphResolver,
 	const TMap<FString, UUBFBindingObject*>& InputMap, const FOnComplete& OnComplete);
 	
-	void BuildContextTreeFromAssetTree(const TSharedPtr<FContextTree>& ContextTree, const FFutureverseAssetTreeData& AssetTree,
+	void BuildContextTreeFromUBFContextData(const TSharedPtr<FContextTree>& ContextTree, const TArray<FUBFContextTreeData>& UBFContextTree,
 		const FString& RootAssetId, const TMap<FString, UBF::FDynamicHandle>& RootTraits) const;
 
-	void ParseInputsThenExecute(UFuturePassInventoryItem* Item, UUBFRuntimeController* Controller,
+	void ParseInputsThenExecute(UUBFInventoryItem* Item, UUBFRuntimeController* Controller,
 		const TMap<FString, UUBFBindingObject*>& InputMap, const FOnComplete& OnComplete,
 		TSharedPtr<FContextTree> ContextTree, const bool bShouldBuildContextTree);
 
@@ -103,6 +103,6 @@ private:
 	mutable UBF::FExecutionContextHandle LastParsingGraphExecutionContextHandle;
 	mutable UBF::FGraphHandle LastParsedGraph;
 	
-	friend class UFuturePassInventoryItem;
+	friend class UUBFInventoryItem;
 	friend class FLoadMultipleAssetDatasAction;
 };

@@ -1,26 +1,16 @@
 // Fill out your copyright notice in the Description page of Project Settings.
 
 
-#include "FutureverseInventoryComponent.h"
+#include "InventoryComponents/EmergenceUBFInventoryComponent.h"
 
 #include "FutureverseUBFControllerLog.h"
-#include "FutureverseUBFControllerSubsystem.h"
 #include "Futurepass/GetAssetTree.h"
 #include "Futurepass/GetFuturepassInventory.h"
 #include "Futurepass/GetFuturepassInventoryByCollectionAndOwner.h"
+#include "Items/UBFInventoryItem.h"
 
-
-// Sets default values for this component's properties
-UFutureverseInventoryComponent::UFutureverseInventoryComponent()
-	: PendingGetInventoryRequest(nullptr), PendingGetInventoryByCollectionAndOwnerRequest(nullptr)
-{}
-
-void UFutureverseInventoryComponent::GetInventory(TArray<UFuturePassInventoryItem*>& OutInventory)
-{
-	OutInventory.Append(Inventory);
-}
-
-void UFutureverseInventoryComponent::RequestFuturepassInventory(const FString& OwnerAddress, const FOnRequestCompleted& OnRequestCompleted)
+void UEmergenceUBFInventoryComponent::RequestFuturepassInventory(const FString& OwnerAddress,
+	const FOnRequestCompleted& OnRequestCompleted)
 {
 	if (PendingGetInventoryRequest)
 	{
@@ -36,7 +26,7 @@ void UFutureverseInventoryComponent::RequestFuturepassInventory(const FString& O
 	OnInventoryRequestCompleted = OnRequestCompleted;
 }
 
-void UFutureverseInventoryComponent::RequestFuturepassInventoryByCollectionAndOwner(const FString& OwnerAddress,
+void UEmergenceUBFInventoryComponent::RequestFuturepassInventoryByCollectionAndOwner(const FString& OwnerAddress,
 	const TArray<FString>& CollectionIds, const FOnRequestCompleted& OnRequestCompleted)
 {
 	if (PendingGetInventoryByCollectionAndOwnerRequest)
@@ -54,23 +44,22 @@ void UFutureverseInventoryComponent::RequestFuturepassInventoryByCollectionAndOw
 	OnFilteredInventoryRequestCompleted = OnRequestCompleted;
 }
 
-void UFutureverseInventoryComponent::UpdateInventory(const TArray<FEmergenceInventoryItem>& Items)
+void UEmergenceUBFInventoryComponent::UpdateInventory(const TArray<FEmergenceInventoryItem>& Items)
 {
-	// todo: do we want to always clear or compare current?
 	Inventory.Empty();
 	PendingNumberOfAssetTreeRequests = 0;
 	
 	for (auto& Item : Items)
 	{
-		UFuturePassInventoryItem* FuturePassItem = NewObject<UFuturePassInventoryItem>(this);
-		FuturePassItem->Initialize(Item);
+		UUBFInventoryItem* UBFItem = NewObject<UUBFInventoryItem>(this);
+		const auto ItemData = UUBFInventoryItem::CreateItemDataFromMetadataJson(Item.contract, Item.tokenId, Item.OriginalData);
+		UBFItem->SetItemData(ItemData);
 		
-		Inventory.Add(FuturePassItem);
-		
-		FString CollectionId = FuturePassItem->GetCollectionID();
-		if (CollectionId.IsEmpty()) continue;
+		Inventory.Add(UBFItem);
 
-		const auto AssetTreeRequest = UGetFutureverseAssetTree::GetFutureverseAssetTree(this, Item.tokenId, CollectionId);
+		if (ItemData.CollectionID.IsEmpty()) continue;
+
+		const auto AssetTreeRequest = UGetFutureverseAssetTree::GetFutureverseAssetTree(this, Item.tokenId, ItemData.CollectionID);
 		AssetTreeRequest->OnGetAssetTreeCompleted.AddDynamic(this, &ThisClass::HandleGetAssetTree);
 		AssetTreeRequest->Activate();
 		
@@ -85,7 +74,7 @@ void UFutureverseInventoryComponent::UpdateInventory(const TArray<FEmergenceInve
 	}
 }
 
-void UFutureverseInventoryComponent::HandleGetFuturepassInventory(FEmergenceInventory Response, EErrorCode StatusCode)
+void UEmergenceUBFInventoryComponent::HandleGetFuturepassInventory(FEmergenceInventory Response, EErrorCode StatusCode)
 {
 	PendingGetInventoryRequest->OnGetFuturepassInventoryCompleted.RemoveDynamic(this, &ThisClass::HandleGetFuturepassInventory);
 	PendingGetInventoryRequest = nullptr;
@@ -95,7 +84,7 @@ void UFutureverseInventoryComponent::HandleGetFuturepassInventory(FEmergenceInve
 	UpdateInventory(Response.items);
 }
 
-void UFutureverseInventoryComponent::HandleGetFuturepassInventoryByCollectionAndOwner(FEmergenceInventory Response,
+void UEmergenceUBFInventoryComponent::HandleGetFuturepassInventoryByCollectionAndOwner(FEmergenceInventory Response,
 	EErrorCode StatusCode)
 {
 	PendingGetInventoryByCollectionAndOwnerRequest->OnGetFuturepassInventoryCompleted.RemoveDynamic(this, &ThisClass::HandleGetFuturepassInventoryByCollectionAndOwner);
@@ -106,7 +95,7 @@ void UFutureverseInventoryComponent::HandleGetFuturepassInventoryByCollectionAnd
 	UpdateInventory(Response.items);
 }
 
-void UFutureverseInventoryComponent::HandleGetAssetTree(const TArray<FFutureverseAssetTreePath>& Tree,
+void UEmergenceUBFInventoryComponent::HandleGetAssetTree(const TArray<FFutureverseAssetTreePath>& Tree,
 	EErrorCode StatusCode)
 {
 	PendingNumberOfAssetTreeRequests--;
@@ -124,37 +113,42 @@ void UFutureverseInventoryComponent::HandleGetAssetTree(const TArray<FFuturevers
 		return;
 	}
 
-	for (auto TreePath : Tree)
+	for (const FFutureverseAssetTreePath& TreePath : Tree)
 	{
 		for (const auto Item : Inventory)
 		{
 			if (TreePath.Id.Contains(Item->GetCombinedID()))
 			{
-				FFutureverseAssetTreeData AssetTree;
-				AssetTree.TreePaths = Tree;
+				TArray<FUBFContextTreeData> ContextTree;
+				TMap<FString, FString> Children;
 				
-				if(TreePath.Objects.IsEmpty())
+				for (const auto& AssetTreeObjectTuple : TreePath.Objects)
 				{
-					// still add itself as a linked item
-					AssetTree.LinkedItems = TMap<FString, FString>{{TreePath.Id, Item->GetAssetID()}};
-					Item->SetAssetTree(AssetTree);
-					continue;
+					// assuming that equipped tree path always starts with "path:"
+					if (!AssetTreeObjectTuple.Key.StartsWith(TEXT("path:"))) continue;
+
+					// ensure related child item exists in the inventory and add it to context tree 
+					for (const auto ChildItem : Inventory)
+					{
+						if (AssetTreeObjectTuple.Value.Id.Contains(ChildItem->GetCombinedID()))
+						{
+							UE_LOG(LogFutureverseUBFController, Verbose,
+							TEXT("UFutureverseInventoryComponent::HandleGetAssetTree Adding Child Item: %s with Relationship: %s"), *Item->GetAssetID(), *AssetTreeObjectTuple.Key);
+							Children.Add(AssetTreeObjectTuple.Key, ChildItem->GetAssetID());
+						}
+					}
 				}
-				
-				auto LinkedItems = GetLinkedItemsForAssetTree(Tree);
 				
 				// Add root item
 				UE_LOG(LogFutureverseUBFController, Verbose,
-					TEXT("UFutureverseInventoryComponent::HandleGetAssetTree Adding Root Item: %s to Linked Items"), *Item->GetAssetID());
-				LinkedItems.Add(TreePath.Id, Item->GetAssetID());
-				AssetTree.LinkedItems = LinkedItems;
-			
-				Item->SetAssetTree(AssetTree);
+					TEXT("UFutureverseInventoryComponent::HandleGetAssetTree Adding Root Item: %s Number of relationships: %d"), *Item->GetAssetID(), Children.Num());
+				
+				ContextTree.Add(FUBFContextTreeData(Item->GetAssetID(), Children));
+				Item->SetContextTree(ContextTree);
 			}
 		}
 	}
 	
-
 	if (PendingNumberOfAssetTreeRequests <= 0)
 	{
 		OnInventoryUpdated.Broadcast();
@@ -162,30 +156,3 @@ void UFutureverseInventoryComponent::HandleGetAssetTree(const TArray<FFuturevers
 		OnFilteredInventoryRequestCompleted.ExecuteIfBound();
 	}
 }
-
-TMap<FString, FString> UFutureverseInventoryComponent::GetLinkedItemsForAssetTree(
-	const TArray<FFutureverseAssetTreePath>& AssetTree)
-{
-	TMap<FString, FString> LinkedItems;
-	
-	for (int i = 0; i < AssetTree.Num(); ++i)
-	{
-		for (auto AssetTreeObject : AssetTree[i].Objects)
-		{
-			for (const auto Item : Inventory)
-			{
-				if (AssetTreeObject.Value.Id.Contains(Item->GetCombinedID()))
-				{
-					UE_LOG(LogFutureverseUBFController, Verbose,
-					TEXT("UFutureverseInventoryComponent::HandleGetAssetTree Adding Item: %s to Linked Items"), *Item->GetAssetID());
-					LinkedItems.Add(AssetTreeObject.Value.Id, Item->GetAssetID());
-				}
-			}
-		}
-	}
-
-	return LinkedItems;
-}
-
-
-
