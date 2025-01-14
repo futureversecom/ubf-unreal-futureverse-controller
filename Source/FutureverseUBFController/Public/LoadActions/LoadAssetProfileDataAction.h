@@ -1,6 +1,7 @@
 #pragma once
+
 #include "FutureverseUBFControllerSubsystem.h"
-#include "LoadAction.h"
+#include "LoadActions/LoadAction.h"
 #include "ControllerLayers/APIGraphProvider.h"
 
 class FLoadAssetProfileDataAction : public TLoadAction<FLoadAssetProfileDataAction>

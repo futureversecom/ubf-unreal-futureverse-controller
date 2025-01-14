@@ -4,6 +4,7 @@ template<class T>
 class TLoadAction : public TSharedFromThis<T>
 {
 public:
+	bool WasFailure() const {return bFailure;}
 protected:
 	void CompletePendingLoad();
 	void CheckPendingLoadsComplete();

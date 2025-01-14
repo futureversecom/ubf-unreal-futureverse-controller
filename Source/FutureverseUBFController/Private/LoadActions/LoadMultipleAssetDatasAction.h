@@ -1,5 +1,6 @@
 #pragma once
 #include "LoadAssetProfilesAction.h"
+#include "LoadActions/LoadAction.h"
 
 class FTempCacheLoader;
 class FMemoryCacheLoader;
