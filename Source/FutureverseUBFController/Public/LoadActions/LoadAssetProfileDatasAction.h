@@ -6,7 +6,7 @@ class FTempCacheLoader;
 class FMemoryCacheLoader;
 class FLoadAssetProfileDataAction;
 
-class FLoadAssetProfileDatasAction : TLoadAction<FLoadAssetProfileDatasAction>
+class FUTUREVERSEUBFCONTROLLER_API FLoadAssetProfileDatasAction : public TLoadAction<FLoadAssetProfileDatasAction>
 {
 public:
 	FLoadAssetProfileDatasAction() {}
