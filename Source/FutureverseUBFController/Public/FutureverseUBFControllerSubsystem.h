@@ -82,7 +82,7 @@ private:
 	
 	TFuture<bool> TryLoadAssetData(const FFutureverseAssetLoadData& LoadData);
 	TFuture<bool> TryLoadAssetProfileData(const FString& AssetID);
-	TFuture<bool> TryLoadAssetProfile(const FString& ContractId);
+	TFuture<bool> TryLoadAssetProfile(const FFutureverseAssetLoadData& LoadData);
 	
 	TFuture<TMap<FString, UUBFBindingObject*>> GetTraitsForItem(const FString& ParsingGraphId,
 		UUBFRuntimeController* Controller, const TMap<FString, UBF::FDynamicHandle>& ParsingInputs) const;

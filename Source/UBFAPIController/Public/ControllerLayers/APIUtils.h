@@ -87,10 +87,12 @@ namespace APIUtils
 		TFuture<UBF::FLoadDataArrayResult> Future = Promise->GetFuture();
 
 		TArray<uint8> CachedData;
+
+		FString TrimmedPath = Path.TrimStartAndEnd();
 		
-		if (CacheLoader != nullptr && CacheLoader->TryGetCachedBytes(Path, Hash, CachedData))
+		if (CacheLoader != nullptr && CacheLoader->TryGetCachedBytes(TrimmedPath, Hash, CachedData))
 		{
-			UE_LOG(LogUBFAPIController, VeryVerbose, TEXT("Loaded data from cached bytes : %s"), *Path);
+			UE_LOG(LogUBFAPIController, VeryVerbose, TEXT("Loaded data from cached bytes : %s"), *TrimmedPath);
 			
 			UBF::FLoadDataArrayResult CacheLoadResult;
 			CacheLoadResult.Result = TPair<bool, TArray<uint8>>(true, CachedData);
@@ -98,9 +100,9 @@ namespace APIUtils
 			return Future;
 		}
 		
-		if (Path.StartsWith(TEXT("http")))
+		if (TrimmedPath.StartsWith(TEXT("http")))
 		{
-			MakeDownloadRequest(Path).Next([Promise, Path, Hash, CacheLoader](const TSharedPtr<IHttpResponse>& Response)
+			MakeDownloadRequest(TrimmedPath).Next([Promise, TrimmedPath, Hash, CacheLoader](const TSharedPtr<IHttpResponse>& Response)
 			{
 				UBF::FLoadDataArrayResult LoadResult;
 				TArray<uint8> Data;
@@ -110,7 +112,7 @@ namespace APIUtils
 					Data = Response->GetContent();
 					if (CacheLoader != nullptr)
 					{
-						CacheLoader->CacheBytes(Path, Hash, Data);
+						CacheLoader->CacheBytes(TrimmedPath, Hash, Data);
 					}
 
 					LoadResult.Result = TPair<bool, TArray<uint8>>(true, Data);
@@ -119,13 +121,13 @@ namespace APIUtils
 				else if (Response.IsValid())
 				{
 					FString ErrorMessage = GetDescription(static_cast<EHttpResponseCodes::Type>(Response->GetResponseCode())).ToString();
-					UE_LOG(LogUBFAPIController, Error, TEXT("Failed to download with URL: %s Message: %s"), *Path, *ErrorMessage);
+					UE_LOG(LogUBFAPIController, Error, TEXT("Failed to download with URL: %s Message: %s"), *TrimmedPath, *ErrorMessage);
 					LoadResult.Result = TPair<bool, TArray<uint8>>(false, Data);
 					Promise->SetValue(LoadResult);
 				}
 				else
 				{
-					UE_LOG(LogUBFAPIController, Error, TEXT("Invalid Response from URL: %s"), *Path);
+					UE_LOG(LogUBFAPIController, Error, TEXT("Invalid Response from URL: %s"), *TrimmedPath);
 					LoadResult.Result = TPair<bool, TArray<uint8>>(false, Data);
 					Promise->SetValue(LoadResult);
 				}
@@ -137,15 +139,15 @@ namespace APIUtils
 			UBF::FLoadDataArrayResult LoadResult;
 			TArray<uint8> Data;
 			
-			bool WasSuccessful = LoadLocalFileToData(Path, Data);
+			bool WasSuccessful = LoadLocalFileToData(TrimmedPath, Data);
 			if (!WasSuccessful)
 			{
-				UE_LOG(LogUBFAPIController, Error, TEXT("Failed to load file to data from path: %s"), *Path);
+				UE_LOG(LogUBFAPIController, Error, TEXT("Failed to load file to data from path: %s"), *TrimmedPath);
 			}
 			
 			if (WasSuccessful && CacheLoader != nullptr)
 			{
-				CacheLoader->CacheBytes(Path, Hash, Data);
+				CacheLoader->CacheBytes(TrimmedPath, Hash, Data);
 			}
 
 			LoadResult.Result = TPair<bool, TArray<uint8>>(WasSuccessful, Data);

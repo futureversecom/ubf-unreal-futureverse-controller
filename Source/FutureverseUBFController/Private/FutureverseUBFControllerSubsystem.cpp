@@ -70,7 +70,7 @@ void UFutureverseUBFControllerSubsystem::RenderItemTree(UUBFInventoryItem* Item,
 	});
 }
 
-TFuture<bool> UFutureverseUBFControllerSubsystem::TryLoadAssetProfile(const FString& ContractId)
+TFuture<bool> UFutureverseUBFControllerSubsystem::TryLoadAssetProfile(const FFutureverseAssetLoadData& LoadData)
 {
 	TSharedPtr<TPromise<bool>> Promise = MakeShareable(new TPromise<bool>());
 	TFuture<bool> Future = Promise->GetFuture();
@@ -78,7 +78,7 @@ TFuture<bool> UFutureverseUBFControllerSubsystem::TryLoadAssetProfile(const FStr
 	TSharedPtr<FLoadAssetProfilesAction> LoadAssetProfilesAction = MakeShared<FLoadAssetProfilesAction>();
 	PendingActions.Add(LoadAssetProfilesAction);
 
-	LoadAssetProfilesAction->TryLoadAssetProfile(ContractId, MemoryCacheLoader, TempCacheLoader)
+	LoadAssetProfilesAction->TryLoadAssetProfile(LoadData, MemoryCacheLoader, TempCacheLoader)
 	.Next([this, Promise, LoadAssetProfilesAction](bool bSuccess)
 	{
 		if (bSuccess)
@@ -241,7 +241,7 @@ TFuture<bool> UFutureverseUBFControllerSubsystem::TryLoadAssetData(const FFuture
 		return Future;
 	}
 	
-	TryLoadAssetProfile(LoadData.ContractID).Next([this, Promise, LoadData](bool bResult)
+	TryLoadAssetProfile(LoadData).Next([this, Promise, LoadData](bool bResult)
 	{
 		if (!bResult || !AssetProfiles.Contains(LoadData.AssetID))
 		{

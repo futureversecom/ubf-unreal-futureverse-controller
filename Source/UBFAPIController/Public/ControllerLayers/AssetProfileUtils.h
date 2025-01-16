@@ -38,6 +38,37 @@ namespace AssetProfileUtils
 			UE_LOG(LogUBFAPIController, Warning, TEXT("AssetProfileUtils::ParseAssetProfileJson Failed to parse JSON string\n %s."), *Json);
 			return;
 		}
+
+		// Handle case when this is single profile
+		if (JsonObject->HasField(RenderInstance))
+		{
+			// Extract the RenderBlueprintUrl
+			FString RenderBlueprintInstanceUri = JsonObject->HasField(RenderInstance)
+					? JsonObject->GetStringField(RenderInstance)
+					: "";
+				
+			FString RenderCatalogUri = JsonObject->HasField(RenderCatalog)
+					? JsonObject->GetStringField(RenderCatalog)
+					: "";
+				
+			FString ParsingBlueprintInstanceUri = JsonObject->HasField(ParsingInstance)
+					? JsonObject->GetStringField(ParsingInstance)
+					: "";
+				
+			FString ParsingCatalogUri = JsonObject->HasField(ParsingCatalog)
+					? JsonObject->GetStringField(ParsingCatalog)
+					: "";
+				
+			// Register the graph and catalog locations
+			FAssetProfile AssetProfileEntry;
+			AssetProfileEntry.Id = "";
+			AssetProfileEntry.RenderBlueprintInstanceUri = RenderBlueprintInstanceUri;
+			AssetProfileEntry.RenderCatalogUri = RenderCatalogUri;
+			AssetProfileEntry.ParsingBlueprintInstanceUri = ParsingBlueprintInstanceUri;
+			AssetProfileEntry.ParsingCatalogUri = ParsingCatalogUri;
+				
+			AssetProfileEntries.Add(AssetProfileEntry);
+		}
 		
 		// Get the "AssetProfiles" array from the JSON object
 		TArray<TSharedPtr<FJsonValue>> AssetProfiles = JsonObject->GetArrayField(TEXT("AssetProfiles"));
