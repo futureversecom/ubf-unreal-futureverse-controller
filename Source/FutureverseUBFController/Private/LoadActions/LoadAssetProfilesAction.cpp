@@ -21,7 +21,7 @@ TFuture<bool> FLoadAssetProfilesAction::TryLoadAssetProfile(const FFutureverseAs
 	if (Settings)
 	{
 		ProfileRemotePath = FPaths::Combine(Settings->GetDefaultAssetProfilePath(), FString::Printf(TEXT("%s_%s_profile.json"), *LoadData.ContractID, *LoadData.GetAssetName()));
-		ProfileRemotePath = ProfileRemotePath.Replace(TEXT(" "), TEXT("-"));
+		ProfileRemotePath = ProfileRemotePath.Replace(TEXT(" "), TEXT("")).Replace(TEXT("-"), TEXT(""));
 	}
 	else
 	{
