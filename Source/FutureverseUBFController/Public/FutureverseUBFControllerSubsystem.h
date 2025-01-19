@@ -21,8 +21,8 @@ struct FFutureverseAssetData
 {
 	FFutureverseAssetData(){}
 	
-	FBlueprintInstance RenderGraphInstance;
-	FBlueprintInstance ParsingGraphInstance;
+	FBlueprintJson RenderGraphInstance;
+	FBlueprintJson ParsingGraphInstance;
 };
 
 /**
@@ -68,7 +68,7 @@ public:
 
 private:
 	void ExecuteGraph(UUBFInventoryItem* Item, const TSharedPtr<FContextTree>& ContextTree,
-	UUBFRuntimeController* Controller, const bool bShouldBuildContextTree, IGraphProvider* GraphProvider, ISubGraphResolver* SubGraphResolver,
+	UUBFRuntimeController* Controller, const bool bShouldBuildContextTree,
 	const TMap<FString, UUBFBindingObject*>& InputMap, const FOnComplete& OnComplete);
 	
 	void BuildContextTreeFromUBFContextData(const TSharedPtr<FContextTree>& ContextTree, const TArray<FUBFContextTreeData>& UBFContextTree,

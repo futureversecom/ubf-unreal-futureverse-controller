@@ -4,6 +4,30 @@
 #include "ControllerLayers/AssetProfileUtils.h"
 #include "ControllerLayers/DownloadRequestManager.h"
 
+namespace LoadBlueprintInstanceUtil
+{
+	FString ParseBlueprintInstanceID(const FString& Path)
+	{
+		FString CleanPath = Path;
+
+		// Check if it's a URL and strip everything before the last '/'
+		if (Path.Contains(TEXT("://")))
+		{
+			int32 LastSlashIndex;
+			if (Path.FindLastChar('/', LastSlashIndex))
+			{
+				CleanPath = Path.Mid(LastSlashIndex + 1);
+			}
+		}
+
+		// Now use FPaths to clean the filename and get the base filename
+		FString FileName = FPaths::GetCleanFilename(CleanPath);
+		FString FileNameWithoutExtension = FPaths::GetBaseFilename(FileName);
+
+		return FileNameWithoutExtension;
+	}
+}
+
 TFuture<bool> FLoadAssetProfileDataAction::TryLoadAssetProfileData(const FAssetProfile& AssetProfile, const TSharedPtr<FMemoryCacheLoader>& MemoryCacheLoader, const TSharedPtr<FTempCacheLoader>& TempCacheLoader)
 {
 	Promise = MakeShareable(new TPromise<bool>());
@@ -26,15 +50,14 @@ TFuture<bool> FLoadAssetProfileDataAction::TryLoadAssetProfileData(const FAssetP
 				return;
 			}
 
-			FBlueprintInstance BlueprintInstance;
-			AssetProfileUtils::ParseBlueprintInstanceJson(LoadResult.Result.Value, BlueprintInstance);
+			FBlueprintJson BlueprintInstance(LoadBlueprintInstanceUtil::ParseBlueprintInstanceID(AssetProfile.GetRenderBlueprintInstanceUri()), LoadResult.Result.Value);
 			SharedThis->AssetData.RenderGraphInstance = BlueprintInstance;
 
 			if(!AssetProfile.RenderCatalogUri.IsEmpty())
 			{
 				SharedThis->AddPendingLoad();
 				FDownloadRequestManager::GetInstance()->LoadStringFromURI(TEXT("Catalog"),AssetProfile.GetRenderCatalogUri(), AssetProfile.GetRenderCatalogUri(), MemoryCacheLoader.Get())
-					.Next([SharedThis, AssetProfile, BlueprintInstance](const UBF::FLoadStringResult& LoadResult)
+					.Next([SharedThis, AssetProfile](const UBF::FLoadStringResult& LoadResult)
 				{
 					if (!LoadResult.Result.Key)
 					{
@@ -66,9 +89,8 @@ TFuture<bool> FLoadAssetProfileDataAction::TryLoadAssetProfileData(const FAssetP
 				SharedThis->CompletePendingLoad();
 				return;
 			}
-					
-			FBlueprintInstance BlueprintInstance;
-			AssetProfileUtils::ParseBlueprintInstanceJson(LoadResult.Result.Value, BlueprintInstance);
+
+				FBlueprintJson BlueprintInstance(LoadBlueprintInstanceUtil::ParseBlueprintInstanceID(AssetProfile.GetParsingBlueprintInstanceUri()), LoadResult.Result.Value);
 			SharedThis->AssetData.ParsingGraphInstance = BlueprintInstance;
 				
 			if(!AssetProfile.ParsingCatalogUri.IsEmpty())

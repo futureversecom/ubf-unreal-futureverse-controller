@@ -43,7 +43,7 @@ void UFutureverseUBFControllerSubsystem::RenderItem(UUBFInventoryItem* Item, UUB
 			return;
 		}
 		
-		ExecuteGraph(Item, ContextTree, Controller, false, APIGraphProvider.Get(), APISubGraphProvider.Get(), InputMap, OnComplete);
+		ExecuteGraph(Item, ContextTree, Controller, false, InputMap, OnComplete);
 	});
 }
 
@@ -66,7 +66,7 @@ void UFutureverseUBFControllerSubsystem::RenderItemTree(UUBFInventoryItem* Item,
 			return;
 		}
 		
-		ExecuteGraph(Item, ContextTree, Controller, true, APIGraphProvider.Get(), APISubGraphProvider.Get(), InputMap, OnComplete);
+		ExecuteGraph(Item, ContextTree, Controller, true, InputMap, OnComplete);
 	});
 }
 
@@ -125,7 +125,7 @@ TFuture<TMap<FString, UUBFBindingObject*>> UFutureverseUBFControllerSubsystem::G
 		Promise->SetValue(UBFUtils::AsBindingObjectMap(Traits));
 	};
 	
-	APIGraphProvider->GetGraph(ParsingGraphId)
+	APIGraphProvider->GetGraph(ParsingGraphId, ParsingGraphId)
 		.Next([this, ParsingInputs, ParsingGraphId, OnParsingGraphComplete, Controller, Promise]
 		(const UBF::FLoadGraphResult& Result)
 	{
@@ -279,10 +279,10 @@ TFuture<bool> UFutureverseUBFControllerSubsystem::TryLoadAssetProfileData(const 
 	{
 		if (bSuccess)
 		{
-			APIGraphProvider->RegisterBlueprintInstance(AssetProfileDataAction->AssetData.RenderGraphInstance);
+			APIGraphProvider->RegisterBlueprintJson(AssetProfileDataAction->AssetData.RenderGraphInstance);
 
 			if (AssetProfileDataAction->AssetData.ParsingGraphInstance.IsValid())
-				APIGraphProvider->RegisterBlueprintInstance(AssetProfileDataAction->AssetData.ParsingGraphInstance);
+				APIGraphProvider->RegisterBlueprintJson(AssetProfileDataAction->AssetData.ParsingGraphInstance);
 
 			APIGraphProvider->RegisterCatalogs(AssetProfileDataAction->AssetData.RenderGraphInstance.GetId(), AssetProfileDataAction->RenderCatalogMap);
 			
@@ -323,10 +323,10 @@ void UFutureverseUBFControllerSubsystem::RegisterAssetProfilesFromData(
 }
 
 void UFutureverseUBFControllerSubsystem::ExecuteGraph(UUBFInventoryItem* Item, const TSharedPtr<FContextTree>& ContextTree,
-	UUBFRuntimeController* Controller, const bool bShouldBuildContextTree, IGraphProvider* GraphProvider, ISubGraphResolver* SubGraphResolver,
+	UUBFRuntimeController* Controller, const bool bShouldBuildContextTree,
     const TMap<FString, UUBFBindingObject*>& InputMap, const FOnComplete& OnComplete)
 {
-	const auto AssetData = AssetDataMap[Item->GetAssetID()];
+	const auto& AssetData = AssetDataMap[Item->GetAssetID()];
 		
 	if (AssetData.ParsingGraphInstance.IsValid())
 	{
@@ -336,7 +336,7 @@ void UFutureverseUBFControllerSubsystem::ExecuteGraph(UUBFInventoryItem* Item, c
 
 	if (!AssetData.RenderGraphInstance.IsValid())
 	{
-		UE_LOG(LogFutureverseUBFController, Warning, TEXT("UFutureverseUBFControllerSubsystem::RenderItem Item %s provided invalid Rendering Graph Instance. Cannot render."), *Item->GetAssetID());
+		UE_LOG(LogFutureverseUBFController, Warning, TEXT("UFutureverseUBFControllerSubsystem::ExecuteGraph Item %s provided invalid Rendering Graph Instance. Cannot render."), *Item->GetAssetID());
 		return;
 	}
 	
@@ -347,7 +347,7 @@ void UFutureverseUBFControllerSubsystem::ExecuteGraph(UUBFInventoryItem* Item, c
 	}
 	
 	// input priorities in order (inputs, traits, blueprint variables)
-	auto ResolvedInputs = UBFUtils::AsBindingObjectMap(AssetData.RenderGraphInstance.GetVariables());
+	TMap<FString, UUBFBindingObject*> ResolvedInputs = UBFUtils::AsBindingObjectMap(AssetData.RenderGraphInstance.GetVariables());
 	ResolvedInputs.Append(InputMap);
 	
 	if (!Controller)
@@ -356,7 +356,7 @@ void UFutureverseUBFControllerSubsystem::ExecuteGraph(UUBFInventoryItem* Item, c
 		return;
 	}
 	
-	Controller->SetGraphProviders(GraphProvider, SubGraphResolver);
+	Controller->SetGraphProviders(APIGraphProvider.Get(), APISubGraphProvider.Get());
 	Controller->ExecuteGraph(AssetData.RenderGraphInstance.GetId(), ResolvedInputs, OnComplete);
 }
 
@@ -440,7 +440,7 @@ void UFutureverseUBFControllerSubsystem::RegisterAssetData(const FString& AssetI
 
 	UE_LOG(LogFutureverseUBFController, VeryVerbose,
 		TEXT("UFutureverseUBFControllerSubsystem::RegisterAssetData Registered AssetData for Item %s RenderingGraphBlueprintId: %s ParsingGraphBlueprintId: %s"),
-		*AssetId, *AssetData.RenderGraphInstance.GetBlueprintId(), *AssetData.ParsingGraphInstance.GetBlueprintId());
+		*AssetId, *AssetData.RenderGraphInstance.GetId(), *AssetData.ParsingGraphInstance.GetId());
 }
 
 UFutureverseUBFControllerSubsystem* UFutureverseUBFControllerSubsystem::Get(const UObject* WorldContext)

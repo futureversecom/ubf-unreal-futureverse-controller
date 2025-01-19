@@ -3,7 +3,7 @@
 #pragma once
 
 #include "CoreMinimal.h"
-#include "BlueprintInstance.h"
+#include "BlueprintJson.h"
 #include "GraphProvider.h"
 #include "ICacheLoader.h"
 
@@ -74,22 +74,22 @@ public:
 
 	explicit FAPIGraphProvider(const TSharedPtr<ICacheLoader>& NewGraphCacheLoader, const TSharedPtr<ICacheLoader>& NewResourceCacheLoader);
 	
-	virtual TFuture<UBF::FLoadGraphResult> GetGraph(const FString& InstanceId) override;
+	virtual TFuture<UBF::FLoadGraphResult> GetGraph(const FString& CatalogId, const FString& ArtifactId) override;
 	
 	virtual TFuture<UBF::FLoadGraphInstanceResult> GetGraphInstance(const FString& InstanceId) override;
 
-	virtual TFuture<UBF::FLoadTextureResult> GetTextureResource(const FString& BlueprintId, const FString& ResourceId) override;
+	virtual TFuture<UBF::FLoadTextureResult> GetTextureResource(const FString& CatalogId, const FString& ArtifactId) override;
 
-	virtual TFuture<UBF::FLoadDataArrayResult> GetMeshResource(const FString& BlueprintId, const FString& ResourceId) override;
+	virtual TFuture<UBF::FLoadDataArrayResult> GetMeshResource(const FString& CatalogId, const FString& ArtifactId) override;
 
 	void RegisterCatalog(const FString& InstanceId, const FCatalogElement& Catalog);
 	void RegisterCatalogs(const FString& InstanceId, const TMap<FString, FCatalogElement>& CatalogMap);
-	void RegisterBlueprintInstance(const FBlueprintInstance& BlueprintInstance);
+	void RegisterBlueprintJson(const FBlueprintJson& BlueprintJson);
 	
 	virtual ~FAPIGraphProvider() override = default;
 private:
 	TMap<FString, TMap<FString, FCatalogElement>> Catalogs;
-	TMap<FString, FBlueprintInstance> BlueprintInstances;
+	TMap<FString, FBlueprintJson> BlueprintJsons;
 
 	TSharedPtr<ICacheLoader> GraphCacheLoader;
 	TSharedPtr<ICacheLoader> ResourceCacheLoader;
