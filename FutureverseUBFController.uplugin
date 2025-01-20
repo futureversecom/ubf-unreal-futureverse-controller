@@ -29,10 +29,6 @@
 	{
 		"Name": "UBF",
 		"Enabled": true
-	},
-	{
-		"Name": "Emergence",
-		"Enabled": true
 	}
 ]
 }

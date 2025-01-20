@@ -3,7 +3,6 @@
 
 #include "FutureverseUBFControllerSubsystem.h"
 
-#include "EmergenceSingleton.h"
 #include "FutureverseAssetLoadData.h"
 #include "FutureverseUBFControllerLog.h"
 #include "CollectionData/CollectionAssetProfiles.h"
@@ -305,12 +304,8 @@ TFuture<bool> UFutureverseUBFControllerSubsystem::TryLoadAssetProfileData(const 
 }
 
 void UFutureverseUBFControllerSubsystem::RegisterAssetProfilesFromData(
-	UCollectionAssetProfiles* CollectionAssetProfiles)
+	const EEnvironment& Environment, UCollectionAssetProfiles* CollectionAssetProfiles)
 {
-	if (!UEmergenceSingleton::GetEmergenceManager(this)) return;
-	
-	const auto Environment = UEmergenceSingleton::GetEmergenceManager(this)->GetFutureverseEnvironment();
-	
 	if (!CollectionAssetProfiles->AssetProfilesJsonMap.Contains(Environment)) return;
 	
 	const auto AssetProfilesJson = CollectionAssetProfiles->AssetProfilesJsonMap[Environment];

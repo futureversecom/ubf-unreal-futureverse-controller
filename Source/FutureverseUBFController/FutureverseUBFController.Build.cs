@@ -25,7 +25,7 @@ public class FutureverseUBFController : ModuleRules
 		PublicDependencyModuleNames.AddRange(
 			new string[]
 			{
-				"Core", "Emergence", "UBF", "UBFAPIController", "HTTP"
+				"Core", "UBF", "UBFAPIController", "HTTP"
 				// ... add other public dependencies that you statically link with here ...
 			}
 			);

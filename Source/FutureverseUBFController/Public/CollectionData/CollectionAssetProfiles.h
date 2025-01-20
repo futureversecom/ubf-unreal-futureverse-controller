@@ -7,8 +7,7 @@
 #include "Engine/DataAsset.h"
 #include "CollectionAssetProfiles.generated.h"
 
-enum class EFutureverseEnvironment : uint8;
-
+enum class EEnvironment : uint8;
 /*
  * Contains same data as FAssetProfile minus relative path,
  * exists to make data entry of asset profiles easier as you don't have to specify 'BasePath' multiple times
@@ -43,9 +42,9 @@ class FUTUREVERSEUBFCONTROLLER_API UCollectionAssetProfiles : public UDataAsset
 public:
 	UPROPERTY(EditAnywhere, BlueprintReadOnly)
 	FString BasePath;
-
+	
 	UPROPERTY(EditAnywhere, BlueprintReadOnly)
-	TMap<EFutureverseEnvironment, FString> AssetProfilesJsonMap;
+	TMap<EEnvironment, FString> AssetProfilesJsonMap;
 
 	UPROPERTY(EditAnywhere, BlueprintReadOnly)
 	TArray<FAssetProfileData> AdditionalData;

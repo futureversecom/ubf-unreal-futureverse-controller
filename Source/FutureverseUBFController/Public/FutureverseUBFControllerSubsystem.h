@@ -25,6 +25,14 @@ struct FFutureverseAssetData
 	FBlueprintInstance ParsingGraphInstance;
 };
 
+UENUM(BlueprintType)
+enum class EEnvironment : uint8
+{
+	Development,
+	Staging,
+	Production,
+};
+
 /**
  * 
  */
@@ -52,7 +60,7 @@ public:
 
 	// Register AssetProfile from data asset
 	UFUNCTION(BlueprintCallable)
-	void RegisterAssetProfilesFromData(UCollectionAssetProfiles* CollectionAssetProfiles);
+	void RegisterAssetProfilesFromData(const EEnvironment& Environment, UCollectionAssetProfiles* CollectionAssetProfiles);
 	// Register AssetProfile from json
 	UFUNCTION(BlueprintCallable)
 	void RegisterAssetProfilesFromJson(const FString& Json, const FString& BasePath);

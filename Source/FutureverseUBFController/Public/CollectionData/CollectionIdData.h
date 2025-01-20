@@ -6,7 +6,7 @@
 #include "Engine/DataAsset.h"
 #include "CollectionIdData.generated.h"
 
-enum class EFutureverseEnvironment : uint8;
+enum class EEnvironment : uint8;
 
 USTRUCT(BlueprintType)
 struct FUTUREVERSEUBFCONTROLLER_API FCollectionIdDefinition
@@ -14,7 +14,7 @@ struct FUTUREVERSEUBFCONTROLLER_API FCollectionIdDefinition
 	GENERATED_BODY()
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite)
-	EFutureverseEnvironment Environment;
+	EEnvironment Environment;
 	
 	UPROPERTY(EditAnywhere, BlueprintReadWrite)
 	TArray<FString> CollectionIds;
@@ -32,7 +32,7 @@ public:
 	TArray<FCollectionIdDefinition> CollectionsIdDefinitions;
 
 	UFUNCTION(BlueprintCallable)
-	TArray<FString> GetCollectionQueryIds(const EFutureverseEnvironment Environment) const
+	TArray<FString> GetCollectionQueryIds(const EEnvironment Environment) const
 	{
 		for (auto CollectionIdDefinition : CollectionsIdDefinitions)
 		{
