@@ -1,6 +1,5 @@
 #pragma once
 
-#include "FutureverseUBFControllerSubsystem.h"
 #include "ControllerLayers/APIGraphProvider.h"
 #include "ControllerLayers/MemoryCacheLoader.h"
 #include "ControllerLayers/TempCacheLoader.h"
