@@ -1,5 +1,4 @@
 #pragma once
-#include "LoadAssetProfilesAction.h"
 #include "LoadActions/LoadAction.h"
 
 class FTempCacheLoader;
@@ -9,7 +8,7 @@ class FLoadMultipleAssetDatasAction : public TLoadAction<FLoadMultipleAssetDatas
 {
 public:
 	FLoadMultipleAssetDatasAction() {}
-	TFuture<bool> TryLoadAssetProfiles(const TArray<FFutureverseAssetLoadData>& AssetLoadDatas, UFutureverseUBFControllerSubsystem*
+	TFuture<bool> TryLoadAssetProfiles(const TArray<struct FFutureverseAssetLoadData>& AssetLoadDatas, class UFutureverseUBFControllerSubsystem*
 	                                   FutureverseUbfControllerSubsystem);
 
 	
