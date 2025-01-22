@@ -67,16 +67,16 @@ public:
 	void RegisterAssetData(const FString& AssetId, const FFutureverseAssetData& AssetData);
 
 private:
-	void ExecuteGraph(UUBFInventoryItem* Item, const TSharedPtr<FContextTree>& ContextTree,
-	UUBFRuntimeController* Controller, const bool bShouldBuildContextTree,
-	const TMap<FString, UUBFBindingObject*>& InputMap, const FOnComplete& OnComplete);
+	void ExecuteGraph(UUBFInventoryItem* Item,
+	                  UUBFRuntimeController* Controller, const bool bShouldBuildContextTree,
+	                  const TMap<FString, UUBFBindingObject*>& InputMap, const FOnComplete& OnComplete);
 	
-	void BuildContextTreeFromUBFContextData(const TSharedPtr<FContextTree>& ContextTree, const TArray<FUBFContextTreeData>& UBFContextTree,
-		const FString& RootAssetId, const TMap<FString, UBF::FDynamicHandle>& RootTraits) const;
+	void CreateBlueprintInstancesFromContextTree(const TArray<FUBFContextTreeData>& UBFContextTree,
+	                                        const FString& RootAssetId, const TMap<FString, UBF::FDynamicHandle>& RootTraits, TArray<UBF::FBlueprintInstance>& OutBlueprintInstances) const;
 
 	void ParseInputsThenExecute(UUBFInventoryItem* Item, UUBFRuntimeController* Controller,
-		const TMap<FString, UUBFBindingObject*>& InputMap, const FOnComplete& OnComplete,
-		TSharedPtr<FContextTree> ContextTree, const bool bShouldBuildContextTree);
+	                            const TMap<FString, UUBFBindingObject*>& InputMap, const FOnComplete& OnComplete,
+	                            const bool bShouldBuildContextTree);
 
 	TFuture<bool> TryLoadAssetDatas(const TArray<struct FFutureverseAssetLoadData>& LoadDatas);
 	
@@ -88,7 +88,6 @@ private:
 		UUBFRuntimeController* Controller, const TMap<FString, UBF::FDynamicHandle>& ParsingInputs) const;
 	
 	TSharedPtr<FAPIGraphProvider> APIGraphProvider;
-	TSharedPtr<FAPISubGraphResolver> APISubGraphProvider;
 	
 	TSharedPtr<FMemoryCacheLoader> MemoryCacheLoader;
 	TSharedPtr<FTempCacheLoader> TempCacheLoader;
@@ -99,9 +98,6 @@ private:
 	TSet<TSharedPtr<FLoadAssetProfilesAction>> PendingActions;
 	TSet<TSharedPtr<class FLoadAssetProfileDataAction>> PendingDataActions;
 	TSet<TSharedPtr<FLoadMultipleAssetDatasAction>> PendingMultiLoadActions;
-	
-	mutable UBF::FExecutionContextHandle LastParsingGraphExecutionContextHandle;
-	mutable UBF::FGraphHandle LastParsedGraph;
 	
 	friend class UUBFInventoryItem;
 	friend class FLoadMultipleAssetDatasAction;
