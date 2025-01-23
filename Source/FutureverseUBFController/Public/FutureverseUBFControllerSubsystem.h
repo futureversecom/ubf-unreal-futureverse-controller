@@ -67,7 +67,7 @@ public:
 	void RegisterAssetData(const FString& AssetId, const FFutureverseAssetData& AssetData);
 
 private:
-	void ExecuteGraph(UUBFInventoryItem* Item,
+	void ExecuteItemGraph(UUBFInventoryItem* Item,
 	                  UUBFRuntimeController* Controller, const bool bShouldBuildContextTree,
 	                  const TMap<FString, UUBFBindingObject*>& InputMap, const FOnComplete& OnComplete);
 	
@@ -77,6 +77,9 @@ private:
 	void ParseInputsThenExecute(UUBFInventoryItem* Item, UUBFRuntimeController* Controller,
 	                            const TMap<FString, UUBFBindingObject*>& InputMap, const FOnComplete& OnComplete,
 	                            const bool bShouldBuildContextTree);
+
+	void ExecuteGraph(UUBFInventoryItem* Item, UUBFRuntimeController* Controller, const TMap<FString, UUBFBindingObject*>& InputMap, bool
+	                  bShouldBuildContextTree, const FOnComplete& OnComplete);
 
 	TFuture<bool> TryLoadAssetDatas(const TArray<struct FFutureverseAssetLoadData>& LoadDatas);
 	
@@ -94,6 +97,8 @@ private:
 
 	TMap<FString, FAssetProfile> AssetProfiles;
 	TMap<FString, FFutureverseAssetData> AssetDataMap;
+
+	mutable TMap<FString, UBF::FExecutionContextHandle> PendingParsingGraphContexts;
 
 	TSet<TSharedPtr<FLoadAssetProfilesAction>> PendingActions;
 	TSet<TSharedPtr<class FLoadAssetProfileDataAction>> PendingDataActions;

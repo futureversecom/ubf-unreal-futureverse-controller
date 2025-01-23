@@ -9,6 +9,7 @@ namespace AssetProfileUtils
 	
 	const FString ParsingInstance = TEXT("parsing-instance");
 	const FString ParsingCatalog = TEXT("parsing-catalog");
+	const FString AssetProfilesName = TEXT("AssetProfiles");
 	
 	inline FString JsonObjectToString(const FJsonObject& JsonObject)
 	{
@@ -69,9 +70,11 @@ namespace AssetProfileUtils
 				
 			AssetProfileEntries.Add(AssetProfileEntry);
 		}
+
+		if (!JsonObject->HasField(AssetProfilesName)) return;
 		
 		// Get the "AssetProfiles" array from the JSON object
-		TArray<TSharedPtr<FJsonValue>> AssetProfiles = JsonObject->GetArrayField(TEXT("AssetProfiles"));
+		TArray<TSharedPtr<FJsonValue>> AssetProfiles = JsonObject->GetArrayField(AssetProfilesName);
 
 		// Iterate over each element in the "AssetProfiles" array
 		for (const TSharedPtr<FJsonValue>& Value : AssetProfiles)

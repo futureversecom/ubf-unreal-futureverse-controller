@@ -40,7 +40,7 @@ void UFutureverseUBFControllerSubsystem::RenderItem(UUBFInventoryItem* Item, UUB
 			return;
 		}
 		
-		ExecuteGraph(Item, Controller, false, InputMap, OnComplete);
+		ExecuteItemGraph(Item, Controller, false, InputMap, OnComplete);
 	});
 }
 
@@ -60,7 +60,7 @@ void UFutureverseUBFControllerSubsystem::RenderItemTree(UUBFInventoryItem* Item,
 			return;
 		}
 		
-		ExecuteGraph(Item, Controller, true, InputMap, OnComplete);
+		ExecuteItemGraph(Item, Controller, true, InputMap, OnComplete);
 	});
 }
 
@@ -114,9 +114,10 @@ TFuture<TMap<FString, UUBFBindingObject*>> UFutureverseUBFControllerSubsystem::G
 		}
 
 		UBF::FGraphHandle ParsedGraph = Result.Result.Value;
-		UBF::FExecutionContextHandle ParsingGraphExecutionContextHandle;
+		FString Id = FGuid::NewGuid().ToString();
+		PendingParsingGraphContexts.Add(Id, UBF::FExecutionContextHandle());
 			
-		const auto OnParsingGraphComplete = [this, Promise, ParsedGraph, ParsingGraphExecutionContextHandle]
+		const auto OnParsingGraphComplete = [this, Promise, ParsedGraph, Id]
 		{
 			// inject outputs of the parsing graph as the inputs of the graph to execute
 			TArray<UBF::FBindingInfo> Outputs;
@@ -126,16 +127,17 @@ TFuture<TMap<FString, UUBFBindingObject*>> UFutureverseUBFControllerSubsystem::G
 			for (auto Output : Outputs)
 			{
 				UBF::FDynamicHandle DynamicOutput;
-				if (ParsingGraphExecutionContextHandle.TryReadOutput(Output.Id, DynamicOutput))
+				if (PendingParsingGraphContexts[Id].TryReadOutput(Output.Id, DynamicOutput))
 				{
 					Traits.Add(Output.Id, DynamicOutput);
 				}
 			}
+			PendingParsingGraphContexts.Remove(Id);
 			Promise->SetValue(UBFUtils::AsBindingObjectMap(Traits));
 		};
 			
 		ParsedGraph.Execute(ParsingGraphId, Controller->RootComponent, APIGraphProvider.Get(), TMap<FString, UBF::FBlueprintInstance>(),
-			ParsingInputs, OnParsingGraphComplete, ParsingGraphExecutionContextHandle);
+			ParsingInputs, OnParsingGraphComplete, PendingParsingGraphContexts[Id]);
 	});
 
 	return Future;
@@ -156,48 +158,52 @@ void UFutureverseUBFControllerSubsystem::ParseInputsThenExecute(UUBFInventoryIte
 				
 	const auto ParsingGraphId = AssetDataMap[Item->GetAssetID()].ParsingGraphInstance.GetId();
 	GetTraitsForItem(ParsingGraphId, Controller, ParsingInputs).Next(
-		[this, Item, bShouldBuildContextTree, InputMap, Controller, AssetData, OnComplete]
+		[this, Item, bShouldBuildContextTree, InputMap, Controller, OnComplete]
 		(const TMap<FString, UUBFBindingObject*>& Traits)
 	{
-			
-		FBlueprintExecutionData ExecutionData;
-
-		if (bShouldBuildContextTree)
-		{
-			CreateBlueprintInstancesFromContextTree(Item->GetContextTreeRef(), Item->GetAssetID(), UBFUtils::AsDynamicMap(Traits), ExecutionData.BlueprintInstances);
-		}
-
-		// input priorities in order (inputs, traits, blueprint variables)
-		// Find traits from blueprint instance for root as it contains inputs for parent -> child graph relationships
-		for (const UBF::FBlueprintInstance& BlueprintInstance : ExecutionData.BlueprintInstances)
-		{
-			if (BlueprintInstance.GetBlueprintId() == AssetData.RenderGraphInstance.GetId())
-			{
-				for (const auto& BindingObjectMapTuple : UBFUtils::AsBindingObjectMap(BlueprintInstance.GetInputs()))
-				{
-					ExecutionData.InputMap.Add(BindingObjectMapTuple.Key, BindingObjectMapTuple.Value);
-				}
-				
-				break;
-			}
-		}
-
-		ExecutionData.InputMap.Append(InputMap);
-					
-		for (auto Input : ExecutionData.InputMap)
-		{
-			UE_LOG(LogFutureverseUBFController, Verbose, TEXT("UFutureverseUBFControllerSubsystem::ParseInputs ResolvedInput %s"), *Input.Value->ToString());
-		}
-	
-		if (!Controller)
-		{
-			UE_LOG(LogFutureverseUBFController, Warning, TEXT("UFutureverseUBFControllerSubsystem::ExecuteGraph null Controller provided. Cannot render."));
-			return;
-		}
-			
-		Controller->SetGraphProviders(APIGraphProvider.Get());
-		Controller->ExecuteBlueprint(AssetData.RenderGraphInstance.GetId(), ExecutionData, OnComplete);
+			TMap<FString, UUBFBindingObject*> Inputs = InputMap;
+			Inputs.Append(Traits);
+			ExecuteGraph(Item, Controller, Inputs, bShouldBuildContextTree, OnComplete);
 	});
+}
+
+void UFutureverseUBFControllerSubsystem::ExecuteGraph(UUBFInventoryItem* Item, UUBFRuntimeController* Controller, const TMap<FString, UUBFBindingObject*>& InputMap, bool bShouldBuildContextTree, const FOnComplete& OnComplete)
+{
+	FBlueprintExecutionData ExecutionData;
+
+	if (bShouldBuildContextTree)
+	{
+		CreateBlueprintInstancesFromContextTree(Item->GetContextTreeRef(), Item->GetAssetID(), UBFUtils::AsDynamicMap(InputMap), ExecutionData.BlueprintInstances);
+	}
+
+	// input priorities in order (inputs, traits, blueprint variables)
+	// Find traits from blueprint instance for root as it contains inputs for parent -> child graph relationships
+	for (const UBF::FBlueprintInstance& BlueprintInstance : ExecutionData.BlueprintInstances)
+	{
+		if (BlueprintInstance.GetBlueprintId() == AssetDataMap[Item->GetAssetID()].RenderGraphInstance.GetId())
+		{
+			for (const auto& BindingObjectMapTuple : UBFUtils::AsBindingObjectMap(BlueprintInstance.GetInputs()))
+			{
+				ExecutionData.InputMap.Add(BindingObjectMapTuple.Key, BindingObjectMapTuple.Value);
+			}
+				
+			break;
+		}
+	}
+					
+	for (auto Input : ExecutionData.InputMap)
+	{
+		UE_LOG(LogFutureverseUBFController, Verbose, TEXT("UFutureverseUBFControllerSubsystem::ParseInputs ResolvedInput %s"), *Input.Value->ToString());
+	}
+	
+	if (!Controller)
+	{
+		UE_LOG(LogFutureverseUBFController, Warning, TEXT("UFutureverseUBFControllerSubsystem::ExecuteGraph null Controller provided. Cannot render."));
+		return;
+	}
+			
+	Controller->SetGraphProviders(APIGraphProvider.Get());
+	Controller->ExecuteBlueprint(AssetDataMap[Item->GetAssetID()].RenderGraphInstance.GetId(), ExecutionData, OnComplete);
 }
 
 TFuture<bool> UFutureverseUBFControllerSubsystem::TryLoadAssetDatas(const TArray<FFutureverseAssetLoadData>& LoadDatas)
@@ -333,7 +339,7 @@ void UFutureverseUBFControllerSubsystem::RegisterAssetProfilesFromData(
 	}
 }
 
-void UFutureverseUBFControllerSubsystem::ExecuteGraph(UUBFInventoryItem* Item,
+void UFutureverseUBFControllerSubsystem::ExecuteItemGraph(UUBFInventoryItem* Item,
 	UUBFRuntimeController* Controller, const bool bShouldBuildContextTree,
     const TMap<FString, UUBFBindingObject*>& InputMap, const FOnComplete& OnComplete)
 {
@@ -351,34 +357,7 @@ void UFutureverseUBFControllerSubsystem::ExecuteGraph(UUBFInventoryItem* Item,
 		return;
 	}
 	
-	FBlueprintExecutionData ExecutionData;
-
-	if (bShouldBuildContextTree)
-	{
-		CreateBlueprintInstancesFromContextTree(Item->GetContextTreeRef(), Item->GetAssetID(), TMap<FString, UBF::FDynamicHandle>(), ExecutionData.BlueprintInstances);
-	}
-
-	// input priorities in order (inputs, traits, blueprint variables)
-	// Find traits from blueprint instance for root as it contains inputs for parent -> child graph relationships
-	for (const UBF::FBlueprintInstance& BlueprintInstance : ExecutionData.BlueprintInstances)
-	{
-		if (BlueprintInstance.GetBlueprintId() == AssetData.RenderGraphInstance.GetId())
-		{
-			ExecutionData.InputMap.Append(UBFUtils::AsBindingObjectMap(BlueprintInstance.GetInputs()));
-			break;
-		}
-	}
-	
-	ExecutionData.InputMap.Append(InputMap);
-	
-	if (!Controller)
-	{
-		UE_LOG(LogFutureverseUBFController, Warning, TEXT("UFutureverseUBFControllerSubsystem::ExecuteGraph null Controller provided. Cannot render."));
-		return;
-	}
-	
-	Controller->SetGraphProviders(APIGraphProvider.Get());
-	Controller->ExecuteBlueprint(AssetData.RenderGraphInstance.GetId(), ExecutionData, OnComplete);
+	ExecuteGraph(Item, Controller, InputMap, bShouldBuildContextTree, OnComplete);
 }
 
 void UFutureverseUBFControllerSubsystem::CreateBlueprintInstancesFromContextTree(
