@@ -415,9 +415,14 @@ void UFutureverseUBFControllerSubsystem::CreateBlueprintInstancesFromContextTree
 				UBF::FBlueprintInstance NewBlueprintInstance(ChildNodeRenderGraph.GetId());
 				AssetIdToInstanceMap.Add(ChildItem.Value, NewBlueprintInstance);
 			}
+
+			FString RelationshipKey = ChildItem.Key;
+
+			//TODO remove temp solution because pb graphs are wrong
+			RelationshipKey = RelationshipKey.Replace(TEXT("path:"), TEXT("")).Replace(TEXT("_accessory"), TEXT(""));
 			
-			AssetIdToInstanceMap[ContextTreeData.RootNodeID].AddInput(ChildItem.Key, UBF::FDynamicHandle::String(AssetIdToInstanceMap[ChildItem.Value].GetInstanceId()));
-			UE_LOG(LogFutureverseUBFController, Verbose, TEXT("UFutureverseUBFControllerSubsystem::CreateBlueprintInstancesFromContextTree Added Child Node %s with Relationship: %s."), *ChildItem.Value, *ChildItem.Key);
+			AssetIdToInstanceMap[ContextTreeData.RootNodeID].AddInput(RelationshipKey, UBF::FDynamicHandle::String(AssetIdToInstanceMap[ChildItem.Value].GetInstanceId()));
+			UE_LOG(LogFutureverseUBFController, Verbose, TEXT("UFutureverseUBFControllerSubsystem::CreateBlueprintInstancesFromContextTree Added Child Node %s with Relationship: %s."), *ChildItem.Value, *RelationshipKey);
 		}
 	}
 

@@ -207,7 +207,23 @@ TFuture<UBF::FLoadDataArrayResult> FAPIGraphProvider::GetMeshResource(const FStr
 	{
 		UBF::FLoadDataArrayResult LoadResult;
 		TArray<uint8> Data;
-		UE_LOG(LogUBFAPIController, Error, TEXT("FAPIGraphProvider::GetMeshResource UBF BlueprintID %s doesn't have a loaded manifest"), *CatalogId);
+		
+		// Gather keys from the map
+		FString KeysString;
+		for (const auto& Pair : Catalogs)
+		{
+			KeysString += Pair.Key + TEXT(", ");
+		}
+
+		// Trim the trailing comma and space
+		if (!KeysString.IsEmpty())
+		{
+			KeysString.LeftChopInline(2);
+		}
+		
+		UE_LOG(LogUBFAPIController, Error, TEXT("FAPIGraphProvider::GetMeshResource UBF CatalogId %s doesn't have a loaded catalog. Current keys in Catalogs: [%s], Map size: %d"),
+		*CatalogId, *KeysString, Catalogs.Num());
+		
 		LoadResult.Result = TPair<bool, TArray<uint8>>(false, Data);
 		Promise->SetValue(LoadResult);
 		return Future;
