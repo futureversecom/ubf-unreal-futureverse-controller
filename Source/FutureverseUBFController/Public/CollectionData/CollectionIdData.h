@@ -3,6 +3,7 @@
 #pragma once
 
 #include "CoreMinimal.h"
+#include "Environment.h"
 #include "Engine/DataAsset.h"
 #include "CollectionIdData.generated.h"
 
@@ -14,7 +15,7 @@ struct FUTUREVERSEUBFCONTROLLER_API FCollectionIdDefinition
 	GENERATED_BODY()
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite)
-	EFutureverseEnvironment Environment;
+	EFutureverseEnvironment Environment = EFutureverseEnvironment::Development;
 	
 	UPROPERTY(EditAnywhere, BlueprintReadWrite)
 	TArray<FString> CollectionIds;
