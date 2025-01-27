@@ -44,7 +44,7 @@ FAPIGraphProvider::FAPIGraphProvider(const TSharedPtr<ICacheLoader>& NewGraphCac
 	ResourceCacheLoader = NewResourceCacheLoader;
 }
 
-TFuture<UBF::FLoadGraphResult> FAPIGraphProvider::GetGraph(const FString& CatalogId, const FString& ArtifactId)
+TFuture<UBF::FLoadGraphResult> FAPIGraphProvider::GetGraph(const FString& ArtifactId)
 {
 	TSharedPtr<TPromise<UBF::FLoadGraphResult>> Promise = MakeShareable(new TPromise<UBF::FLoadGraphResult>());
 	TFuture<UBF::FLoadGraphResult> Future = Promise->GetFuture();
@@ -70,15 +70,7 @@ TFuture<UBF::FLoadGraphResult> FAPIGraphProvider::GetGraph(const FString& Catalo
 		}
 		return Future;
 	}
-
-	if (!Catalogs.Contains(CatalogId))
-	{
-		UE_LOG(LogUBFAPIController, Error, TEXT("FAPIGraphProvider::GetGraph Failed to get graph because no catalog found for CatalogId: %s ArtifactId: %s"), *CatalogId, *ArtifactId);
-		Promise->SetValue(LoadResult);
-		return Future;
-	}
-
-	auto Catalog = Catalogs[CatalogId];
+	
 	if (!Catalog.Contains(ArtifactId))
 	{
 		UE_LOG(LogUBFAPIController, Error, TEXT("FAPIGraphProvider::GetGraph Failed to get graph because no graph catalog element found for ArtifactId: %s"), *ArtifactId);
@@ -124,54 +116,21 @@ TFuture<UBF::FLoadGraphResult> FAPIGraphProvider::GetGraph(const FString& Catalo
 	return Future;
 }
 
-TFuture<UBF::FLoadGraphInstanceResult> FAPIGraphProvider::GetGraphInstance(const FString& InstanceId)
-{
-	TSharedPtr<TPromise<UBF::FLoadGraphInstanceResult>> Promise = MakeShareable(new TPromise<UBF::FLoadGraphInstanceResult>());
-	TFuture<UBF::FLoadGraphInstanceResult> Future = Promise->GetFuture();
-	
-	UBF::FLoadGraphInstanceResult LoadResult;
-	
-	if (!BlueprintJsons.Contains(InstanceId))
-	{
-		UE_LOG(LogUBFAPIController, Warning, TEXT("FAPIGraphProvider::GetGraphInstance No BlueprintInstance found for InstanceId %s"), *InstanceId);
-	}
-	
-	LoadResult.Result = BlueprintJsons.Contains(InstanceId)
-		? TPair<bool, FBlueprintJson>(true, BlueprintJsons[InstanceId])
-		: TPair<bool, FBlueprintJson>(false, FBlueprintJson());
-	
-	Promise->SetValue(LoadResult);
-	return Future;
-}
-
-TFuture<UBF::FLoadTextureResult> FAPIGraphProvider::GetTextureResource(const FString& CatalogId,
-	const FString& ArtifactId)
+TFuture<UBF::FLoadTextureResult> FAPIGraphProvider::GetTextureResource(const FString& ArtifactId)
 {
 	TSharedPtr<TPromise<UBF::FLoadTextureResult>> Promise = MakeShareable(new TPromise<UBF::FLoadTextureResult>());
 	TFuture<UBF::FLoadTextureResult> Future = Promise->GetFuture();
 	
-	//TODO handle download manifest if needed
-	
-	if (!Catalogs.Contains(CatalogId))
+	if (!Catalog.Contains(ArtifactId))
 	{
 		UBF::FLoadTextureResult LoadResult;
-		UE_LOG(LogUBFAPIController, Error, TEXT("FAPIGraphProvider::GetTextureResource UBF BlueprintID %s doesn't have a loaded manifest"), *CatalogId);
-		LoadResult.Result = TPair<bool, UTexture2D*>(false, nullptr);
-		Promise->SetValue(LoadResult);
-		return Future;
-	}
-	
-	auto ResourceManifestElementMap = Catalogs[CatalogId];
-	if (!ResourceManifestElementMap.Contains(ArtifactId))
-	{
-		UBF::FLoadTextureResult LoadResult;
-		UE_LOG(LogUBFAPIController, Verbose, TEXT("FAPIGraphProvider::GetTextureResource UBF BlueprintID %s doesn't have a ResourceId %s entry"), *CatalogId, *ArtifactId);
+		UE_LOG(LogUBFAPIController, Verbose, TEXT("FAPIGraphProvider::GetTextureResource UBF doesn't have a ResourceId %s entry"), *ArtifactId);
 		LoadResult.Result = TPair<bool, UTexture2D*>(false, nullptr);
 		Promise->SetValue(LoadResult);
 		return Future;
 	}
 
-	const auto ResourceManifestElement = ResourceManifestElementMap[ArtifactId];
+	const auto ResourceManifestElement = Catalog[ArtifactId];
 	FDownloadRequestManager::GetInstance()->LoadDataFromURI(TEXT("Texture"),ResourceManifestElement.Uri, ResourceManifestElement.Hash, ResourceCacheLoader.Get())
 	.Next([this, Promise](const UBF::FLoadDataArrayResult& DataResult)
 	{
@@ -180,7 +139,7 @@ TFuture<UBF::FLoadTextureResult> FAPIGraphProvider::GetTextureResource(const FSt
 		
 		if (Data.Num() == 0 || Data.GetData() == nullptr)
 		{
-			UE_LOG(LogUBF, Error, TEXT("Data is empty"));
+			UE_LOG(LogUBF, Error, TEXT("FAPIGraphProvider::GetTextureResource Data is empty"));
 			LoadResult.Result = TPair<bool, UTexture2D*>(false, nullptr);
 			Promise->SetValue(LoadResult);
 			return;
@@ -196,51 +155,22 @@ TFuture<UBF::FLoadTextureResult> FAPIGraphProvider::GetTextureResource(const FSt
 	return Future;
 }
 
-TFuture<UBF::FLoadDataArrayResult> FAPIGraphProvider::GetMeshResource(const FString& CatalogId, const FString& ArtifactId)
+TFuture<UBF::FLoadDataArrayResult> FAPIGraphProvider::GetMeshResource(const FString& ArtifactId)
 {
 	TSharedPtr<TPromise<UBF::FLoadDataArrayResult>> Promise = MakeShareable(new TPromise<UBF::FLoadDataArrayResult>());
 	TFuture<UBF::FLoadDataArrayResult> Future = Promise->GetFuture();
 	
-	//TODO handle download manifest if needed
-
-	if (!Catalogs.Contains(CatalogId))
+	if (!Catalog.Contains(ArtifactId))
 	{
 		UBF::FLoadDataArrayResult LoadResult;
 		TArray<uint8> Data;
-		
-		// Gather keys from the map
-		FString KeysString;
-		for (const auto& Pair : Catalogs)
-		{
-			KeysString += Pair.Key + TEXT(", ");
-		}
-
-		// Trim the trailing comma and space
-		if (!KeysString.IsEmpty())
-		{
-			KeysString.LeftChopInline(2);
-		}
-		
-		UE_LOG(LogUBFAPIController, Error, TEXT("FAPIGraphProvider::GetMeshResource UBF CatalogId %s doesn't have a loaded catalog. Current keys in Catalogs: [%s], Map size: %d"),
-		*CatalogId, *KeysString, Catalogs.Num());
-		
-		LoadResult.Result = TPair<bool, TArray<uint8>>(false, Data);
-		Promise->SetValue(LoadResult);
-		return Future;
-	}
-	
-	auto ResourceManifestElementMap = Catalogs[CatalogId];
-	if (!ResourceManifestElementMap.Contains(ArtifactId))
-	{
-		UBF::FLoadDataArrayResult LoadResult;
-		TArray<uint8> Data;
-		UE_LOG(LogUBFAPIController, Error, TEXT("FAPIGraphProvider::GetMeshResource UBF BlueprintID %s doesn't have a ResourceId %s entry."), *CatalogId, *ArtifactId);
+		UE_LOG(LogUBFAPIController, Error, TEXT("FAPIGraphProvider::GetMeshResource UBF doesn't have a ResourceId %s entry."), *ArtifactId);
 		LoadResult.Result = TPair<bool, TArray<uint8>>(false, Data);
 		Promise->SetValue(LoadResult);
 		return Future;
 	}
 
-	const auto ResourceManifestElement = ResourceManifestElementMap[ArtifactId];
+	const auto ResourceManifestElement = Catalog[ArtifactId];
 	FDownloadRequestManager::GetInstance()->LoadDataFromURI(TEXT("Mesh"),ResourceManifestElement.Uri, ResourceManifestElement.Hash, ResourceCacheLoader.Get())
 	.Next([this, Promise](const UBF::FLoadDataArrayResult& DataResult)
 	{
@@ -262,33 +192,27 @@ TFuture<UBF::FLoadDataArrayResult> FAPIGraphProvider::GetMeshResource(const FStr
 	return Future;
 }
 
-void FAPIGraphProvider::RegisterCatalog(const FString& InstanceId, const FCatalogElement& Catalog)
+void FAPIGraphProvider::RegisterCatalog(const FCatalogElement& CatalogElement)
 {
-	if (Catalogs.Contains(InstanceId))
+	if (Catalog.Contains(CatalogElement.Id))
 	{
-		TMap<FString, FCatalogElement>& CatalogMap = Catalogs[InstanceId];
-		if (CatalogMap.Contains(Catalog.Id))
-		{
-			CatalogMap[Catalog.Id] = Catalog;
-		}
-		else
-		{
-			CatalogMap.Add(Catalog.Id, Catalog);
-		}
+		// If we are just registering the same catalog element again its ok
+		if (Catalog[CatalogElement.Id] == CatalogElement)
+			return;
+
+		UE_LOG(LogUBFAPIController, Warning, TEXT("[APIGraphProvider] Catalog Id Collision Detected. Existing entry: %s New Entry: %s"),
+			*Catalog[CatalogElement.Id].ToString(), *CatalogElement.ToString());
+		return;
 	}
-	else
-	{
-		TMap<FString, FCatalogElement> NewCatalogMap;
-		NewCatalogMap.Add(Catalog.Id, Catalog);
-		Catalogs.Add(InstanceId, NewCatalogMap);
-	}
+
+	Catalog.Add(CatalogElement.Id, CatalogElement);
 }
 
-void FAPIGraphProvider::RegisterCatalogs(const FString& InstanceId, const TMap<FString, FCatalogElement>& CatalogMap)
+void FAPIGraphProvider::RegisterCatalogs(const TMap<FString, FCatalogElement>& CatalogMap)
 {
-	for (const auto& Catalog : CatalogMap)
+	for (const auto& CatalogElement : CatalogMap)
 	{
-		RegisterCatalog(InstanceId, Catalog.Value);
+		RegisterCatalog(CatalogElement.Value);
 	}
 }
 

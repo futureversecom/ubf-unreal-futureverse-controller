@@ -101,7 +101,7 @@ TFuture<TMap<FString, UUBFBindingObject*>> UFutureverseUBFControllerSubsystem::G
 	TSharedPtr<TPromise<TMap<FString, UUBFBindingObject*>>> Promise = MakeShareable(new TPromise<TMap<FString, UUBFBindingObject*>>());
 	TFuture<TMap<FString, UUBFBindingObject*>> Future = Promise->GetFuture();
 	
-	APIGraphProvider->GetGraph(ParsingGraphId, ParsingGraphId)
+	APIGraphProvider->GetGraph(ParsingGraphId)
 		.Next([this, ParsingInputs, ParsingGraphId, Controller, Promise]
 		(const UBF::FLoadGraphResult& Result)
 	{
@@ -301,10 +301,10 @@ TFuture<bool> UFutureverseUBFControllerSubsystem::TryLoadAssetProfileData(const 
 			if (AssetProfileDataAction->AssetData.ParsingGraphInstance.IsValid())
 				APIGraphProvider->RegisterBlueprintJson(AssetProfileDataAction->AssetData.ParsingGraphInstance);
 
-			APIGraphProvider->RegisterCatalogs(AssetProfileDataAction->AssetData.RenderGraphInstance.GetId(), AssetProfileDataAction->RenderCatalogMap);
+			APIGraphProvider->RegisterCatalogs(AssetProfileDataAction->RenderCatalogMap);
 			
 			if (AssetProfileDataAction->AssetData.ParsingGraphInstance.IsValid())
-				APIGraphProvider->RegisterCatalogs(AssetProfileDataAction->AssetData.ParsingGraphInstance.GetId(), AssetProfileDataAction->ParsingCatalogMap);
+				APIGraphProvider->RegisterCatalogs(AssetProfileDataAction->ParsingCatalogMap);
 			
 			RegisterAssetData(AssetProfileDataAction->AssetProfileLoaded.Id, AssetProfileDataAction->AssetData);
 			
