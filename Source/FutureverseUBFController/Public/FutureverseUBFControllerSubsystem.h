@@ -3,6 +3,7 @@
 #pragma once
 
 #include "CoreMinimal.h"
+#include "AssetIdMap.h"
 #include "UBFRuntimeController.h"
 #include "ControllerLayers/APIGraphProvider.h"
 #include "ControllerLayers/APISubGraphResolver.h"
@@ -24,6 +25,8 @@ struct FFutureverseAssetData
 	FBlueprintJson RenderGraphInstance;
 	FBlueprintJson ParsingGraphInstance;
 };
+
+
 
 /**
  * 
@@ -87,6 +90,7 @@ private:
 	TFuture<bool> TryLoadAssetProfileData(const FString& AssetID);
 	TFuture<bool> TryLoadAssetProfile(const FFutureverseAssetLoadData& LoadData);
 	
+	
 	TFuture<TMap<FString, UUBFBindingObject*>> GetTraitsForItem(const FString& ParsingGraphId,
 		UUBFRuntimeController* Controller, const TMap<FString, UBF::FDynamicHandle>& ParsingInputs) const;
 	
@@ -95,8 +99,8 @@ private:
 	TSharedPtr<FMemoryCacheLoader> MemoryCacheLoader;
 	TSharedPtr<FTempCacheLoader> TempCacheLoader;
 
-	TMap<FString, FAssetProfile> AssetProfiles;
-	TMap<FString, FFutureverseAssetData> AssetDataMap;
+	TAssetIdMap<FAssetProfile> AssetProfiles;
+	TAssetIdMap<FFutureverseAssetData> AssetDataMap;
 
 	mutable TMap<FString, UBF::FExecutionContextHandle> PendingParsingGraphContexts;
 

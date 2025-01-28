@@ -9,7 +9,9 @@ namespace AssetProfileUtils
 	
 	const FString ParsingInstance = TEXT("parsing-instance");
 	const FString ParsingCatalog = TEXT("parsing-catalog");
-	const FString AssetProfilesName = TEXT("AssetProfiles");
+	const FString AssetProfilesName = TEXT("asset-profiles");
+	const FString AssetIdName = TEXT("asset-id");
+	const FString ProfileName = TEXT("profile");
 	
 	inline FString JsonObjectToString(const FJsonObject& JsonObject)
 	{
@@ -85,21 +87,21 @@ namespace AssetProfileUtils
 			if (!AssetProfileObject.IsValid())
 				continue;
 
-			if (!AssetProfileObject->HasField(TEXT("InventoryItemName")))
+			if (!AssetProfileObject->HasField(AssetIdName))
 			{
-				UE_LOG(LogUBFAPIController, Warning, TEXT("ParseAssetProfileJson() missing 'InventoryItemName' field. Source Json: \n %s"), *Json);
+				UE_LOG(LogUBFAPIController, Warning, TEXT("ParseAssetProfileJson() missing '%s' field. Source Json: \n %s"), *AssetIdName, *Json);
 			}
 
-			if (!AssetProfileObject->HasField(TEXT("AssetProfile")))
+			if (!AssetProfileObject->HasField(ProfileName))
 			{
-				UE_LOG(LogUBFAPIController, Warning, TEXT("ParseAssetProfileJson() missing 'AssetProfile' field. Source Json: \n %s"), *Json);
+				UE_LOG(LogUBFAPIController, Warning, TEXT("ParseAssetProfileJson() missing '%s' field. Source Json: \n %s"), *ProfileName, *Json);
 			}
 			
 			// Extract the InventoryItemName
-			FString InventoryItemName = AssetProfileObject->GetStringField(TEXT("InventoryItemName"));
+			FString AssetId = AssetProfileObject->GetStringField(AssetIdName);
 
 			// Get the nested AssetProfile object
-			TSharedPtr<FJsonObject> AssetProfile = AssetProfileObject->GetObjectField(TEXT("AssetProfile"));
+			TSharedPtr<FJsonObject> AssetProfile = AssetProfileObject->GetObjectField(ProfileName);
 			
 			if (AssetProfile.IsValid())
 			{
@@ -128,7 +130,7 @@ namespace AssetProfileUtils
 				
 				// Register the graph and catalog locations
 				FAssetProfile AssetProfileEntry;
-				AssetProfileEntry.Id = InventoryItemName;
+				AssetProfileEntry.Id = AssetId;
 				AssetProfileEntry.RenderBlueprintInstanceUri = RenderBlueprintInstanceUri;
 				AssetProfileEntry.RenderCatalogUri = RenderCatalogUri;
 				AssetProfileEntry.ParsingBlueprintInstanceUri = ParsingBlueprintInstanceUri;

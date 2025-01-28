@@ -23,12 +23,13 @@ TFuture<bool> FLoadAssetProfilesAction::TryLoadAssetProfile(const FFutureverseAs
 		FString AssetNameFormatted = LoadData.GetAssetName().ToLower().Replace(TEXT("-"), TEXT(""));
 		
 		ProfileRemotePath = FPaths::Combine(Settings->GetDefaultAssetProfilePath(),
-			FString::Printf(TEXT("%s_%s_profile.json"), *LoadData.ContractID, *AssetNameFormatted));
+			FString::Printf(TEXT("profiles_%s.json"), *LoadData.ContractID));
 		
 		ProfileRemotePath = ProfileRemotePath.Replace(TEXT(" "), TEXT(""));
 	}
 	else
 	{
+		UE_LOG(LogFutureverseUBFController, Error, TEXT("FLoadAssetProfilesAction::TryLoadAssetProfile  UFutureverseUBFControllerSettings was null cannot fetch asset profile"));
 		Promise->SetValue(false);
 	}
 
@@ -51,8 +52,13 @@ TFuture<bool> FLoadAssetProfilesAction::TryLoadAssetProfile(const FFutureverseAs
 		{
 			// no need to provide base path here as the values are remote not local
 			AssetProfile.RelativePath = "";
+			
 			if (AssetProfile.Id.IsEmpty())
 				AssetProfile.Id = LoadData.AssetID;
+			
+			if (!AssetProfile.Id.Contains(LoadData.ContractID))
+				AssetProfile.Id = FString::Printf(TEXT("%s:%s"), *LoadData.ContractID, *AssetProfile.Id);
+			
 			SharedThis->AssetProfiles.Add(AssetProfile.Id, AssetProfile);
 		};
 
