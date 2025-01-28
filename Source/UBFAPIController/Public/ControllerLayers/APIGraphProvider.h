@@ -66,6 +66,13 @@ struct FCatalogElement
 			   Hash == Other.Hash;
 	}
 
+	bool EqualWithoutHash(const FCatalogElement& Other) const
+	{
+		return Id == Other.Id &&
+			   Type == Other.Type &&
+			   Uri == Other.Uri;
+	}
+
 	// ToString method
 	FString ToString() const
 	{

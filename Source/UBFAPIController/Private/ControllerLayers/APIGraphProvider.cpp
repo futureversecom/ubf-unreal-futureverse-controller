@@ -197,7 +197,8 @@ void FAPIGraphProvider::RegisterCatalog(const FCatalogElement& CatalogElement)
 	if (Catalog.Contains(CatalogElement.Id))
 	{
 		// If we are just registering the same catalog element again its ok
-		if (Catalog[CatalogElement.Id] == CatalogElement)
+		// TODO maybe use new hash?
+		if (Catalog[CatalogElement.Id].EqualWithoutHash(CatalogElement))
 			return;
 
 		UE_LOG(LogUBFAPIController, Warning, TEXT("[APIGraphProvider] Catalog Id Collision Detected. Existing entry: %s New Entry: %s"),

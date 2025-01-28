@@ -47,7 +47,12 @@ void UFutureverseUBFControllerSubsystem::RenderItem(UUBFInventoryItem* Item, UUB
 void UFutureverseUBFControllerSubsystem::RenderItemTree(UUBFInventoryItem* Item,
 	UUBFRuntimeController* Controller, const TMap<FString, UUBFBindingObject*>& InputMap, const FOnComplete& OnComplete)
 {
-	TryLoadAssetDatas(Item->GetLinkedAssetLoadData()).Next([this, Item, Controller, InputMap, OnComplete](const bool bIsAssetProfileLoaded)
+	TArray<FFutureverseAssetLoadData> AssetLoadDatas = Item->GetLinkedAssetLoadData();
+
+	if (AssetLoadDatas.IsEmpty())
+		UE_LOG(LogFutureverseUBFController, Warning, TEXT("UFutureverseUBFControllerSubsystem::RenderItemTree AssetLoadDatas empty for Item %s."), *Item->GetAssetID());
+	
+	TryLoadAssetDatas(AssetLoadDatas).Next([this, Item, Controller, InputMap, OnComplete](const bool bIsAssetProfileLoaded)
 	{
 		if (!bIsAssetProfileLoaded)
 		{
@@ -233,6 +238,7 @@ TFuture<bool> UFutureverseUBFControllerSubsystem::TryLoadAssetData(const FFuture
 	// Check AssetData already exists
 	if (AssetDataMap.Contains(LoadData.AssetID))
 	{
+		UE_LOG(LogFutureverseUBFController, Verbose, TEXT("UFutureverseUBFControllerSubsystem::TryLoadAssetData Asset Data already exists for AssetId %s"), *LoadData.AssetID);
 		Promise->SetValue(true);
 		return Future;
 	}
@@ -240,6 +246,7 @@ TFuture<bool> UFutureverseUBFControllerSubsystem::TryLoadAssetData(const FFuture
 	// Check AssetProfile already exists
 	if (AssetProfiles.Contains(LoadData.AssetID))
 	{
+		UE_LOG(LogFutureverseUBFController, Verbose, TEXT("UFutureverseUBFControllerSubsystem::TryLoadAssetData AssetProfile already exists for AssetId %s"), *LoadData.AssetID);
 		TryLoadAssetProfileData(LoadData.AssetID).Next([this, Promise, LoadData](bool bResult)
 		{
 			if (!bResult|| !AssetDataMap.Contains(LoadData.AssetID))
@@ -258,6 +265,7 @@ TFuture<bool> UFutureverseUBFControllerSubsystem::TryLoadAssetData(const FFuture
 		return Future;
 	}
 	
+	UE_LOG(LogFutureverseUBFController, Verbose, TEXT("UFutureverseUBFControllerSubsystem::TryLoadAssetData No AssetProfile exists for AssetId %s Attempting to load..."), *LoadData.AssetID);
 	TryLoadAssetProfile(LoadData).Next([this, Promise, LoadData](bool bResult)
 	{
 		if (!bResult || !AssetProfiles.Contains(LoadData.AssetID))
@@ -366,7 +374,13 @@ void UFutureverseUBFControllerSubsystem::CreateBlueprintInstancesFromContextTree
 {
 	if (UBFContextTree.IsEmpty())
 	{
-		UE_LOG(LogFutureverseUBFController, Warning, TEXT("UFutureverseUBFControllerSubsystem::CreateBlueprintInstancesFromContextTree Can't build context tree beacuse UBFContextTree is empty."));
+		UE_LOG(LogFutureverseUBFController, Verbose, TEXT("UFutureverseUBFControllerSubsystem::CreateBlueprintInstancesFromContextTree Can't build context tree beacuse UBFContextTree is empty."));
+		
+		auto ParentNodeRenderGraphInstance = AssetDataMap[RootAssetId].RenderGraphInstance;
+		UBF::FBlueprintInstance BlueprintInstance(ParentNodeRenderGraphInstance.GetId());
+		BlueprintInstance.AddInputs(RootTraits);
+		OutBlueprintInstances.Reset();
+		OutBlueprintInstances.Add(BlueprintInstance);
 		return;
 	}
 
