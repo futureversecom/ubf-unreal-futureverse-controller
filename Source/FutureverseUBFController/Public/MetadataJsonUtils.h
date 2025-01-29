@@ -51,7 +51,7 @@ namespace MetadataJsonUtils
 		FString AssetName;
 		if (!(*PropertiesObject)->TryGetStringField(TEXT("name"), AssetName) || AssetName.IsEmpty())
 		{
-			UE_LOG(LogFutureverseUBFController, Warning, TEXT("MetadataJsonUtils::TryGetAssetID Missing or empty 'name' field in properties object"));
+			UE_LOG(LogFutureverseUBFController, Verbose, TEXT("MetadataJsonUtils::TryGetAssetID Missing or empty 'name' field in properties object"));
 			LogJsonString(JsonObject);
 		}
 
