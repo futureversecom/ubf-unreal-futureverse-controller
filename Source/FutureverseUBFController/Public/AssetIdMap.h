@@ -60,6 +60,8 @@ public:
 	{
 		InternalMap.Reset();
 	}
+
+	
 private:
 	TMap<FString, T> InternalMap;
 	
