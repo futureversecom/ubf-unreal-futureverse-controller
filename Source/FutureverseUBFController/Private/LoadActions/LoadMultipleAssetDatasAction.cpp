@@ -1,4 +1,6 @@
 #include "LoadMultipleAssetDatasAction.h"
+#include "FutureverseAssetLoadData.h"
+#include "FutureverseUBFControllerSubsystem.h"
 
 TFuture<bool> FLoadMultipleAssetDatasAction::TryLoadAssetProfiles(const TArray<FFutureverseAssetLoadData>& AssetLoadDatas, UFutureverseUBFControllerSubsystem* FutureverseUbfControllerSubsystem)
 {
