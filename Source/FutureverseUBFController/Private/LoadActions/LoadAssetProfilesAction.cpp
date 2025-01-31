@@ -35,7 +35,7 @@ TFuture<bool> FLoadAssetProfilesAction::TryLoadAssetProfile(const FFutureverseAs
 
 	TSharedPtr<FLoadAssetProfilesAction> SharedThis = AsShared();
 	// fetch remote asset profile, then parse and register all the blueprint instances and catalogs
-	FDownloadRequestManager::GetInstance()->LoadStringFromURI(TEXT("AssetProfile"), ProfileRemotePath, "", MemoryCacheLoader.Get()).Next(
+	FDownloadRequestManager::GetInstance()->LoadStringFromURI(TEXT("AssetProfile"), ProfileRemotePath, "", MemoryCacheLoader).Next(
 		[SharedThis, ProfileRemotePath, LoadData](const UBF::FLoadStringResult& AssetProfileResult)
 	{
 		if(!AssetProfileResult.Result.Key)

@@ -20,7 +20,7 @@ TFuture<UBF::FLoadDataArrayResult> FDownloadRequestManager::LoadDataFromURI(
 	const FString& DownloadId, 
 	const FString& Path, 
 	const FString& Hash, 
-	ICacheLoader* CacheLoader)
+	TSharedPtr<ICacheLoader> CacheLoader)
 {
 	TSharedPtr<TPromise<UBF::FLoadDataArrayResult>> Promise = MakeShareable(new TPromise<UBF::FLoadDataArrayResult>());
 	TFuture<UBF::FLoadDataArrayResult> Future = Promise->GetFuture();
@@ -63,7 +63,7 @@ TFuture<UBF::FLoadDataArrayResult> FDownloadRequestManager::LoadDataFromURI(
 }
 
 TFuture<UBF::FLoadStringResult> FDownloadRequestManager::LoadStringFromURI(const FString& DownloadId,
-                                                                           const FString& Path, const FString& Hash, ICacheLoader* CacheLoader)
+                                                                           const FString& Path, const FString& Hash, TSharedPtr<ICacheLoader> CacheLoader)
 {
 	TSharedPtr<TPromise<UBF::FLoadStringResult>> Promise = MakeShareable(new TPromise<UBF::FLoadStringResult>());
 	TFuture<UBF::FLoadStringResult> Future = Promise->GetFuture();

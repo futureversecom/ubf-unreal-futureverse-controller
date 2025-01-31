@@ -143,7 +143,7 @@ TFuture<TMap<FString, UUBFBindingObject*>> UFutureverseUBFControllerSubsystem::G
 			Promise->SetValue(UBFUtils::AsBindingObjectMap(Traits));
 		};
 			
-		ParsedGraph.Execute(ParsingGraphId, Controller->RootComponent, APIGraphProvider.Get(), TMap<FString, UBF::FBlueprintInstance>(),
+		ParsedGraph.Execute(ParsingGraphId, Controller->RootComponent, APIGraphProvider, TMap<FString, UBF::FBlueprintInstance>(),
 			ParsingInputs, OnParsingGraphComplete, PendingParsingGraphContexts[Id]);
 	});
 
@@ -209,7 +209,7 @@ void UFutureverseUBFControllerSubsystem::ExecuteGraph(UUBFInventoryItem* Item, U
 		return;
 	}
 			
-	Controller->SetGraphProviders(APIGraphProvider.Get());
+	Controller->SetGraphProviders(APIGraphProvider);
 	Controller->ExecuteBlueprint(AssetDataMap.Get(Item->GetAssetID()).RenderGraphInstance.GetId(), ExecutionData, OnComplete);
 }
 
