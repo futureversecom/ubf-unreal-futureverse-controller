@@ -3,7 +3,6 @@
 #pragma once
 
 #include "CoreMinimal.h"
-#include "Environment.h"
 #include "Engine/DataAsset.h"
 #include "CollectionIdData.generated.h"
 
