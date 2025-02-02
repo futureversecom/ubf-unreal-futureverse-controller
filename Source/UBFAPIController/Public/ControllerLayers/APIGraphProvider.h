@@ -3,7 +3,7 @@
 #pragma once
 
 #include "CoreMinimal.h"
-#include "BlueprintInstance.h"
+#include "BlueprintJson.h"
 #include "GraphProvider.h"
 #include "ICacheLoader.h"
 
@@ -56,6 +56,29 @@ public:
 struct FCatalogElement
 {
 	FCatalogElement(){}
+
+	// Equal operator
+	bool operator==(const FCatalogElement& Other) const
+	{
+		return Id == Other.Id &&
+			   Type == Other.Type &&
+			   Uri == Other.Uri &&
+			   Hash == Other.Hash;
+	}
+
+	bool EqualWithoutHash(const FCatalogElement& Other) const
+	{
+		return Id == Other.Id &&
+			   Type == Other.Type &&
+			   Uri == Other.Uri;
+	}
+
+	// ToString method
+	FString ToString() const
+	{
+		return FString::Printf(TEXT("Id: %s, Type: %s, Uri: %s, Hash: %s"),
+							   *Id, *Type, *Uri, *Hash);
+	}
 	
 	FString Id;
 	FString Type;
@@ -74,22 +97,20 @@ public:
 
 	explicit FAPIGraphProvider(const TSharedPtr<ICacheLoader>& NewGraphCacheLoader, const TSharedPtr<ICacheLoader>& NewResourceCacheLoader);
 	
-	virtual TFuture<UBF::FLoadGraphResult> GetGraph(const FString& InstanceId) override;
+	virtual TFuture<UBF::FLoadGraphResult> GetGraph(const FString& ArtifactId) override;
 	
-	virtual TFuture<UBF::FLoadGraphInstanceResult> GetGraphInstance(const FString& InstanceId) override;
+	virtual TFuture<UBF::FLoadTextureResult> GetTextureResource(const FString& ArtifactId) override;
 
-	virtual TFuture<UBF::FLoadTextureResult> GetTextureResource(const FString& BlueprintId, const FString& ResourceId) override;
+	virtual TFuture<UBF::FLoadDataArrayResult> GetMeshResource(const FString& ArtifactId) override;
 
-	virtual TFuture<UBF::FLoadDataArrayResult> GetMeshResource(const FString& BlueprintId, const FString& ResourceId) override;
-
-	void RegisterCatalog(const FString& InstanceId, const FCatalogElement& Catalog);
-	void RegisterCatalogs(const FString& InstanceId, const TMap<FString, FCatalogElement>& CatalogMap);
-	void RegisterBlueprintInstance(const FBlueprintInstance& BlueprintInstance);
+	void RegisterCatalog(const FCatalogElement& CatalogElement);
+	void RegisterCatalogs(const TMap<FString, FCatalogElement>& CatalogMap);
+	void RegisterBlueprintJson(const FBlueprintJson& BlueprintJson);
 	
 	virtual ~FAPIGraphProvider() override = default;
 private:
-	TMap<FString, TMap<FString, FCatalogElement>> Catalogs;
-	TMap<FString, FBlueprintInstance> BlueprintInstances;
+	TMap<FString, FCatalogElement> Catalog;
+	TMap<FString, FBlueprintJson> BlueprintJsons;
 
 	TSharedPtr<ICacheLoader> GraphCacheLoader;
 	TSharedPtr<ICacheLoader> ResourceCacheLoader;

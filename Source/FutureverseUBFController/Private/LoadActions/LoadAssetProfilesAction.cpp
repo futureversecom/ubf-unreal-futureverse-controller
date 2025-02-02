@@ -2,6 +2,7 @@
 
 #include <FutureverseUBFControllerSettings.h>
 
+#include "FutureverseAssetLoadData.h"
 #include "FutureverseUBFControllerLog.h"
 #include "ControllerLayers/APIGraphProvider.h"
 #include "ControllerLayers/AssetProfileUtils.h"
@@ -9,7 +10,7 @@
 #include "ControllerLayers/MemoryCacheLoader.h"
 #include "ControllerLayers/TempCacheLoader.h"
 
-TFuture<bool> FLoadAssetProfilesAction::TryLoadAssetProfile(const FString& ContractId, const TSharedPtr<FMemoryCacheLoader>& MemoryCacheLoader, const TSharedPtr<FTempCacheLoader>& TempCacheLoader)
+TFuture<bool> FLoadAssetProfilesAction::TryLoadAssetProfile(const FFutureverseAssetLoadData& LoadData, const TSharedPtr<FMemoryCacheLoader>& MemoryCacheLoader, const TSharedPtr<FTempCacheLoader>& TempCacheLoader)
 {
 	Promise = MakeShareable(new TPromise<bool>());
 	TFuture<bool> Future = Promise->GetFuture();
@@ -19,17 +20,23 @@ TFuture<bool> FLoadAssetProfilesAction::TryLoadAssetProfile(const FString& Contr
 	check(Settings);
 	if (Settings)
 	{
-		ProfileRemotePath = FString::Printf(TEXT("%s/profiles_%s.json"), *Settings->GetDefaultAssetProfilePath(), *ContractId);
+		FString AssetNameFormatted = LoadData.GetAssetName().ToLower().Replace(TEXT("-"), TEXT(""));
+		
+		ProfileRemotePath = FPaths::Combine(Settings->GetDefaultAssetProfilePath(),
+			FString::Printf(TEXT("profiles_%s.json"), *LoadData.ContractID));
+		
+		ProfileRemotePath = ProfileRemotePath.Replace(TEXT(" "), TEXT(""));
 	}
 	else
 	{
+		UE_LOG(LogFutureverseUBFController, Error, TEXT("FLoadAssetProfilesAction::TryLoadAssetProfile  UFutureverseUBFControllerSettings was null cannot fetch asset profile"));
 		Promise->SetValue(false);
 	}
 
 	TSharedPtr<FLoadAssetProfilesAction> SharedThis = AsShared();
 	// fetch remote asset profile, then parse and register all the blueprint instances and catalogs
-	FDownloadRequestManager::GetInstance()->LoadStringFromURI(TEXT("AssetProfile"), ProfileRemotePath, "", MemoryCacheLoader.Get()).Next(
-		[SharedThis, ProfileRemotePath](const UBF::FLoadStringResult& AssetProfileResult)
+	FDownloadRequestManager::GetInstance()->LoadStringFromURI(TEXT("AssetProfile"), ProfileRemotePath, "", MemoryCacheLoader).Next(
+		[SharedThis, ProfileRemotePath, LoadData](const UBF::FLoadStringResult& AssetProfileResult)
 	{
 		if(!AssetProfileResult.Result.Key)
 		{
@@ -45,6 +52,13 @@ TFuture<bool> FLoadAssetProfilesAction::TryLoadAssetProfile(const FString& Contr
 		{
 			// no need to provide base path here as the values are remote not local
 			AssetProfile.RelativePath = "";
+			
+			if (AssetProfile.Id.IsEmpty())
+				AssetProfile.Id = LoadData.AssetID;
+			
+			if (!AssetProfile.Id.Contains(LoadData.ContractID))
+				AssetProfile.Id = FString::Printf(TEXT("%s:%s"), *LoadData.ContractID, *AssetProfile.Id);
+			
 			SharedThis->AssetProfiles.Add(AssetProfile.Id, AssetProfile);
 		};
 

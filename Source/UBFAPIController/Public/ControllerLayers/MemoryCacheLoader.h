@@ -16,7 +16,7 @@ public:
 			CachedBytesMap.Add(Uri, Bytes);
 		}
 
-		UE_LOG(LogUBFAPIController, Verbose, TEXT("FMemoryCacheLoader::CacheBytes Successfully cached bytes for %s"), *Uri);
+		UE_LOG(LogUBFAPIController, VeryVerbose, TEXT("FMemoryCacheLoader::CacheBytes Successfully cached bytes for %s"), *Uri);
 	}
 	
 	virtual bool TryGetCachedBytes(const FString& Uri, const FString& Hash, TArray<uint8>& CachedBytes) const override
@@ -24,10 +24,10 @@ public:
 		if (CachedBytesMap.Contains(Uri))
 		{
 			CachedBytes = CachedBytesMap[Uri];
-			UE_LOG(LogUBFAPIController, Verbose, TEXT("FMemoryCacheLoader::TryGetCachedBytes Cache exists for %s"), *Uri);
+			UE_LOG(LogUBFAPIController, VeryVerbose, TEXT("FMemoryCacheLoader::TryGetCachedBytes Cache exists for %s"), *Uri);
 			return true;
 		}
-		UE_LOG(LogUBFAPIController, Verbose, TEXT("FMemoryCacheLoader::TryGetCachedBytes Cache doesn't exist for %s"), *Uri);
+		UE_LOG(LogUBFAPIController, VeryVerbose, TEXT("FMemoryCacheLoader::TryGetCachedBytes Cache doesn't exist for %s"), *Uri);
 		return false;
 	}
 	

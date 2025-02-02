@@ -14,7 +14,7 @@ class FUTUREVERSEUBFCONTROLLER_API UFutureverseUBFControllerSettings : public UD
 {
 	GENERATED_BODY()
 public:
-	FString GetDefaultAssetProfilePath() const { return DefaultAssetProfilePath; } 
+	FString GetDefaultAssetProfilePath() const { return DefaultAssetProfilePath.TrimStartAndEnd(); } 
 private:
 	UPROPERTY(EditAnywhere, Config)
 	FString DefaultAssetProfilePath = "https://fv-ubf-assets-dev.s3.us-west-2.amazonaws.com/Profiles";

@@ -9,6 +9,9 @@ namespace AssetProfileUtils
 	
 	const FString ParsingInstance = TEXT("parsing-instance");
 	const FString ParsingCatalog = TEXT("parsing-catalog");
+	const FString AssetProfilesName = TEXT("asset-profiles");
+	const FString AssetIdName = TEXT("asset-id");
+	const FString ProfileName = TEXT("profile");
 	
 	inline FString JsonObjectToString(const FJsonObject& JsonObject)
 	{
@@ -38,9 +41,42 @@ namespace AssetProfileUtils
 			UE_LOG(LogUBFAPIController, Warning, TEXT("AssetProfileUtils::ParseAssetProfileJson Failed to parse JSON string\n %s."), *Json);
 			return;
 		}
+
+		// Handle case when this is single profile
+		if (JsonObject->HasField(RenderInstance))
+		{
+			// Extract the RenderBlueprintUrl
+			FString RenderBlueprintInstanceUri = JsonObject->HasField(RenderInstance)
+					? JsonObject->GetStringField(RenderInstance)
+					: "";
+				
+			FString RenderCatalogUri = JsonObject->HasField(RenderCatalog)
+					? JsonObject->GetStringField(RenderCatalog)
+					: "";
+				
+			FString ParsingBlueprintInstanceUri = JsonObject->HasField(ParsingInstance)
+					? JsonObject->GetStringField(ParsingInstance)
+					: "";
+				
+			FString ParsingCatalogUri = JsonObject->HasField(ParsingCatalog)
+					? JsonObject->GetStringField(ParsingCatalog)
+					: "";
+				
+			// Register the graph and catalog locations
+			FAssetProfile AssetProfileEntry;
+			AssetProfileEntry.Id = "";
+			AssetProfileEntry.RenderBlueprintInstanceUri = RenderBlueprintInstanceUri;
+			AssetProfileEntry.RenderCatalogUri = RenderCatalogUri;
+			AssetProfileEntry.ParsingBlueprintInstanceUri = ParsingBlueprintInstanceUri;
+			AssetProfileEntry.ParsingCatalogUri = ParsingCatalogUri;
+				
+			AssetProfileEntries.Add(AssetProfileEntry);
+		}
+
+		if (!JsonObject->HasField(AssetProfilesName)) return;
 		
 		// Get the "AssetProfiles" array from the JSON object
-		TArray<TSharedPtr<FJsonValue>> AssetProfiles = JsonObject->GetArrayField(TEXT("AssetProfiles"));
+		TArray<TSharedPtr<FJsonValue>> AssetProfiles = JsonObject->GetArrayField(AssetProfilesName);
 
 		// Iterate over each element in the "AssetProfiles" array
 		for (const TSharedPtr<FJsonValue>& Value : AssetProfiles)
@@ -51,21 +87,21 @@ namespace AssetProfileUtils
 			if (!AssetProfileObject.IsValid())
 				continue;
 
-			if (!AssetProfileObject->HasField(TEXT("InventoryItemName")))
+			if (!AssetProfileObject->HasField(AssetIdName))
 			{
-				UE_LOG(LogUBFAPIController, Warning, TEXT("ParseAssetProfileJson() missing 'InventoryItemName' field. Source Json: \n %s"), *Json);
+				UE_LOG(LogUBFAPIController, Warning, TEXT("ParseAssetProfileJson() missing '%s' field. Source Json: \n %s"), *AssetIdName, *Json);
 			}
 
-			if (!AssetProfileObject->HasField(TEXT("AssetProfile")))
+			if (!AssetProfileObject->HasField(ProfileName))
 			{
-				UE_LOG(LogUBFAPIController, Warning, TEXT("ParseAssetProfileJson() missing 'AssetProfile' field. Source Json: \n %s"), *Json);
+				UE_LOG(LogUBFAPIController, Warning, TEXT("ParseAssetProfileJson() missing '%s' field. Source Json: \n %s"), *ProfileName, *Json);
 			}
 			
 			// Extract the InventoryItemName
-			FString InventoryItemName = AssetProfileObject->GetStringField(TEXT("InventoryItemName"));
+			FString AssetId = AssetProfileObject->GetStringField(AssetIdName);
 
 			// Get the nested AssetProfile object
-			TSharedPtr<FJsonObject> AssetProfile = AssetProfileObject->GetObjectField(TEXT("AssetProfile"));
+			TSharedPtr<FJsonObject> AssetProfile = AssetProfileObject->GetObjectField(ProfileName);
 			
 			if (AssetProfile.IsValid())
 			{
@@ -94,7 +130,7 @@ namespace AssetProfileUtils
 				
 				// Register the graph and catalog locations
 				FAssetProfile AssetProfileEntry;
-				AssetProfileEntry.Id = InventoryItemName;
+				AssetProfileEntry.Id = AssetId;
 				AssetProfileEntry.RenderBlueprintInstanceUri = RenderBlueprintInstanceUri;
 				AssetProfileEntry.RenderCatalogUri = RenderCatalogUri;
 				AssetProfileEntry.ParsingBlueprintInstanceUri = ParsingBlueprintInstanceUri;
@@ -147,54 +183,6 @@ namespace AssetProfileUtils
 				UE_LOG(LogUBFAPIController, VeryVerbose, TEXT("AssetProfileUtils::ParseCatalog "
 					"Added CatalogElement Id: %s Type: %s Uri: %s hash: %s"),
 					*CatalogElement.Id, *CatalogElement.Type, *CatalogElement.Uri, *CatalogElement.Hash);
-			}
-		}
-	}
-
-	inline void ParseBlueprintInstanceJson(const FString& Json, FBlueprintInstance& BlueprintInstance)
-	{
-		// Create a shared pointer to hold the JSON object
-		TSharedPtr<FJsonObject> JsonObject;
-
-		// Create a JSON reader
-		TSharedRef<TJsonReader<>> Reader = TJsonReaderFactory<>::Create(Json);
-
-		// Deserialize the JSON data into the JsonObject
-		if (!FJsonSerializer::Deserialize(Reader, JsonObject) || !JsonObject.IsValid())
-		{
-			UE_LOG(LogUBFAPIController, Warning, TEXT("AssetProfileUtils::ParseBlueprintInstanceJson Failed to parse JSON string\n %s."), *Json);
-			return;
-		}
-		FString BlueprintID = JsonObject->HasField(TEXT("blueprintId"))
-				? JsonObject->GetStringField(TEXT("blueprintId"))
-				: TEXT("");
-
-		BlueprintInstance.SetBlueprintId(BlueprintID);
-		// Get the "bindings" array from the JSON
-		TArray<TSharedPtr<FJsonValue>> BindingsArray = JsonObject->GetArrayField(TEXT("bindings"));
-
-		// Iterate over each element in the bindings array
-		for (const TSharedPtr<FJsonValue>& Value : BindingsArray)
-		{
-			// Each element is a JSON object, get it as such
-			TSharedPtr<FJsonObject> BindingObject = Value->AsObject();
-			if (BindingObject.IsValid())
-			{
-				if (!BindingObject->HasField(TEXT("id"))
-					|| !BindingObject->HasField(TEXT("type"))
-					|| !BindingObject->HasField(TEXT("value")))
-				{
-					UE_LOG(LogUBFAPIController, Error, TEXT("Cannot parse Json, missing id, type or value field in element %s in json %s"), *Value->AsString(), *Json);
-					continue;
-				}
-				FBlueprintInstanceBinding Binding;
-				Binding.Id = BindingObject->GetStringField(TEXT("id"));
-				Binding.Type = BindingObject->GetStringField(TEXT("type"));
-				BindingObject->TryGetStringField(TEXT("value"), Binding.Value);
-				BlueprintInstance.AddBinding(Binding.Id, Binding);
-				UE_LOG(LogUBFAPIController, VeryVerbose, TEXT("AssetProfileUtils::ParseBlueprintInstanceJson "
-					"Added FBlueprintInstanceBinding Id: %s Type: %s Value: %s"),
-					*Binding.Id, *Binding.Type, *Binding.Value);
 			}
 		}
 	}

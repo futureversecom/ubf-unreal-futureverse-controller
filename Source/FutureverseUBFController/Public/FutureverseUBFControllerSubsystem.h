@@ -3,6 +3,7 @@
 #pragma once
 
 #include "CoreMinimal.h"
+#include "AssetIdMap.h"
 #include "UBFRuntimeController.h"
 #include "ControllerLayers/APIGraphProvider.h"
 #include "ControllerLayers/APISubGraphResolver.h"
@@ -21,9 +22,11 @@ struct FFutureverseAssetData
 {
 	FFutureverseAssetData(){}
 	
-	FBlueprintInstance RenderGraphInstance;
-	FBlueprintInstance ParsingGraphInstance;
+	FBlueprintJson RenderGraphInstance;
+	FBlueprintJson ParsingGraphInstance;
 };
+
+
 
 UENUM(BlueprintType)
 enum class EEnvironment : uint8
@@ -75,41 +78,43 @@ public:
 	void RegisterAssetData(const FString& AssetId, const FFutureverseAssetData& AssetData);
 
 private:
-	void ExecuteGraph(UUBFInventoryItem* Item, const TSharedPtr<FContextTree>& ContextTree,
-	UUBFRuntimeController* Controller, const bool bShouldBuildContextTree, IGraphProvider* GraphProvider, ISubGraphResolver* SubGraphResolver,
-	const TMap<FString, UUBFBindingObject*>& InputMap, const FOnComplete& OnComplete);
+	void ExecuteItemGraph(UUBFInventoryItem* Item,
+	                  UUBFRuntimeController* Controller, const bool bShouldBuildContextTree,
+	                  const TMap<FString, UUBFBindingObject*>& InputMap, const FOnComplete& OnComplete);
 	
-	void BuildContextTreeFromUBFContextData(const TSharedPtr<FContextTree>& ContextTree, const TArray<FUBFContextTreeData>& UBFContextTree,
-		const FString& RootAssetId, const TMap<FString, UBF::FDynamicHandle>& RootTraits) const;
+	void CreateBlueprintInstancesFromContextTree(const TArray<FUBFContextTreeData>& UBFContextTree,
+	                                        const FString& RootAssetId, const TMap<FString, UBF::FDynamicHandle>& RootTraits, TArray<UBF::FBlueprintInstance>& OutBlueprintInstances) const;
 
 	void ParseInputsThenExecute(UUBFInventoryItem* Item, UUBFRuntimeController* Controller,
-		const TMap<FString, UUBFBindingObject*>& InputMap, const FOnComplete& OnComplete,
-		TSharedPtr<FContextTree> ContextTree, const bool bShouldBuildContextTree);
+	                            const TMap<FString, UUBFBindingObject*>& InputMap, const FOnComplete& OnComplete,
+	                            const bool bShouldBuildContextTree);
+
+	void ExecuteGraph(UUBFInventoryItem* Item, UUBFRuntimeController* Controller, const TMap<FString, UUBFBindingObject*>& InputMap, bool
+	                  bShouldBuildContextTree, const FOnComplete& OnComplete);
 
 	TFuture<bool> TryLoadAssetDatas(const TArray<struct FFutureverseAssetLoadData>& LoadDatas);
 	
 	TFuture<bool> TryLoadAssetData(const FFutureverseAssetLoadData& LoadData);
 	TFuture<bool> TryLoadAssetProfileData(const FString& AssetID);
-	TFuture<bool> TryLoadAssetProfile(const FString& ContractId);
+	TFuture<bool> TryLoadAssetProfile(const FFutureverseAssetLoadData& LoadData);
+	
 	
 	TFuture<TMap<FString, UUBFBindingObject*>> GetTraitsForItem(const FString& ParsingGraphId,
 		UUBFRuntimeController* Controller, const TMap<FString, UBF::FDynamicHandle>& ParsingInputs) const;
 	
 	TSharedPtr<FAPIGraphProvider> APIGraphProvider;
-	TSharedPtr<FAPISubGraphResolver> APISubGraphProvider;
 	
 	TSharedPtr<FMemoryCacheLoader> MemoryCacheLoader;
 	TSharedPtr<FTempCacheLoader> TempCacheLoader;
 
-	TMap<FString, FAssetProfile> AssetProfiles;
-	TMap<FString, FFutureverseAssetData> AssetDataMap;
+	TAssetIdMap<FAssetProfile> AssetProfiles;
+	TAssetIdMap<FFutureverseAssetData> AssetDataMap;
+
+	mutable TMap<FString, UBF::FExecutionContextHandle> PendingParsingGraphContexts;
 
 	TSet<TSharedPtr<FLoadAssetProfilesAction>> PendingActions;
 	TSet<TSharedPtr<class FLoadAssetProfileDataAction>> PendingDataActions;
 	TSet<TSharedPtr<FLoadMultipleAssetDatasAction>> PendingMultiLoadActions;
-	
-	mutable UBF::FExecutionContextHandle LastParsingGraphExecutionContextHandle;
-	mutable UBF::FGraphHandle LastParsedGraph;
 	
 	friend class UUBFInventoryItem;
 	friend class FLoadMultipleAssetDatasAction;

@@ -40,6 +40,9 @@ TArray<FFutureverseAssetLoadData> UUBFInventoryItem::GetLinkedAssetLoadData() co
 			OutContractIds.Add(FFutureverseAssetLoadData(ChildItemTuple.Value, Out[0]));
 		}
 	}
+
+	if (OutContractIds.IsEmpty())
+		OutContractIds.Add(FFutureverseAssetLoadData(GetAssetID(), GetContractID()));
 		
 	return OutContractIds;
 }

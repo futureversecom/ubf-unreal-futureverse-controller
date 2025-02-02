@@ -44,7 +44,7 @@ FAPIGraphProvider::FAPIGraphProvider(const TSharedPtr<ICacheLoader>& NewGraphCac
 	ResourceCacheLoader = NewResourceCacheLoader;
 }
 
-TFuture<UBF::FLoadGraphResult> FAPIGraphProvider::GetGraph(const FString& InstanceId)
+TFuture<UBF::FLoadGraphResult> FAPIGraphProvider::GetGraph(const FString& ArtifactId)
 {
 	TSharedPtr<TPromise<UBF::FLoadGraphResult>> Promise = MakeShareable(new TPromise<UBF::FLoadGraphResult>());
 	TFuture<UBF::FLoadGraphResult> Future = Promise->GetFuture();
@@ -53,41 +53,36 @@ TFuture<UBF::FLoadGraphResult> FAPIGraphProvider::GetGraph(const FString& Instan
 	LoadResult.Result = TPair<bool, UBF::FGraphHandle>(false, UBF::FGraphHandle());
 	
 	// get graph from catalog using graph instance's blueprint id
-	if (!BlueprintInstances.Contains(InstanceId))
+	if (BlueprintJsons.Contains(ArtifactId))
 	{
-		UE_LOG(LogUBFAPIController, Warning, TEXT("FAPIGraphProvider::GetGraph No BlueprintInstance found for InstanceId %s"), *InstanceId);
+		UBF::FGraphHandle Graph;
+		if (UBF::FGraphHandle::Load(UBF::FRegistryHandle::Default(), BlueprintJsons[ArtifactId].GetGraphJson(), Graph))
+		{
+			UE_LOG(LogUBFAPIController, Verbose, TEXT("Successfully loaded Graph %s"), *ArtifactId);
+		
+			LoadResult.Result = TPair<bool,UBF::FGraphHandle>(true, Graph);
+			Promise->SetValue(LoadResult);	
+		}
+		else
+		{
+			UE_LOG(LogUBFAPIController, Error, TEXT("Unable to load Graph BlueprintId %s"), *ArtifactId);
+			Promise->SetValue(LoadResult);
+		}
+		return Future;
+	}
+	
+	if (!Catalog.Contains(ArtifactId))
+	{
+		UE_LOG(LogUBFAPIController, Error, TEXT("FAPIGraphProvider::GetGraph Failed to get graph because no graph catalog element found for ArtifactId: %s"), *ArtifactId);
 		Promise->SetValue(LoadResult);
 		return Future;
 	}
 	
-	auto BlueprintId = BlueprintInstances[InstanceId].GetBlueprintId();
-	if (BlueprintId.IsEmpty())
-	{
-		UE_LOG(LogUBFAPIController, Error, TEXT("FAPIGraphProvider::GetGraph Failed to get graph because graph instance's Blueprint Id was invalid!"));
-		Promise->SetValue(LoadResult);
-		return Future;
-	}
-
-	if (!Catalogs.Contains(InstanceId))
-	{
-		UE_LOG(LogUBFAPIController, Error, TEXT("FAPIGraphProvider::GetGraph Failed to get graph because no catalog found for InstanceId: %s Blueprint Id: %s"), *InstanceId, *BlueprintId);
-		Promise->SetValue(LoadResult);
-		return Future;
-	}
-
-	auto Catalog = Catalogs[InstanceId];
-	if (!Catalog.Contains(BlueprintId))
-	{
-		UE_LOG(LogUBFAPIController, Error, TEXT("FAPIGraphProvider::GetGraph Failed to get graph because no graph catalog element found for Blueprint Id: %s"), *BlueprintId);
-		Promise->SetValue(LoadResult);
-		return Future;
-	}
+	const auto GraphResource = Catalog[ArtifactId];
+	UE_LOG(LogUBFAPIController, Verbose, TEXT("Try Loading Graph %s from Uri %s"), *ArtifactId, *GraphResource.Uri);
 	
-	const auto GraphResource = Catalog[BlueprintId];
-	UE_LOG(LogUBFAPIController, Verbose, TEXT("Try Loading Graph %s from Uri %s"), *BlueprintId, *GraphResource.Uri);
-	
-	FDownloadRequestManager::GetInstance()->LoadStringFromURI(TEXT("Graph"),GraphResource.Uri, GraphResource.Hash, GraphCacheLoader.Get())
-	.Next([this, BlueprintId, Promise](const UBF::FLoadStringResult& LoadGraphResult)
+	FDownloadRequestManager::GetInstance()->LoadStringFromURI(TEXT("Graph"),GraphResource.Uri, GraphResource.Hash, GraphCacheLoader)
+	.Next([this, ArtifactId, Promise](const UBF::FLoadStringResult& LoadGraphResult)
 	{
 		UBF::FLoadGraphResult PromiseResult;
 		PromiseResult.Result = TPair<bool,UBF::FGraphHandle>(false, UBF::FGraphHandle());
@@ -98,20 +93,22 @@ TFuture<UBF::FLoadGraphResult> FAPIGraphProvider::GetGraph(const FString& Instan
 			return;
 		}
 
+		FBlueprintJson BlueprintJson(ArtifactId, LoadGraphResult.Result.Value);
+
 		if (APIGraphProvider::CVarLogUBFJson.GetValueOnAnyThread())
 			UE_LOG(LogUBFAPIController, Log, TEXT("Graph downloaded with json: \n\n %s \n\n"), *LoadGraphResult.Result.Value);
 		 			
 		UBF::FGraphHandle Graph;
 		if (UBF::FGraphHandle::Load(UBF::FRegistryHandle::Default(), LoadGraphResult.Result.Value, Graph))
 		{
-			UE_LOG(LogUBFAPIController, Verbose, TEXT("Successfully loaded Graph %s"), *BlueprintId);
+			UE_LOG(LogUBFAPIController, Verbose, TEXT("Successfully loaded Graph %s"), *ArtifactId);
 		
 			PromiseResult.Result = TPair<bool,UBF::FGraphHandle>(true, Graph);
 			Promise->SetValue(PromiseResult);	
 		}
 		else
 		{
-			UE_LOG(LogUBFAPIController, Error, TEXT("Unable to load Graph BlueprintId %s"), *BlueprintId);
+			UE_LOG(LogUBFAPIController, Error, TEXT("Unable to load Graph BlueprintId %s"), *ArtifactId);
 			Promise->SetValue(PromiseResult);
 		}
 	});
@@ -119,55 +116,22 @@ TFuture<UBF::FLoadGraphResult> FAPIGraphProvider::GetGraph(const FString& Instan
 	return Future;
 }
 
-TFuture<UBF::FLoadGraphInstanceResult> FAPIGraphProvider::GetGraphInstance(const FString& InstanceId)
-{
-	TSharedPtr<TPromise<UBF::FLoadGraphInstanceResult>> Promise = MakeShareable(new TPromise<UBF::FLoadGraphInstanceResult>());
-	TFuture<UBF::FLoadGraphInstanceResult> Future = Promise->GetFuture();
-	
-	UBF::FLoadGraphInstanceResult LoadResult;
-	
-	if (!BlueprintInstances.Contains(InstanceId))
-	{
-		UE_LOG(LogUBFAPIController, Warning, TEXT("FAPIGraphProvider::GetGraphInstance No BlueprintInstance found for InstanceId %s"), *InstanceId);
-	}
-	
-	LoadResult.Result = BlueprintInstances.Contains(InstanceId)
-		? TPair<bool, FBlueprintInstance>(true, BlueprintInstances[InstanceId])
-		: TPair<bool, FBlueprintInstance>(false, FBlueprintInstance());
-	
-	Promise->SetValue(LoadResult);
-	return Future;
-}
-
-TFuture<UBF::FLoadTextureResult> FAPIGraphProvider::GetTextureResource(const FString& BlueprintId,
-	const FString& ResourceId)
+TFuture<UBF::FLoadTextureResult> FAPIGraphProvider::GetTextureResource(const FString& ArtifactId)
 {
 	TSharedPtr<TPromise<UBF::FLoadTextureResult>> Promise = MakeShareable(new TPromise<UBF::FLoadTextureResult>());
 	TFuture<UBF::FLoadTextureResult> Future = Promise->GetFuture();
 	
-	//TODO handle download manifest if needed
-	
-	if (!Catalogs.Contains(BlueprintId))
+	if (!Catalog.Contains(ArtifactId))
 	{
 		UBF::FLoadTextureResult LoadResult;
-		UE_LOG(LogUBFAPIController, Error, TEXT("FAPIGraphProvider::GetTextureResource UBF BlueprintID %s doesn't have a loaded manifest"), *BlueprintId);
-		LoadResult.Result = TPair<bool, UTexture2D*>(false, nullptr);
-		Promise->SetValue(LoadResult);
-		return Future;
-	}
-	
-	auto ResourceManifestElementMap = Catalogs[BlueprintId];
-	if (!ResourceManifestElementMap.Contains(ResourceId))
-	{
-		UBF::FLoadTextureResult LoadResult;
-		UE_LOG(LogUBFAPIController, Verbose, TEXT("FAPIGraphProvider::GetTextureResource UBF BlueprintID %s doesn't have a ResourceId %s entry"), *BlueprintId, *ResourceId);
+		UE_LOG(LogUBFAPIController, Verbose, TEXT("FAPIGraphProvider::GetTextureResource UBF doesn't have a ResourceId %s entry"), *ArtifactId);
 		LoadResult.Result = TPair<bool, UTexture2D*>(false, nullptr);
 		Promise->SetValue(LoadResult);
 		return Future;
 	}
 
-	const auto ResourceManifestElement = ResourceManifestElementMap[ResourceId];
-	FDownloadRequestManager::GetInstance()->LoadDataFromURI(TEXT("Texture"),ResourceManifestElement.Uri, ResourceManifestElement.Hash, ResourceCacheLoader.Get())
+	const auto ResourceManifestElement = Catalog[ArtifactId];
+	FDownloadRequestManager::GetInstance()->LoadDataFromURI(TEXT("Texture"),ResourceManifestElement.Uri, ResourceManifestElement.Hash, ResourceCacheLoader)
 	.Next([this, Promise](const UBF::FLoadDataArrayResult& DataResult)
 	{
 		const TArray<uint8> Data = DataResult.Result.Value;
@@ -175,7 +139,7 @@ TFuture<UBF::FLoadTextureResult> FAPIGraphProvider::GetTextureResource(const FSt
 		
 		if (Data.Num() == 0 || Data.GetData() == nullptr)
 		{
-			UE_LOG(LogUBF, Error, TEXT("Data is empty"));
+			UE_LOG(LogUBF, Error, TEXT("FAPIGraphProvider::GetTextureResource Data is empty"));
 			LoadResult.Result = TPair<bool, UTexture2D*>(false, nullptr);
 			Promise->SetValue(LoadResult);
 			return;
@@ -191,36 +155,23 @@ TFuture<UBF::FLoadTextureResult> FAPIGraphProvider::GetTextureResource(const FSt
 	return Future;
 }
 
-TFuture<UBF::FLoadDataArrayResult> FAPIGraphProvider::GetMeshResource(const FString& BlueprintId, const FString& ResourceId)
+TFuture<UBF::FLoadDataArrayResult> FAPIGraphProvider::GetMeshResource(const FString& ArtifactId)
 {
 	TSharedPtr<TPromise<UBF::FLoadDataArrayResult>> Promise = MakeShareable(new TPromise<UBF::FLoadDataArrayResult>());
 	TFuture<UBF::FLoadDataArrayResult> Future = Promise->GetFuture();
 	
-	//TODO handle download manifest if needed
-
-	if (!Catalogs.Contains(BlueprintId))
+	if (!Catalog.Contains(ArtifactId))
 	{
 		UBF::FLoadDataArrayResult LoadResult;
 		TArray<uint8> Data;
-		UE_LOG(LogUBFAPIController, Error, TEXT("FAPIGraphProvider::GetMeshResource UBF BlueprintID %s doesn't have a loaded manifest"), *BlueprintId);
-		LoadResult.Result = TPair<bool, TArray<uint8>>(false, Data);
-		Promise->SetValue(LoadResult);
-		return Future;
-	}
-	
-	auto ResourceManifestElementMap = Catalogs[BlueprintId];
-	if (!ResourceManifestElementMap.Contains(ResourceId))
-	{
-		UBF::FLoadDataArrayResult LoadResult;
-		TArray<uint8> Data;
-		UE_LOG(LogUBFAPIController, Error, TEXT("FAPIGraphProvider::GetMeshResource UBF BlueprintID %s doesn't have a ResourceId %s entry."), *BlueprintId, *ResourceId);
+		UE_LOG(LogUBFAPIController, Error, TEXT("FAPIGraphProvider::GetMeshResource UBF doesn't have a ResourceId %s entry."), *ArtifactId);
 		LoadResult.Result = TPair<bool, TArray<uint8>>(false, Data);
 		Promise->SetValue(LoadResult);
 		return Future;
 	}
 
-	const auto ResourceManifestElement = ResourceManifestElementMap[ResourceId];
-	FDownloadRequestManager::GetInstance()->LoadDataFromURI(TEXT("Mesh"),ResourceManifestElement.Uri, ResourceManifestElement.Hash, ResourceCacheLoader.Get())
+	const auto ResourceManifestElement = Catalog[ArtifactId];
+	FDownloadRequestManager::GetInstance()->LoadDataFromURI(TEXT("Mesh"),ResourceManifestElement.Uri, ResourceManifestElement.Hash, ResourceCacheLoader)
 	.Next([this, Promise](const UBF::FLoadDataArrayResult& DataResult)
 	{
 		const TArray<uint8> Data = DataResult.Result.Value;
@@ -241,44 +192,39 @@ TFuture<UBF::FLoadDataArrayResult> FAPIGraphProvider::GetMeshResource(const FStr
 	return Future;
 }
 
-void FAPIGraphProvider::RegisterCatalog(const FString& InstanceId, const FCatalogElement& Catalog)
+void FAPIGraphProvider::RegisterCatalog(const FCatalogElement& CatalogElement)
 {
-	if (Catalogs.Contains(InstanceId))
+	if (Catalog.Contains(CatalogElement.Id))
 	{
-		TMap<FString, FCatalogElement>& CatalogMap = Catalogs[InstanceId];
-		if (CatalogMap.Contains(Catalog.Id))
-		{
-			CatalogMap[Catalog.Id] = Catalog;
-		}
-		else
-		{
-			CatalogMap.Add(Catalog.Id, Catalog);
-		}
+		// If we are just registering the same catalog element again its ok
+		// TODO maybe use new hash?
+		if (Catalog[CatalogElement.Id].EqualWithoutHash(CatalogElement))
+			return;
+
+		UE_LOG(LogUBFAPIController, Warning, TEXT("[APIGraphProvider] Catalog Id Collision Detected. Existing entry: %s New Entry: %s"),
+			*Catalog[CatalogElement.Id].ToString(), *CatalogElement.ToString());
+		return;
 	}
-	else
+
+	Catalog.Add(CatalogElement.Id, CatalogElement);
+}
+
+void FAPIGraphProvider::RegisterCatalogs(const TMap<FString, FCatalogElement>& CatalogMap)
+{
+	for (const auto& CatalogElement : CatalogMap)
 	{
-		TMap<FString, FCatalogElement> NewCatalogMap;
-		NewCatalogMap.Add(Catalog.Id, Catalog);
-		Catalogs.Add(InstanceId, NewCatalogMap);
+		RegisterCatalog(CatalogElement.Value);
 	}
 }
 
-void FAPIGraphProvider::RegisterCatalogs(const FString& InstanceId, const TMap<FString, FCatalogElement>& CatalogMap)
+void FAPIGraphProvider::RegisterBlueprintJson(const FBlueprintJson& BlueprintJson)
 {
-	for (const auto& Catalog : CatalogMap)
+	if (BlueprintJsons.Contains(BlueprintJson.GetId()))
 	{
-		RegisterCatalog(InstanceId, Catalog.Value);
-	}
-}
-
-void FAPIGraphProvider::RegisterBlueprintInstance(const FBlueprintInstance& BlueprintInstance)
-{
-	if (BlueprintInstances.Contains(BlueprintInstance.GetId()))
-	{
-		BlueprintInstances[BlueprintInstance.GetId()] = BlueprintInstance;
+		BlueprintJsons[BlueprintJson.GetId()] = BlueprintJson;
 	}
 	else
 	{
-		BlueprintInstances.Add(BlueprintInstance.GetId(), BlueprintInstance);
+		BlueprintJsons.Add(BlueprintJson.GetId(), BlueprintJson);
 	}
 }
