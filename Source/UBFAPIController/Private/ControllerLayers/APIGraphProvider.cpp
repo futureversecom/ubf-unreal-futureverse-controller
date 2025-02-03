@@ -124,7 +124,7 @@ TFuture<UBF::FLoadTextureResult> FAPIGraphProvider::GetTextureResource(const FSt
 	if (!Catalog.Contains(ArtifactId))
 	{
 		UBF::FLoadTextureResult LoadResult;
-		UE_LOG(LogUBFAPIController, Verbose, TEXT("FAPIGraphProvider::GetTextureResource UBF doesn't have a ResourceId %s entry"), *ArtifactId);
+		UE_LOG(LogUBFAPIController, Verbose, TEXT("FAPIGraphProvider::GetTextureResource UBF doesn't have a ResourceId '%s' entry"), *ArtifactId);
 		LoadResult.Result = TPair<bool, UTexture2D*>(false, nullptr);
 		Promise->SetValue(LoadResult);
 		return Future;
