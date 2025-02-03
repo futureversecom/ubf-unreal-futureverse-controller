@@ -181,6 +181,10 @@ void UFutureverseUBFControllerSubsystem::ExecuteGraph(UUBFInventoryItem* Item, U
 	{
 		CreateBlueprintInstancesFromContextTree(Item->GetContextTreeRef(), Item->GetAssetID(), UBFUtils::AsDynamicMap(InputMap), ExecutionData.BlueprintInstances);
 	}
+	else
+	{
+		ExecutionData.InputMap = InputMap;
+	}
 
 	// input priorities in order (inputs, traits, blueprint variables)
 	// Find traits from blueprint instance for root as it contains inputs for parent -> child graph relationships
