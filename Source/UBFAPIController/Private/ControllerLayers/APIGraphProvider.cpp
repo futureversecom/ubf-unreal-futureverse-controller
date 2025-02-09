@@ -93,7 +93,7 @@ TFuture<UBF::FLoadGraphResult> FAPIGraphProvider::GetGraph(const FString& Artifa
 			return;
 		}
 
-		FBlueprintJson BlueprintJson(ArtifactId, LoadGraphResult.Result.Value);
+		// FBlueprintJson BlueprintJson(ArtifactId, LoadGraphResult.Result.Value);
 
 		if (APIGraphProvider::CVarLogUBFJson.GetValueOnAnyThread())
 			UE_LOG(LogUBFAPIController, Log, TEXT("Graph downloaded with json: \n\n %s \n\n"), *LoadGraphResult.Result.Value);
@@ -190,6 +190,33 @@ TFuture<UBF::FLoadDataArrayResult> FAPIGraphProvider::GetMeshResource(const FStr
 	});
 
 	return Future;
+}
+
+void FAPIGraphProvider::PrintBlueprintDebug(const FString& ArtifactId, const FString& ContextString)
+{
+	if (!UBFAPIControllerLogging::GraphLoggingEnabled()) return;
+	
+	// get graph from catalog using graph instance's blueprint id
+	if (BlueprintJsons.Contains(ArtifactId))
+	{
+		UE_LOG(LogUBFAPIController, Log, TEXT("Context: %s GraphId: %s Graph: \\n\\n%s"), *ContextString, *ArtifactId, *BlueprintJsons[ArtifactId].GetGraphJson());
+		return;
+	}
+	
+	if (!Catalog.Contains(ArtifactId))
+	{
+		return;
+	}
+	
+	const auto GraphResource = Catalog[ArtifactId];
+	UE_LOG(LogUBFAPIController, Verbose, TEXT("Try Loading Graph %s from Uri %s"), *ArtifactId, *GraphResource.Uri);
+	
+	FDownloadRequestManager::GetInstance()->LoadStringFromURI(TEXT("Graph"),GraphResource.Uri, GraphResource.Hash, GraphCacheLoader)
+	.Next([this, ArtifactId, ContextString](const UBF::FLoadStringResult& LoadGraphResult)
+	{
+		if (LoadGraphResult.Result.Key)
+			UE_LOG(LogUBFAPIController, Log, TEXT("Context: %s GraphId: %s Graph: \\n\\n%s"), *ContextString, *ArtifactId, *LoadGraphResult.Result.Value);
+	});
 }
 
 void FAPIGraphProvider::RegisterCatalog(const FCatalogElement& CatalogElement)

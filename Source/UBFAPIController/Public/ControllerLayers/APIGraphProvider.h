@@ -102,13 +102,17 @@ public:
 	virtual TFuture<UBF::FLoadTextureResult> GetTextureResource(const FString& ArtifactId) override;
 
 	virtual TFuture<UBF::FLoadDataArrayResult> GetMeshResource(const FString& ArtifactId) override;
+	virtual void PrintBlueprintDebug(const FString& ArtifactId, const FString& ContextString) override;
 
 	void RegisterCatalog(const FCatalogElement& CatalogElement);
 	void RegisterCatalogs(const TMap<FString, FCatalogElement>& CatalogMap);
 	void RegisterBlueprintJson(const FBlueprintJson& BlueprintJson);
 	
 	virtual ~FAPIGraphProvider() override = default;
+
 private:
+
+	
 	TMap<FString, FCatalogElement> Catalog;
 	TMap<FString, FBlueprintJson> BlueprintJsons;
 
