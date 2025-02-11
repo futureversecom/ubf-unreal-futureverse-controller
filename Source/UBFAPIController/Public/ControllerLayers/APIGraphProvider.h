@@ -4,6 +4,8 @@
 
 #include "CoreMinimal.h"
 #include "BlueprintJson.h"
+#include "CachedMesh.h"
+#include "glTFRuntimeParser.h"
 #include "GraphProvider.h"
 #include "ICacheLoader.h"
 
@@ -86,7 +88,6 @@ struct FCatalogElement
 	FString Hash;
 };
 
-
 /**
  * 
  */
@@ -101,7 +102,7 @@ public:
 	
 	virtual TFuture<UBF::FLoadTextureResult> GetTextureResource(const FString& ArtifactId) override;
 
-	virtual TFuture<UBF::FLoadDataArrayResult> GetMeshResource(const FString& ArtifactId) override;
+	virtual TFuture<UBF::FLoadMeshResult> GetMeshResource(const FString& ArtifactId, const FglTFRuntimeConfig& Config) override;
 	virtual void PrintBlueprintDebug(const FString& ArtifactId, const FString& ContextString) override;
 
 	void RegisterCatalog(const FCatalogElement& CatalogElement);
@@ -112,6 +113,8 @@ public:
 
 private:
 
+	TMap<FString, TWeakObjectPtr<UTexture2D>> LoadedTexturesMap;
+	TMap<FString, FCachedMesh> LoadedMeshesMap;
 	
 	TMap<FString, FCatalogElement> Catalog;
 	TMap<FString, FBlueprintJson> BlueprintJsons;

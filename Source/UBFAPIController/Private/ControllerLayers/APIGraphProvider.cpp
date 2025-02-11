@@ -7,6 +7,7 @@
 #include "ImageUtils.h"
 #include "ControllerLayers/AssetProfileUtils.h"
 #include "ControllerLayers/DownloadRequestManager.h"
+#include "glTFRuntimeAsset.h"
 
 namespace APIGraphProvider
 {
@@ -120,6 +121,14 @@ TFuture<UBF::FLoadTextureResult> FAPIGraphProvider::GetTextureResource(const FSt
 {
 	TSharedPtr<TPromise<UBF::FLoadTextureResult>> Promise = MakeShareable(new TPromise<UBF::FLoadTextureResult>());
 	TFuture<UBF::FLoadTextureResult> Future = Promise->GetFuture();
+
+	if (LoadedTexturesMap.Contains(ArtifactId) && LoadedTexturesMap[ArtifactId].IsValid())
+	{
+		UBF::FLoadTextureResult LoadResult;
+		LoadResult.Result = TPair<bool, UTexture2D*>(true, LoadedTexturesMap[ArtifactId].Get());
+		Promise->SetValue(LoadResult);
+		return Future;
+	}
 	
 	if (!Catalog.Contains(ArtifactId))
 	{
@@ -132,7 +141,7 @@ TFuture<UBF::FLoadTextureResult> FAPIGraphProvider::GetTextureResource(const FSt
 
 	const auto ResourceManifestElement = Catalog[ArtifactId];
 	FDownloadRequestManager::GetInstance()->LoadDataFromURI(TEXT("Texture"),ResourceManifestElement.Uri, ResourceManifestElement.Hash, ResourceCacheLoader)
-	.Next([this, Promise](const UBF::FLoadDataArrayResult& DataResult)
+	.Next([this, Promise, ArtifactId](const UBF::FLoadDataArrayResult& DataResult)
 	{
 		const TArray<uint8> Data = DataResult.Result.Value;
 		UBF::FLoadTextureResult LoadResult;
@@ -146,8 +155,8 @@ TFuture<UBF::FLoadTextureResult> FAPIGraphProvider::GetTextureResource(const FSt
 		}
 							
 		UTexture2D* Texture = FImageUtils::ImportBufferAsTexture2D(Data);
-							
-		Texture->AddToRoot();
+		LoadedTexturesMap.Remove(ArtifactId);
+		LoadedTexturesMap.Add(ArtifactId, Texture);
 		LoadResult.Result = TPair<bool, UTexture2D*>(true, Texture);
 		Promise->SetValue(LoadResult);
 	});
@@ -155,37 +164,59 @@ TFuture<UBF::FLoadTextureResult> FAPIGraphProvider::GetTextureResource(const FSt
 	return Future;
 }
 
-TFuture<UBF::FLoadDataArrayResult> FAPIGraphProvider::GetMeshResource(const FString& ArtifactId)
+TFuture<UBF::FLoadMeshResult> FAPIGraphProvider::GetMeshResource(const FString& ArtifactId, const FglTFRuntimeConfig& Config)
 {
-	TSharedPtr<TPromise<UBF::FLoadDataArrayResult>> Promise = MakeShareable(new TPromise<UBF::FLoadDataArrayResult>());
-	TFuture<UBF::FLoadDataArrayResult> Future = Promise->GetFuture();
+	TSharedPtr<TPromise<UBF::FLoadMeshResult>> Promise = MakeShareable(new TPromise<UBF::FLoadMeshResult>());
+	TFuture<UBF::FLoadMeshResult> Future = Promise->GetFuture();
+	
+	if (LoadedMeshesMap.Contains(ArtifactId) && LoadedMeshesMap[ArtifactId].ContainsMesh(Config))
+	{
+		UBF::FLoadMeshResult LoadResult;
+		LoadResult.Result = TPair<bool, UglTFRuntimeAsset*>(true, LoadedMeshesMap[ArtifactId].GetMesh(Config));
+		Promise->SetValue(LoadResult);
+		return Future;
+	}
 	
 	if (!Catalog.Contains(ArtifactId))
 	{
-		UBF::FLoadDataArrayResult LoadResult;
+		UBF::FLoadMeshResult LoadResult;
 		TArray<uint8> Data;
 		UE_LOG(LogUBFAPIController, Error, TEXT("FAPIGraphProvider::GetMeshResource UBF doesn't have a ResourceId %s entry."), *ArtifactId);
-		LoadResult.Result = TPair<bool, TArray<uint8>>(false, Data);
+		LoadResult.Result = TPair<bool, UglTFRuntimeAsset*>(false, nullptr);
 		Promise->SetValue(LoadResult);
 		return Future;
 	}
 
 	const auto ResourceManifestElement = Catalog[ArtifactId];
 	FDownloadRequestManager::GetInstance()->LoadDataFromURI(TEXT("Mesh"),ResourceManifestElement.Uri, ResourceManifestElement.Hash, ResourceCacheLoader)
-	.Next([this, Promise](const UBF::FLoadDataArrayResult& DataResult)
+	.Next([this, Promise, Config, ArtifactId](const UBF::FLoadDataArrayResult& DataResult)
 	{
 		const TArray<uint8> Data = DataResult.Result.Value;
-		UBF::FLoadDataArrayResult LoadResult;
+		UBF::FLoadMeshResult LoadResult;
 			
 		if (Data.Num() == 0 || Data.GetData() == nullptr)
 		{
-			UE_LOG(LogUBF, Error, TEXT("Data is empty"));
-			LoadResult.Result = TPair<bool, TArray<uint8>>(false, Data);
+			UE_LOG(LogUBF, Error, TEXT("FAPIGraphProvider::GetMeshResource Data is empty"));
+			LoadResult.Result = TPair<bool, UglTFRuntimeAsset*>(false, nullptr);
 			Promise->SetValue(LoadResult);
 			return;
 		}
+
+		UglTFRuntimeAsset* Asset = NewObject<UglTFRuntimeAsset>();
+		Asset->RuntimeContextObject = Config.RuntimeContextObject;
+		Asset->RuntimeContextString = Config.RuntimeContextString;
 		
-		LoadResult.Result = TPair<bool, TArray<uint8>>(true, Data);
+		if (!Asset->LoadFromData(Data.GetData(), Data.Num(), Config))
+		{
+			UE_LOG(LogUBF, Error, TEXT("FAPIGraphProvider::GetMeshResource Failed to Load Mesh from Data %s"), *ArtifactId);
+			LoadResult.Result = TPair<bool, UglTFRuntimeAsset*>(false, nullptr);
+			Promise->SetValue(LoadResult);
+			return;
+		}
+
+		LoadedMeshesMap.FindOrAdd(ArtifactId).AddOrReplaceMesh(Config, Asset);
+		
+		LoadResult.Result = TPair<bool, UglTFRuntimeAsset*>(true, Asset);
 		Promise->SetValue(LoadResult);
 	});
 
