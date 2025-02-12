@@ -77,6 +77,8 @@ public:
 	// Asset data contains the actual blueprint instances that were fetched using the urls from asset profiles
 	void RegisterAssetData(const FString& AssetId, const FFutureverseAssetData& AssetData);
 
+	TFuture<bool> TryLoadAssetDatas(const TArray<struct FFutureverseAssetLoadData>& LoadDatas);
+	
 private:
 	void ExecuteItemGraph(UUBFInventoryItem* Item,
 	                  UUBFRuntimeController* Controller, const bool bShouldBuildContextTree,
@@ -91,8 +93,7 @@ private:
 
 	void ExecuteGraph(UUBFInventoryItem* Item, UUBFRuntimeController* Controller, const TMap<FString, UUBFBindingObject*>& InputMap, bool
 	                  bShouldBuildContextTree, const FOnComplete& OnComplete);
-
-	TFuture<bool> TryLoadAssetDatas(const TArray<struct FFutureverseAssetLoadData>& LoadDatas);
+	
 	
 	TFuture<bool> TryLoadAssetData(const FFutureverseAssetLoadData& LoadData);
 	TFuture<bool> TryLoadAssetProfileData(const FString& AssetID);

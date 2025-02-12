@@ -23,12 +23,17 @@
 			"Name": "UBFAPIController",
 			"Type": "Runtime",
 			"LoadingPhase": "Default"
+		},
+		{
+			"Name": "UBFAssetTest",
+			"Type": "Runtime",
+			"LoadingPhase": "Default"
 		}
-	],	
+	],
 	"Plugins": [
-	{
-		"Name": "UBF",
-		"Enabled": true
-	}
-]
+		{
+			"Name": "UBF",
+			"Enabled": true
+		}
+	]
 }
