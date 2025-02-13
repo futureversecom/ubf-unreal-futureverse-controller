@@ -31,12 +31,14 @@ void UFutureverseUBFControllerSubsystem::RenderItem(UUBFInventoryItem* Item, UUB
 		if (!bIsAssetProfileLoaded)
 		{
 			UE_LOG(LogFutureverseUBFController, Warning, TEXT("UFutureverseUBFControllerSubsystem::RenderItem Item %s provided invalid AssetProfile. Cannot render."), *Item->GetAssetID());
+			OnComplete.ExecuteIfBound(false, FUBFExecutionReport::Failure());
 			return;
 		}
 		
 		if (!AssetDataMap.Contains(Item->GetAssetID()))
 		{
 			UE_LOG(LogFutureverseUBFController, Warning, TEXT("UFutureverseUBFControllerSubsystem::RenderItem AssetDataMap does not contian Item %s. Cannot render."), *Item->GetAssetID());
+			OnComplete.ExecuteIfBound(false, FUBFExecutionReport::Failure());
 			return;
 		}
 		
@@ -62,6 +64,7 @@ void UFutureverseUBFControllerSubsystem::RenderItemTree(UUBFInventoryItem* Item,
 		if (!AssetDataMap.Contains(Item->GetAssetID()))
 		{
 			UE_LOG(LogFutureverseUBFController, Warning, TEXT("UFutureverseUBFControllerSubsystem::RenderItemTree AssetDataMap does not contian Item %s. Cannot render."), *Item->GetAssetID());
+			OnComplete.ExecuteIfBound(false, FUBFExecutionReport::Failure());
 			return;
 		}
 		
@@ -364,6 +367,7 @@ void UFutureverseUBFControllerSubsystem::ExecuteItemGraph(UUBFInventoryItem* Ite
 	if (!AssetData.RenderGraphInstance.IsValid())
 	{
 		UE_LOG(LogFutureverseUBFController, Warning, TEXT("UFutureverseUBFControllerSubsystem::ExecuteGraph Item %s provided invalid Rendering Graph Instance. Cannot render."), *Item->GetAssetID());
+		OnComplete.ExecuteIfBound(false, FUBFExecutionReport::Failure());
 		return;
 	}
 	
