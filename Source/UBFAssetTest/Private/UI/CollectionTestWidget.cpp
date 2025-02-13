@@ -3,6 +3,7 @@
 
 #include "UI/CollectionTestWidget.h"
 
+#include "CollectionTestInputBindingObject.h"
 #include "FutureverseAssetLoadData.h"
 #include "FutureverseUBFControllerSettings.h"
 #include "FutureverseUBFControllerSubsystem.h"
@@ -127,4 +128,17 @@ UUBFInventoryItem* UCollectionTestWidget::GetItemForAsset(const FString& AssetID
 	}
 
 	return nullptr;
+}
+
+TArray<FUBFContextTreeData> UCollectionTestWidget::MakeContextTree(const FString& RootAssetID,
+	const TArray<UCollectionTestInputBindingObject*>& Inputs)
+{
+	TMap<FString, FString> InputMap;
+	for (const UCollectionTestInputBindingObject* Input : Inputs)
+	{
+		InputMap.Add(Input->GetId(), Input->GetValue());
+	}
+
+	const TArray ContextTree {FUBFContextTreeData(RootAssetID, InputMap)};
+	return ContextTree;
 }

@@ -7,9 +7,11 @@
 #include "ControllerLayers/APIGraphProvider.h"
 #include "CollectionTestWidget.generated.h"
 
+class UCollectionTestInputBindingObject;
 class UUBFInventoryItem;
 class FMemoryCacheLoader;
 class UCollectionTestData;
+struct FUBFContextTreeData;
 /**
  * 
  */
@@ -33,6 +35,9 @@ public:
 
 	UFUNCTION(BlueprintCallable)
 	UUBFInventoryItem* GetItemForAsset(const FString& AssetID);
+
+	UFUNCTION(BlueprintCallable)
+	TArray<FUBFContextTreeData> MakeContextTree(const FString& RootAssetID, const TArray<UCollectionTestInputBindingObject*>& Inputs);
 private:
 	UPROPERTY()
 	TArray<UUBFInventoryItem*> TestAssetInventory;
