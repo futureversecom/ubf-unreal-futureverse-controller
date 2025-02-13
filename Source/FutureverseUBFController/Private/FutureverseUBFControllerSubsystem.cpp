@@ -5,6 +5,7 @@
 
 #include "FutureverseAssetLoadData.h"
 #include "FutureverseUBFControllerLog.h"
+#include "UBFLogData.h"
 #include "CollectionData/CollectionAssetProfiles.h"
 #include "ControllerLayers/AssetProfileUtils.h"
 #include "ControllerLayers/DownloadRequestManager.h"
@@ -30,12 +31,14 @@ void UFutureverseUBFControllerSubsystem::RenderItem(UUBFInventoryItem* Item, UUB
 		if (!bIsAssetProfileLoaded)
 		{
 			UE_LOG(LogFutureverseUBFController, Warning, TEXT("UFutureverseUBFControllerSubsystem::RenderItem Item %s provided invalid AssetProfile. Cannot render."), *Item->GetAssetID());
+			OnComplete.ExecuteIfBound(false, FUBFExecutionReport::Failure());
 			return;
 		}
 		
 		if (!AssetDataMap.Contains(Item->GetAssetID()))
 		{
 			UE_LOG(LogFutureverseUBFController, Warning, TEXT("UFutureverseUBFControllerSubsystem::RenderItem AssetDataMap does not contian Item %s. Cannot render."), *Item->GetAssetID());
+			OnComplete.ExecuteIfBound(false, FUBFExecutionReport::Failure());
 			return;
 		}
 		
@@ -61,6 +64,7 @@ void UFutureverseUBFControllerSubsystem::RenderItemTree(UUBFInventoryItem* Item,
 		if (!AssetDataMap.Contains(Item->GetAssetID()))
 		{
 			UE_LOG(LogFutureverseUBFController, Warning, TEXT("UFutureverseUBFControllerSubsystem::RenderItemTree AssetDataMap does not contian Item %s. Cannot render."), *Item->GetAssetID());
+			OnComplete.ExecuteIfBound(false, FUBFExecutionReport::Failure());
 			return;
 		}
 		
@@ -123,7 +127,7 @@ TFuture<TMap<FString, UUBFBindingObject*>> UFutureverseUBFControllerSubsystem::G
 		FString Id = FGuid::NewGuid().ToString();
 		PendingParsingGraphContexts.Add(Id, UBF::FExecutionContextHandle());
 			
-		const auto OnParsingGraphComplete = [this, Promise, ParsedGraph, Id]
+		const auto OnParsingGraphComplete = [this, Promise, ParsedGraph, Id](bool Success, FUBFExecutionReport ExecutionReport)
 		{
 			// inject outputs of the parsing graph as the inputs of the graph to execute
 			TArray<UBF::FBindingInfo> Outputs;
@@ -142,7 +146,7 @@ TFuture<TMap<FString, UUBFBindingObject*>> UFutureverseUBFControllerSubsystem::G
 			Promise->SetValue(UBFUtils::AsBindingObjectMap(Traits));
 		};
 			
-		ParsedGraph.Execute(ParsingGraphId, Controller->RootComponent, APIGraphProvider, TMap<FString, UBF::FBlueprintInstance>(),
+		ParsedGraph.Execute(ParsingGraphId, Controller->RootComponent, APIGraphProvider, MakeShared<FUBFLogData>(ParsingGraphId),TMap<FString, UBF::FBlueprintInstance>(),
 			ParsingInputs, OnParsingGraphComplete, PendingParsingGraphContexts[Id]);
 	});
 
@@ -363,6 +367,7 @@ void UFutureverseUBFControllerSubsystem::ExecuteItemGraph(UUBFInventoryItem* Ite
 	if (!AssetData.RenderGraphInstance.IsValid())
 	{
 		UE_LOG(LogFutureverseUBFController, Warning, TEXT("UFutureverseUBFControllerSubsystem::ExecuteGraph Item %s provided invalid Rendering Graph Instance. Cannot render."), *Item->GetAssetID());
+		OnComplete.ExecuteIfBound(false, FUBFExecutionReport::Failure());
 		return;
 	}
 	
