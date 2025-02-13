@@ -5,6 +5,7 @@
 
 #include "FutureverseAssetLoadData.h"
 #include "FutureverseUBFControllerLog.h"
+#include "UBFLogData.h"
 #include "CollectionData/CollectionAssetProfiles.h"
 #include "ControllerLayers/AssetProfileUtils.h"
 #include "ControllerLayers/DownloadRequestManager.h"
@@ -123,7 +124,7 @@ TFuture<TMap<FString, UUBFBindingObject*>> UFutureverseUBFControllerSubsystem::G
 		FString Id = FGuid::NewGuid().ToString();
 		PendingParsingGraphContexts.Add(Id, UBF::FExecutionContextHandle());
 			
-		const auto OnParsingGraphComplete = [this, Promise, ParsedGraph, Id]
+		const auto OnParsingGraphComplete = [this, Promise, ParsedGraph, Id](bool Success, FUBFExecutionReport ExecutionReport)
 		{
 			// inject outputs of the parsing graph as the inputs of the graph to execute
 			TArray<UBF::FBindingInfo> Outputs;
@@ -142,7 +143,7 @@ TFuture<TMap<FString, UUBFBindingObject*>> UFutureverseUBFControllerSubsystem::G
 			Promise->SetValue(UBFUtils::AsBindingObjectMap(Traits));
 		};
 			
-		ParsedGraph.Execute(ParsingGraphId, Controller->RootComponent, APIGraphProvider, TMap<FString, UBF::FBlueprintInstance>(),
+		ParsedGraph.Execute(ParsingGraphId, Controller->RootComponent, APIGraphProvider, MakeShared<FUBFLogData>(ParsingGraphId),TMap<FString, UBF::FBlueprintInstance>(),
 			ParsingInputs, OnParsingGraphComplete, PendingParsingGraphContexts[Id]);
 	});
 
