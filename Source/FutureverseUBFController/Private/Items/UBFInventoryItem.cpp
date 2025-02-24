@@ -6,8 +6,9 @@
 #include "FutureverseAssetLoadData.h"
 #include "MetadataJsonUtils.h"
 
+
 FUBFItemData UUBFInventoryItem::CreateItemDataFromMetadataJson(const FString& ContractID, const FString& TokenID,
-		const FJsonObjectWrapper& MetadataJsonWrapper)
+																const FJsonObjectWrapper& MetadataJsonWrapper)
 {
 	const FString AssetName = MetadataJsonUtils::GetAssetName(MetadataJsonWrapper.JsonObject); 
 	const FString CollectionID = MetadataJsonUtils::GetCollectionID(MetadataJsonWrapper.JsonObject); 
@@ -31,13 +32,13 @@ TArray<FFutureverseAssetLoadData> UUBFInventoryItem::GetLinkedAssetLoadData() co
 			OutContractIds.Add(FFutureverseAssetLoadData(ContextTreeData.RootNodeID, Out[0]));
 		}
 		
-		for (auto& ChildItemTuple: ContextTreeData.Children)
+		for (auto& Relationship: ContextTreeData.Relationships)
 		{
-			ChildItemTuple.Value.ParseIntoArray(Out, TEXT(":"), true);
+			Relationship.ChildAssetID.ParseIntoArray(Out, TEXT(":"), true);
 
 			if (Out.IsEmpty()) continue;
 			
-			OutContractIds.Add(FFutureverseAssetLoadData(ChildItemTuple.Value, Out[0]));
+			OutContractIds.Add(FFutureverseAssetLoadData(Relationship.ChildAssetID, Out[0]));
 		}
 	}
 
@@ -45,4 +46,17 @@ TArray<FFutureverseAssetLoadData> UUBFInventoryItem::GetLinkedAssetLoadData() co
 		OutContractIds.Add(FFutureverseAssetLoadData(GetAssetID(), GetContractID()));
 		
 	return OutContractIds;
+}
+
+FUBFRenderData UUBFInventoryItem::GetRenderData()
+{
+	return FUBFRenderData(GetAssetID(), GetContractID(), GetMetadataJson(), GetContextTreeRef());
+}
+
+void UUBFInventoryItem::InitializeFromRenderData(const FUBFRenderData& RenderData)
+{
+	ItemData.AssetID = RenderData.AssetID;
+	ItemData.ContractID = RenderData.ContractID;
+	ItemData.MetadataJson = RenderData.MetadataJson;
+	ContextTree = RenderData.ContextTree;
 }

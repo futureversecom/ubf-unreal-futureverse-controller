@@ -72,6 +72,22 @@ void UFutureverseUBFControllerSubsystem::RenderItemTree(UUBFInventoryItem* Item,
 	});
 }
 
+void UFutureverseUBFControllerSubsystem::RenderItemFromRenderData(const FUBFRenderData& RenderData,
+	UUBFRuntimeController* Controller, const TMap<FString, UUBFBindingObject*>& InputMap, const FOnComplete& OnComplete)
+{
+	const auto DummyItem = NewObject<UUBFInventoryItem>();
+	DummyItem->InitializeFromRenderData(RenderData);
+	RenderItem(DummyItem, Controller, InputMap, OnComplete);
+}
+
+void UFutureverseUBFControllerSubsystem::RenderItemTreeFromRenderData(const FUBFRenderData& RenderData,
+	UUBFRuntimeController* Controller, const TMap<FString, UUBFBindingObject*>& InputMap, const FOnComplete& OnComplete)
+{
+	const auto DummyItem = NewObject<UUBFInventoryItem>();
+	DummyItem->InitializeFromRenderData(RenderData);
+	RenderItemTree(DummyItem, Controller, InputMap, OnComplete);
+}
+
 TFuture<bool> UFutureverseUBFControllerSubsystem::TryLoadAssetProfile(const FFutureverseAssetLoadData& LoadData)
 {
 	TSharedPtr<TPromise<bool>> Promise = MakeShareable(new TPromise<bool>());
@@ -415,15 +431,15 @@ void UFutureverseUBFControllerSubsystem::CreateBlueprintInstancesFromContextTree
 
 	for (const auto& ContextTreeData : UBFContextTree)
 	{
-		for (const auto& ChildItem : ContextTreeData.Children)
+		for (const auto& Relationship : ContextTreeData.Relationships)
 		{
-			if (!AssetDataMap.Contains(ChildItem.Value))
+			if (!AssetDataMap.Contains(Relationship.ChildAssetID))
 			{
-				UE_LOG(LogFutureverseUBFController, Warning, TEXT("UFutureverseUBFControllerSubsystem::CreateBlueprintInstancesFromContextTree AssetDataMap does not contain %s."), *ChildItem.Value);
+				UE_LOG(LogFutureverseUBFController, Warning, TEXT("UFutureverseUBFControllerSubsystem::CreateBlueprintInstancesFromContextTree AssetDataMap does not contain %s."), *Relationship.ChildAssetID);
 				continue;
 			}
 
-			if (!AssetIdToInstanceMap.Contains(ChildItem.Value))
+			if (!AssetIdToInstanceMap.Contains(Relationship.ChildAssetID))
 			{
 				if (!AssetDataMap.Contains(ContextTreeData.RootNodeID))
 				{
@@ -431,18 +447,18 @@ void UFutureverseUBFControllerSubsystem::CreateBlueprintInstancesFromContextTree
 					continue;
 				}
 
-				auto ChildNodeRenderGraph = AssetDataMap.Get(ChildItem.Value).RenderGraphInstance;
+				auto ChildNodeRenderGraph = AssetDataMap.Get(Relationship.ChildAssetID).RenderGraphInstance;
 				UBF::FBlueprintInstance NewBlueprintInstance(ChildNodeRenderGraph.GetId());
-				AssetIdToInstanceMap.Add(ChildItem.Value, NewBlueprintInstance);
+				AssetIdToInstanceMap.Add(Relationship.ChildAssetID, NewBlueprintInstance);
 			}
 
-			FString RelationshipKey = ChildItem.Key;
+			FString RelationshipKey = Relationship.RelationshipID;
 
 			//TODO remove temp solution because pb graphs are wrong
 			RelationshipKey = RelationshipKey.Replace(TEXT("path:"), TEXT("")).Replace(TEXT("_accessory"), TEXT(""));
 			
-			AssetIdToInstanceMap[ContextTreeData.RootNodeID].AddInput(RelationshipKey, UBF::FDynamicHandle::String(AssetIdToInstanceMap[ChildItem.Value].GetInstanceId()));
-			UE_LOG(LogFutureverseUBFController, Verbose, TEXT("UFutureverseUBFControllerSubsystem::CreateBlueprintInstancesFromContextTree Added Child Node %s with Relationship: %s."), *ChildItem.Value, *RelationshipKey);
+			AssetIdToInstanceMap[ContextTreeData.RootNodeID].AddInput(RelationshipKey, UBF::FDynamicHandle::String(AssetIdToInstanceMap[Relationship.ChildAssetID].GetInstanceId()));
+			UE_LOG(LogFutureverseUBFController, Verbose, TEXT("UFutureverseUBFControllerSubsystem::CreateBlueprintInstancesFromContextTree Added Child Node %s with Relationship: %s."), *Relationship.ChildAssetID, *RelationshipKey);
 		}
 	}
 

@@ -61,22 +61,63 @@ struct FUBFItemData
 	}
 };
 
-USTRUCT(Blueprintable)
+USTRUCT(Blueprintable, BlueprintType)
+struct FUBFContextTreeRelationshipData
+{
+	GENERATED_BODY()
+
+	FUBFContextTreeRelationshipData() {}
+
+	FUBFContextTreeRelationshipData(const FString& RelationshipID, const FString& ChildAssetID)
+	: RelationshipID(RelationshipID), ChildAssetID(ChildAssetID) {}
+
+	UPROPERTY()
+	FString RelationshipID;
+
+	UPROPERTY()
+	FString ChildAssetID;
+};
+
+USTRUCT(Blueprintable, BlueprintType)
 struct FUBFContextTreeData
 {
 	GENERATED_BODY()
 
 	FUBFContextTreeData() {}
 	
-	FUBFContextTreeData(const FString& RootNodeID, const TMap<FString, FString>& Children)
-	: RootNodeID(RootNodeID), Children(Children) {}
+	FUBFContextTreeData(const FString& RootNodeID, const TArray<FUBFContextTreeRelationshipData>& Relationships)
+	: RootNodeID(RootNodeID), Relationships(Relationships) {}
 
 	UPROPERTY()
 	FString RootNodeID;
 
-	// <Relationship, AssetID>
 	UPROPERTY()
-	TMap<FString, FString> Children;
+	TArray<FUBFContextTreeRelationshipData> Relationships;
+};
+
+// contains the core data that UBF Subsystem needs to render an item
+USTRUCT(BlueprintType)
+struct FUBFRenderData
+{
+	GENERATED_BODY()
+
+	FUBFRenderData() {}
+
+	FUBFRenderData(const FString& AssetID, const FString& ContractID, const FString& MetadataJson,
+		const TArray<FUBFContextTreeData>& ContextTree)
+		: AssetID(AssetID), ContractID(ContractID), MetadataJson(MetadataJson), ContextTree(ContextTree) {}
+	
+	UPROPERTY(BlueprintReadOnly)
+	FString AssetID = "Invalid";
+
+	UPROPERTY(BlueprintReadOnly)
+	FString ContractID;
+
+	UPROPERTY(BlueprintReadOnly)
+	FString MetadataJson;
+
+	UPROPERTY(BlueprintReadOnly)
+	TArray<FUBFContextTreeData> ContextTree;
 };
 
 /**
@@ -125,6 +166,12 @@ public:
 	FString GetMetadataJson() const { return ItemData.MetadataJson; }
 
 	TArray<FFutureverseAssetLoadData> GetLinkedAssetLoadData() const;
+
+	UFUNCTION(BlueprintCallable)
+	FUBFRenderData GetRenderData();
+
+	UFUNCTION(BlueprintCallable)
+	void InitializeFromRenderData(const FUBFRenderData& RenderData);
 	
 private:
 	UPROPERTY()

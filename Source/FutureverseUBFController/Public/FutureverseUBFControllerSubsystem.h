@@ -56,6 +56,16 @@ public:
 	UFUNCTION(BlueprintCallable, meta = (AutoCreateRefTerm = "OnComplete"))
 	void RenderItemTree(UUBFInventoryItem* Item, UUBFRuntimeController* Controller,
 		const TMap<FString, UUBFBindingObject*>& InputMap, const FOnComplete& OnComplete);
+	
+	// Used for rendering an item by itself without asset tree
+	UFUNCTION(BlueprintCallable, meta = (AutoCreateRefTerm = "OnComplete"))
+	void RenderItemFromRenderData(const FUBFRenderData& RenderData, UUBFRuntimeController* Controller,
+		const TMap<FString, UUBFBindingObject*>& InputMap, const FOnComplete& OnComplete);
+
+	// Used for rendering an item by itself without asset tree
+	UFUNCTION(BlueprintCallable, meta = (AutoCreateRefTerm = "OnComplete"))
+	void RenderItemTreeFromRenderData(const FUBFRenderData& RenderData,UUBFRuntimeController* Controller,
+		const TMap<FString, UUBFBindingObject*>& InputMap, const FOnComplete& OnComplete);
 
 	// Asset profiles contain the path for Blueprints, Parsing Blueprints and ResourceManifests associated with an UFuturePassInventoryItem
 	// Currently this data needs to provided by the experience using the below functions
