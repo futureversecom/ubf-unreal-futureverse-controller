@@ -9,6 +9,8 @@ public:
 	
 	virtual void CacheBytes(const FString& Uri, const FString& Hash, const TArray<uint8>& Bytes) override
 	{
+		TRACE_CPUPROFILER_EVENT_SCOPE(FTempCacheLoader::CacheBytes);
+		
 		if (Hash.IsEmpty())
 		{
 			UE_LOG(LogUBFAPIController, Warning, TEXT("FTempCacheLoader::CacheBytes Failed to cache bytes to %s because provided hash was empty!"), *Uri);
@@ -55,6 +57,8 @@ public:
 	
 	virtual bool TryGetCachedBytes(const FString& Uri, const FString& Hash, TArray<uint8>& CachedBytes) const override
 	{
+		TRACE_CPUPROFILER_EVENT_SCOPE(FTempCacheLoader::TryGetCachedBytes);
+		
 		if (Hash.IsEmpty())
 		{
 			UE_LOG(LogUBFAPIController, Warning, TEXT("FTempCacheLoader::TryGetCachedBytes Failed to get cache from %s because provided hash was empty!"), *Uri);

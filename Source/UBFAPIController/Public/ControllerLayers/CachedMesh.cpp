@@ -1,13 +1,18 @@
 #include "CachedMesh.h"
 #include "glTFRuntimeAsset.h"
 
+FCachedMeshEntry::FCachedMeshEntry(const FglTFRuntimeConfig& ImportConfig, UglTFRuntimeAsset* Asset): ImportConfig(ImportConfig), Asset(Asset)
+{
+	
+}
+
 bool FCachedMesh::ContainsMesh(const FglTFRuntimeConfig& Config)
 {
 	int Index = GetIndexForConfig(Config);
-
+	
 	if (!LoadedAssets.IsValidIndex(Index))
 		return false;
-
+	
 	return LoadedAssets[Index].Asset.IsValid();
 }
 

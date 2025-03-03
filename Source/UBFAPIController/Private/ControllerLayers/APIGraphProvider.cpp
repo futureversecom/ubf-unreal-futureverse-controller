@@ -153,10 +153,21 @@ TFuture<UBF::FLoadTextureResult> FAPIGraphProvider::GetTextureResource(const FSt
 			Promise->SetValue(LoadResult);
 			return;
 		}
-							
-		UTexture2D* Texture = FImageUtils::ImportBufferAsTexture2D(Data);
-		LoadedTexturesMap.Remove(ArtifactId);
-		LoadedTexturesMap.Add(ArtifactId, Texture);
+
+		UTexture2D* Texture = nullptr;
+
+		if (LoadedTexturesMap.Contains(ArtifactId) && LoadedTexturesMap[ArtifactId].IsValid())
+		{
+			Texture = LoadedTexturesMap[ArtifactId].Get();
+		}
+		else
+		{
+			TRACE_CPUPROFILER_EVENT_SCOPE(FAPIGraphProvider::GetTextureResource_ImportDataAsTexture);
+			Texture = FImageUtils::ImportBufferAsTexture2D(Data);
+			LoadedTexturesMap.Remove(ArtifactId);
+			LoadedTexturesMap.Add(ArtifactId, Texture);
+		}
+		
 		LoadResult.Result = TPair<bool, UTexture2D*>(true, Texture);
 		Promise->SetValue(LoadResult);
 	});
@@ -202,19 +213,30 @@ TFuture<UBF::FLoadMeshResult> FAPIGraphProvider::GetMeshResource(const FString& 
 			return;
 		}
 
-		UglTFRuntimeAsset* Asset = NewObject<UglTFRuntimeAsset>();
-		Asset->RuntimeContextObject = Config.RuntimeContextObject;
-		Asset->RuntimeContextString = Config.RuntimeContextString;
-		
-		if (!Asset->LoadFromData(Data.GetData(), Data.Num(), Config))
-		{
-			UE_LOG(LogUBF, Error, TEXT("FAPIGraphProvider::GetMeshResource Failed to Load Mesh from Data %s"), *ArtifactId);
-			LoadResult.Result = TPair<bool, UglTFRuntimeAsset*>(false, nullptr);
-			Promise->SetValue(LoadResult);
-			return;
-		}
+		UglTFRuntimeAsset* Asset;
 
-		LoadedMeshesMap.FindOrAdd(ArtifactId).AddOrReplaceMesh(Config, Asset);
+		if (LoadedMeshesMap.Contains(ArtifactId) && LoadedMeshesMap[ArtifactId].ContainsMesh(Config))
+		{
+			Asset = LoadedMeshesMap[ArtifactId].GetMesh(Config);
+		}
+		else
+		{
+			TRACE_CPUPROFILER_EVENT_SCOPE(FAPIGraphProvider::GetMeshResource_ImportDataAsGLTFRuntimeAsset);
+
+			Asset = NewObject<UglTFRuntimeAsset>();
+			Asset->RuntimeContextObject = Config.RuntimeContextObject;
+			Asset->RuntimeContextString = Config.RuntimeContextString;
+					
+			if (!Asset->LoadFromData(Data.GetData(), Data.Num(), Config))
+			{
+				UE_LOG(LogUBF, Error, TEXT("FAPIGraphProvider::GetMeshResource Failed to Load Mesh from Data %s"), *ArtifactId);
+				LoadResult.Result = TPair<bool, UglTFRuntimeAsset*>(false, nullptr);
+				Promise->SetValue(LoadResult);
+				return;
+			}
+			
+			LoadedMeshesMap.FindOrAdd(ArtifactId).AddOrReplaceMesh(Config, Asset);
+		}
 		
 		LoadResult.Result = TPair<bool, UglTFRuntimeAsset*>(true, Asset);
 		Promise->SetValue(LoadResult);
