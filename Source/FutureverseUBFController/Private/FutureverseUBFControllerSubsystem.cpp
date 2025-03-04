@@ -28,6 +28,8 @@ void UFutureverseUBFControllerSubsystem::RenderItem(UUBFInventoryItem* Item, UUB
 {
 	TryLoadAssetData(FFutureverseAssetLoadData(Item->GetAssetID(), Item->GetContractID())).Next([this, Item, Controller, InputMap, OnComplete](const bool bIsAssetProfileLoaded)
 	{
+		if (!IsSubsystemValid()) return;
+		
 		if (!bIsAssetProfileLoaded)
 		{
 			UE_LOG(LogFutureverseUBFController, Warning, TEXT("UFutureverseUBFControllerSubsystem::RenderItem Item %s provided invalid AssetProfile. Cannot render."), *Item->GetAssetID());
@@ -56,6 +58,8 @@ void UFutureverseUBFControllerSubsystem::RenderItemTree(UUBFInventoryItem* Item,
 	
 	TryLoadAssetDatas(AssetLoadDatas).Next([this, Item, Controller, InputMap, OnComplete](const bool bIsAssetProfileLoaded)
 	{
+		if (!IsSubsystemValid()) return;
+		
 		if (!bIsAssetProfileLoaded)
 		{
 			UE_LOG(LogFutureverseUBFController, Warning, TEXT("UFutureverseUBFControllerSubsystem::RenderItemTree Item %s asset tree failed to load one or many AssetDatas. This will cause asset tree to not render fully"), *Item->GetAssetID());
@@ -99,6 +103,8 @@ TFuture<bool> UFutureverseUBFControllerSubsystem::TryLoadAssetProfile(const FFut
 	LoadAssetProfilesAction->TryLoadAssetProfile(LoadData, MemoryCacheLoader, TempCacheLoader)
 	.Next([this, Promise, LoadAssetProfilesAction](bool bSuccess)
 	{
+		if (!IsSubsystemValid()) return;
+		
 		if (bSuccess)
 		{
 			for (const auto& Element : LoadAssetProfilesAction->AssetProfiles)
@@ -131,6 +137,8 @@ TFuture<TMap<FString, UUBFBindingObject*>> UFutureverseUBFControllerSubsystem::G
 		.Next([this, ParsingInputs, ParsingGraphId, Controller, Promise]
 		(const UBF::FLoadGraphResult& Result)
 	{
+		if (!IsSubsystemValid()) return;
+			
 		if (!Result.Result.Key)
 		{
 			UE_LOG(LogUBF, Error, TEXT("Aborting execution: graph '%s' is invalid"), *ParsingGraphId);
@@ -169,9 +177,14 @@ TFuture<TMap<FString, UUBFBindingObject*>> UFutureverseUBFControllerSubsystem::G
 	return Future;
 }
 
+bool UFutureverseUBFControllerSubsystem::IsSubsystemValid() const
+{
+	return IsValid(this) && bIsInitialized;
+}
+
 void UFutureverseUBFControllerSubsystem::ParseInputsThenExecute(UUBFInventoryItem* Item, UUBFRuntimeController* Controller,
-	const TMap<FString, UUBFBindingObject*>& InputMap, const FOnComplete& OnComplete,
-	const bool bShouldBuildContextTree)
+                                                                const TMap<FString, UUBFBindingObject*>& InputMap, const FOnComplete& OnComplete,
+                                                                const bool bShouldBuildContextTree)
 {
 	const auto AssetData = AssetDataMap.Get(Item->GetAssetID());
 	
@@ -187,9 +200,11 @@ void UFutureverseUBFControllerSubsystem::ParseInputsThenExecute(UUBFInventoryIte
 		[this, Item, bShouldBuildContextTree, InputMap, Controller, OnComplete]
 		(const TMap<FString, UUBFBindingObject*>& Traits)
 	{
-			TMap<FString, UUBFBindingObject*> Inputs = InputMap;
-			Inputs.Append(Traits);
-			ExecuteGraph(Item, Controller, Inputs, bShouldBuildContextTree, OnComplete);
+		if (!IsSubsystemValid()) return;
+			
+		TMap<FString, UUBFBindingObject*> Inputs = InputMap;
+		Inputs.Append(Traits);
+		ExecuteGraph(Item, Controller, Inputs, bShouldBuildContextTree, OnComplete);
 	});
 }
 
@@ -247,6 +262,8 @@ TFuture<bool> UFutureverseUBFControllerSubsystem::TryLoadAssetDatas(const TArray
 	LoadAssetProfilesAction->TryLoadAssetProfiles(LoadDatas, this)
 	.Next([this, Promise, LoadAssetProfilesAction](bool bSuccess)
 	{
+		if (!IsSubsystemValid()) return;
+		
 		Promise->SetValue(bSuccess);
 
 		PendingMultiLoadActions.Remove(LoadAssetProfilesAction);
@@ -274,6 +291,8 @@ TFuture<bool> UFutureverseUBFControllerSubsystem::TryLoadAssetData(const FFuture
 		UE_LOG(LogFutureverseUBFController, Verbose, TEXT("UFutureverseUBFControllerSubsystem::TryLoadAssetData AssetProfile already exists for AssetId %s"), *LoadData.AssetID);
 		TryLoadAssetProfileData(LoadData.AssetID).Next([this, Promise, LoadData](bool bResult)
 		{
+			if (!IsSubsystemValid()) return;
+			
 			if (!bResult|| !AssetDataMap.Contains(LoadData.AssetID))
 			{
 				FAssetProfile AssetProfile = AssetProfiles.Get(LoadData.AssetID);
@@ -293,6 +312,8 @@ TFuture<bool> UFutureverseUBFControllerSubsystem::TryLoadAssetData(const FFuture
 	UE_LOG(LogFutureverseUBFController, Verbose, TEXT("UFutureverseUBFControllerSubsystem::TryLoadAssetData No AssetProfile exists for AssetId %s Attempting to load..."), *LoadData.AssetID);
 	TryLoadAssetProfile(LoadData).Next([this, Promise, LoadData](bool bResult)
 	{
+		if (!IsSubsystemValid()) return;
+		
 		if (!bResult || !AssetProfiles.Contains(LoadData.AssetID))
 		{
 			UE_LOG(LogFutureverseUBFController, Warning, TEXT("UFutureverseUBFControllerSubsystem::TryLoadAssetData Failed to load asset profile for AssetId %s. Result %d ProfileExists %d"), *LoadData.AssetID, bResult, AssetProfiles.Contains(LoadData.AssetID));
@@ -327,6 +348,8 @@ TFuture<bool> UFutureverseUBFControllerSubsystem::TryLoadAssetProfileData(const 
 
 	AssetProfileDataAction->TryLoadAssetProfileData(AssetProfile, MemoryCacheLoader, TempCacheLoader).Next([this, AssetProfileDataAction, Promise](bool bSuccess)
 	{
+		if (!IsSubsystemValid()) return;
+		
 		if (bSuccess)
 		{
 			APIGraphProvider->RegisterBlueprintJson(AssetProfileDataAction->AssetData.RenderGraphInstance);
@@ -499,6 +522,20 @@ void UFutureverseUBFControllerSubsystem::RegisterAssetData(const FString& AssetI
 	UE_LOG(LogFutureverseUBFController, VeryVerbose,
 		TEXT("UFutureverseUBFControllerSubsystem::RegisterAssetData Registered AssetData for Item %s RenderingGraphBlueprintId: %s ParsingGraphBlueprintId: %s"),
 		*AssetId, *AssetData.RenderGraphInstance.GetId(), *AssetData.ParsingGraphInstance.GetId());
+}
+
+void UFutureverseUBFControllerSubsystem::Deinitialize()
+{
+	Super::Deinitialize();
+
+	bIsInitialized = false;
+}
+
+void UFutureverseUBFControllerSubsystem::Initialize(FSubsystemCollectionBase& Collection)
+{
+	Super::Initialize(Collection);
+
+	bIsInitialized = true;
 }
 
 UFutureverseUBFControllerSubsystem* UFutureverseUBFControllerSubsystem::Get(const UObject* WorldContext)

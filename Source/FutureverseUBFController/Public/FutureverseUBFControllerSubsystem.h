@@ -86,6 +86,9 @@ public:
 	// Asset data contains the actual blueprint instances that were fetched using the urls from asset profiles
 	void RegisterAssetData(const FString& AssetId, const FFutureverseAssetData& AssetData);
 
+	virtual void Deinitialize() override;
+	virtual void Initialize(FSubsystemCollectionBase& Collection) override;
+
 private:
 	void ExecuteItemGraph(UUBFInventoryItem* Item,
 	                  UUBFRuntimeController* Controller, const bool bShouldBuildContextTree,
@@ -110,6 +113,8 @@ private:
 	
 	TFuture<TMap<FString, UUBFBindingObject*>> GetTraitsForItem(const FString& ParsingGraphId,
 		UUBFRuntimeController* Controller, const TMap<FString, UBF::FDynamicHandle>& ParsingInputs) const;
+
+	bool IsSubsystemValid() const;
 	
 	TSharedPtr<FAPIGraphProvider> APIGraphProvider;
 	
@@ -118,6 +123,8 @@ private:
 
 	TAssetIdMap<FAssetProfile> AssetProfiles;
 	TAssetIdMap<FFutureverseAssetData> AssetDataMap;
+
+	bool bIsInitialized = false;
 
 	mutable TMap<FString, UBF::FExecutionContextHandle> PendingParsingGraphContexts;
 
