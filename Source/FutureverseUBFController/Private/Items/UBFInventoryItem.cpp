@@ -50,7 +50,8 @@ TArray<FFutureverseAssetLoadData> UUBFInventoryItem::GetLinkedAssetLoadData() co
 
 FUBFRenderData UUBFInventoryItem::GetRenderData()
 {
-	return FUBFRenderData(GetAssetID(), GetContractID(), GetMetadataJson(), GetContextTreeRef());
+	return FUBFRenderData(ItemData.AssetID, ItemData.ContractID, ItemData.TokenID,
+		ItemData.CollectionID, GetMetadataJson(), GetContextTreeRef());
 }
 
 void UUBFInventoryItem::InitializeFromRenderData(const FUBFRenderData& RenderData)
@@ -58,5 +59,7 @@ void UUBFInventoryItem::InitializeFromRenderData(const FUBFRenderData& RenderDat
 	ItemData.AssetID = RenderData.AssetID;
 	ItemData.ContractID = RenderData.ContractID;
 	ItemData.MetadataJson = RenderData.MetadataJson;
+	ItemData.TokenID = RenderData.TokenID;
+	ItemData.CollectionID = RenderData.CollectionID;
 	ContextTree = RenderData.ContextTree;
 }

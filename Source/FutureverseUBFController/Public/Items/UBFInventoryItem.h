@@ -103,15 +103,22 @@ struct FUBFRenderData
 
 	FUBFRenderData() {}
 
-	FUBFRenderData(const FString& AssetID, const FString& ContractID, const FString& MetadataJson,
-		const TArray<FUBFContextTreeData>& ContextTree)
-		: AssetID(AssetID), ContractID(ContractID), MetadataJson(MetadataJson), ContextTree(ContextTree) {}
+	FUBFRenderData(const FString& AssetID, const FString& ContractID, const FString& TokenID,
+		const FString& CollectionID, const FString& MetadataJson,const TArray<FUBFContextTreeData>& ContextTree)
+		: AssetID(AssetID), ContractID(ContractID), TokenID(TokenID), CollectionID(CollectionID),
+		  MetadataJson(MetadataJson), ContextTree(ContextTree) {}
 	
 	UPROPERTY(BlueprintReadOnly)
 	FString AssetID = "Invalid";
 
 	UPROPERTY(BlueprintReadOnly)
 	FString ContractID;
+
+	UPROPERTY(BlueprintReadOnly)
+	FString TokenID;
+
+	UPROPERTY(BlueprintReadOnly)
+	FString CollectionID;
 
 	UPROPERTY(BlueprintReadOnly)
 	FString MetadataJson;
@@ -163,6 +170,12 @@ public:
 	FString GetCombinedID() const { return ItemData.GetCombinedID(); }
 
 	UFUNCTION(BlueprintCallable)
+	FString GetTokenID() const { return ItemData.TokenID; }
+
+	UFUNCTION(BlueprintCallable)
+	FString GetCollectionID() const { return ItemData.CollectionID; }
+
+	UFUNCTION(BlueprintCallable)
 	FString GetMetadataJson() const { return ItemData.MetadataJson; }
 
 	TArray<FFutureverseAssetLoadData> GetLinkedAssetLoadData() const;
@@ -172,11 +185,11 @@ public:
 
 	UFUNCTION(BlueprintCallable)
 	void InitializeFromRenderData(const FUBFRenderData& RenderData);
-	
-private:
-	UPROPERTY()
-	FUBFItemData ItemData;
-	
+
+protected:
 	UPROPERTY()
 	TArray<FUBFContextTreeData> ContextTree;
+	
+	UPROPERTY()
+    FUBFItemData ItemData;
 };
