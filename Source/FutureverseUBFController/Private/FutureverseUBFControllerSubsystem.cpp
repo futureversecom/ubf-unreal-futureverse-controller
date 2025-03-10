@@ -103,7 +103,11 @@ TFuture<bool> UFutureverseUBFControllerSubsystem::TryLoadAssetProfile(const FFut
 	LoadAssetProfilesAction->TryLoadAssetProfile(LoadData, MemoryCacheLoader, TempCacheLoader)
 	.Next([this, Promise, LoadAssetProfilesAction](bool bSuccess)
 	{
-		if (!IsSubsystemValid()) return;
+		if (!IsSubsystemValid())
+		{
+			Promise->SetValue(false);
+			return;
+		}
 		
 		if (bSuccess)
 		{
@@ -137,7 +141,12 @@ TFuture<TMap<FString, UUBFBindingObject*>> UFutureverseUBFControllerSubsystem::G
 		.Next([this, ParsingInputs, ParsingGraphId, Controller, Promise]
 		(const UBF::FLoadGraphResult& Result)
 	{
-		if (!IsSubsystemValid()) return;
+		if (!IsSubsystemValid())
+		{
+			TMap<FString, UBF::FDynamicHandle> Traits;
+			Promise->SetValue(UBFUtils::AsBindingObjectMap(Traits));
+			return;
+		}
 			
 		if (!Result.Result.Key)
 		{
@@ -262,7 +271,11 @@ TFuture<bool> UFutureverseUBFControllerSubsystem::TryLoadAssetDatas(const TArray
 	LoadAssetProfilesAction->TryLoadAssetProfiles(LoadDatas, this)
 	.Next([this, Promise, LoadAssetProfilesAction](bool bSuccess)
 	{
-		if (!IsSubsystemValid()) return;
+		if (!IsSubsystemValid())
+		{
+			Promise->SetValue(false);
+			return;
+		}
 		
 		Promise->SetValue(bSuccess);
 
@@ -291,7 +304,11 @@ TFuture<bool> UFutureverseUBFControllerSubsystem::TryLoadAssetData(const FFuture
 		UE_LOG(LogFutureverseUBFController, Verbose, TEXT("UFutureverseUBFControllerSubsystem::TryLoadAssetData AssetProfile already exists for AssetId %s"), *LoadData.AssetID);
 		TryLoadAssetProfileData(LoadData.AssetID).Next([this, Promise, LoadData](bool bResult)
 		{
-			if (!IsSubsystemValid()) return;
+			if (!IsSubsystemValid())
+			{
+				Promise->SetValue(false);
+				return;
+			}
 			
 			if (!bResult|| !AssetDataMap.Contains(LoadData.AssetID))
 			{
@@ -312,7 +329,11 @@ TFuture<bool> UFutureverseUBFControllerSubsystem::TryLoadAssetData(const FFuture
 	UE_LOG(LogFutureverseUBFController, Verbose, TEXT("UFutureverseUBFControllerSubsystem::TryLoadAssetData No AssetProfile exists for AssetId %s Attempting to load..."), *LoadData.AssetID);
 	TryLoadAssetProfile(LoadData).Next([this, Promise, LoadData](bool bResult)
 	{
-		if (!IsSubsystemValid()) return;
+		if (!IsSubsystemValid())
+		{
+			Promise->SetValue(false);
+			return;
+		}
 		
 		if (!bResult || !AssetProfiles.Contains(LoadData.AssetID))
 		{
@@ -348,7 +369,11 @@ TFuture<bool> UFutureverseUBFControllerSubsystem::TryLoadAssetProfileData(const 
 
 	AssetProfileDataAction->TryLoadAssetProfileData(AssetProfile, MemoryCacheLoader, TempCacheLoader).Next([this, AssetProfileDataAction, Promise](bool bSuccess)
 	{
-		if (!IsSubsystemValid()) return;
+		if (!IsSubsystemValid())
+		{
+			Promise->SetValue(false);
+			return;
+		}
 		
 		if (bSuccess)
 		{
