@@ -26,70 +26,49 @@ UFutureverseUBFControllerSubsystem::UFutureverseUBFControllerSubsystem()
 void UFutureverseUBFControllerSubsystem::RenderItem(UUBFInventoryItem* Item, UUBFRuntimeController* Controller,
 	const TMap<FString, UUBFBindingObject*>& InputMap, const FOnComplete& OnComplete)
 {
-	TryLoadAssetData(FFutureverseAssetLoadData(Item->GetAssetID(), Item->GetContractID())).Next([this, Item, Controller, InputMap, OnComplete](const bool bIsAssetProfileLoaded)
+	if (!IsValid(Item))
 	{
-		if (!IsSubsystemValid()) return;
-		
-		if (!bIsAssetProfileLoaded)
-		{
-			UE_LOG(LogFutureverseUBFController, Warning, TEXT("UFutureverseUBFControllerSubsystem::RenderItem Item %s provided invalid AssetProfile. Cannot render."), *Item->GetAssetID());
-			OnComplete.ExecuteIfBound(false, FUBFExecutionReport::Failure());
-			return;
-		}
-		
-		if (!AssetDataMap.Contains(Item->GetAssetID()))
-		{
-			UE_LOG(LogFutureverseUBFController, Warning, TEXT("UFutureverseUBFControllerSubsystem::RenderItem AssetDataMap does not contian Item %s. Cannot render."), *Item->GetAssetID());
-			OnComplete.ExecuteIfBound(false, FUBFExecutionReport::Failure());
-			return;
-		}
-		
-		ExecuteItemGraph(Item, Controller, false, InputMap, OnComplete);
-	});
+		UE_LOG(LogFutureverseUBFController, Warning, TEXT("UFutureverseUBFControllerSubsystem::RenderItem was provided invalid Item. Cannot Render."));
+		return;
+	}
+	
+	if (!IsValid(Controller))
+	{
+		UE_LOG(LogFutureverseUBFController, Warning, TEXT("UFutureverseUBFControllerSubsystem::RenderItem was provided invalid Controller. Cannot Render."));
+		return;
+	}
+	
+	RenderItemInternal(FUBFRenderDataContainer::GetFromData(Item->GetRenderData()), Controller, InputMap, OnComplete);
 }
 
 void UFutureverseUBFControllerSubsystem::RenderItemTree(UUBFInventoryItem* Item,
 	UUBFRuntimeController* Controller, const TMap<FString, UUBFBindingObject*>& InputMap, const FOnComplete& OnComplete)
 {
-	TArray<FFutureverseAssetLoadData> AssetLoadDatas = Item->GetLinkedAssetLoadData();
-
-	if (AssetLoadDatas.IsEmpty())
-		UE_LOG(LogFutureverseUBFController, Warning, TEXT("UFutureverseUBFControllerSubsystem::RenderItemTree AssetLoadDatas empty for Item %s."), *Item->GetAssetID());
-	
-	TryLoadAssetDatas(AssetLoadDatas).Next([this, Item, Controller, InputMap, OnComplete](const bool bIsAssetProfileLoaded)
+	if (!IsValid(Item))
 	{
-		if (!IsSubsystemValid()) return;
-		
-		if (!bIsAssetProfileLoaded)
-		{
-			UE_LOG(LogFutureverseUBFController, Warning, TEXT("UFutureverseUBFControllerSubsystem::RenderItemTree Item %s asset tree failed to load one or many AssetDatas. This will cause asset tree to not render fully"), *Item->GetAssetID());
-		}
-		
-		if (!AssetDataMap.Contains(Item->GetAssetID()))
-		{
-			UE_LOG(LogFutureverseUBFController, Warning, TEXT("UFutureverseUBFControllerSubsystem::RenderItemTree AssetDataMap does not contian Item %s. Cannot render."), *Item->GetAssetID());
-			OnComplete.ExecuteIfBound(false, FUBFExecutionReport::Failure());
-			return;
-		}
-		
-		ExecuteItemGraph(Item, Controller, true, InputMap, OnComplete);
-	});
+		UE_LOG(LogFutureverseUBFController, Warning, TEXT("UFutureverseUBFControllerSubsystem::RenderItemTree was provided invalid Item. Cannot Render."));
+		return;
+	}
+	
+	if (!IsValid(Controller))
+	{
+		UE_LOG(LogFutureverseUBFController, Warning, TEXT("UFutureverseUBFControllerSubsystem::RenderItemTree was provided invalid Controller. Cannot Render."));
+		return;
+	}
+	
+	RenderItemTreeInternal(FUBFRenderDataContainer::GetFromData(Item->GetRenderData()), Controller, InputMap, OnComplete);
 }
 
 void UFutureverseUBFControllerSubsystem::RenderItemFromRenderData(const FUBFRenderData& RenderData,
 	UUBFRuntimeController* Controller, const TMap<FString, UUBFBindingObject*>& InputMap, const FOnComplete& OnComplete)
 {
-	const auto DummyItem = NewObject<UUBFInventoryItem>();
-	DummyItem->InitializeFromRenderData(RenderData);
-	RenderItem(DummyItem, Controller, InputMap, OnComplete);
+	RenderItemInternal(FUBFRenderDataContainer::GetFromData(RenderData), Controller, InputMap, OnComplete);
 }
 
 void UFutureverseUBFControllerSubsystem::RenderItemTreeFromRenderData(const FUBFRenderData& RenderData,
 	UUBFRuntimeController* Controller, const TMap<FString, UUBFBindingObject*>& InputMap, const FOnComplete& OnComplete)
 {
-	const auto DummyItem = NewObject<UUBFInventoryItem>();
-	DummyItem->InitializeFromRenderData(RenderData);
-	RenderItemTree(DummyItem, Controller, InputMap, OnComplete);
+	RenderItemTreeInternal(FUBFRenderDataContainer::GetFromData(RenderData), Controller, InputMap, OnComplete);
 }
 
 TFuture<bool> UFutureverseUBFControllerSubsystem::TryLoadAssetProfile(const FFutureverseAssetLoadData& LoadData)
@@ -103,7 +82,11 @@ TFuture<bool> UFutureverseUBFControllerSubsystem::TryLoadAssetProfile(const FFut
 	LoadAssetProfilesAction->TryLoadAssetProfile(LoadData, MemoryCacheLoader, TempCacheLoader)
 	.Next([this, Promise, LoadAssetProfilesAction](bool bSuccess)
 	{
-		if (!IsSubsystemValid()) return;
+		if (!IsSubsystemValid())
+		{
+			Promise->SetValue(false);
+			return;
+		}
 		
 		if (bSuccess)
 		{
@@ -137,7 +120,12 @@ TFuture<TMap<FString, UUBFBindingObject*>> UFutureverseUBFControllerSubsystem::G
 		.Next([this, ParsingInputs, ParsingGraphId, Controller, Promise]
 		(const UBF::FLoadGraphResult& Result)
 	{
-		if (!IsSubsystemValid()) return;
+		if (!IsSubsystemValid())
+		{
+			TMap<FString, UBF::FDynamicHandle> Traits;
+			Promise->SetValue(UBFUtils::AsBindingObjectMap(Traits));
+			return;
+		}
 			
 		if (!Result.Result.Key)
 		{
@@ -182,39 +170,39 @@ bool UFutureverseUBFControllerSubsystem::IsSubsystemValid() const
 	return IsValid(this) && bIsInitialized;
 }
 
-void UFutureverseUBFControllerSubsystem::ParseInputsThenExecute(UUBFInventoryItem* Item, UUBFRuntimeController* Controller,
+void UFutureverseUBFControllerSubsystem::ParseInputsThenExecute(FUBFRenderDataPtr RenderData, UUBFRuntimeController* Controller,
                                                                 const TMap<FString, UUBFBindingObject*>& InputMap, const FOnComplete& OnComplete,
                                                                 const bool bShouldBuildContextTree)
 {
-	const auto AssetData = AssetDataMap.Get(Item->GetAssetID());
+	const auto AssetData = AssetDataMap.Get(RenderData->GetAssetID());
 	
 	// get metadata json string from original json
-	UE_LOG(LogFutureverseUBFController, VeryVerbose, TEXT("UFutureverseUBFControllerSubsystem::ParseInputs Parsing Metadata: %s"), *Item->GetMetadataJson());
+	UE_LOG(LogFutureverseUBFController, VeryVerbose, TEXT("UFutureverseUBFControllerSubsystem::ParseInputs Parsing Metadata: %s"), *RenderData->GetMetadataJson());
 	TMap<FString, UBF::FDynamicHandle> ParsingInputs =
 	{
-		{TEXT("metadata"), UBF::FDynamicHandle::String(Item->GetMetadataJson()) }
+		{TEXT("metadata"), UBF::FDynamicHandle::String(RenderData->GetMetadataJson()) }
 	};
 				
-	const auto ParsingGraphId = AssetDataMap.Get(Item->GetAssetID()).ParsingGraphInstance.GetId();
+	const auto ParsingGraphId = AssetDataMap.Get(RenderData->GetAssetID()).ParsingGraphInstance.GetId();
 	GetTraitsForItem(ParsingGraphId, Controller, ParsingInputs).Next(
-		[this, Item, bShouldBuildContextTree, InputMap, Controller, OnComplete]
+		[this, RenderData, bShouldBuildContextTree, InputMap, Controller, OnComplete]
 		(const TMap<FString, UUBFBindingObject*>& Traits)
 	{
 		if (!IsSubsystemValid()) return;
 			
 		TMap<FString, UUBFBindingObject*> Inputs = InputMap;
 		Inputs.Append(Traits);
-		ExecuteGraph(Item, Controller, Inputs, bShouldBuildContextTree, OnComplete);
+		ExecuteGraph(RenderData, Controller, Inputs, bShouldBuildContextTree, OnComplete);
 	});
 }
 
-void UFutureverseUBFControllerSubsystem::ExecuteGraph(UUBFInventoryItem* Item, UUBFRuntimeController* Controller, const TMap<FString, UUBFBindingObject*>& InputMap, bool bShouldBuildContextTree, const FOnComplete& OnComplete)
+void UFutureverseUBFControllerSubsystem::ExecuteGraph(FUBFRenderDataPtr RenderData, UUBFRuntimeController* Controller, const TMap<FString, UUBFBindingObject*>& InputMap, bool bShouldBuildContextTree, const FOnComplete& OnComplete)
 {
 	FBlueprintExecutionData ExecutionData;
 
 	if (bShouldBuildContextTree)
 	{
-		CreateBlueprintInstancesFromContextTree(Item->GetContextTreeRef(), Item->GetAssetID(), UBFUtils::AsDynamicMap(InputMap), ExecutionData.BlueprintInstances);
+		CreateBlueprintInstancesFromContextTree(RenderData->GetContextTreeRef(), RenderData->GetAssetID(), UBFUtils::AsDynamicMap(InputMap), ExecutionData.BlueprintInstances);
 	}
 	else
 	{
@@ -225,7 +213,7 @@ void UFutureverseUBFControllerSubsystem::ExecuteGraph(UUBFInventoryItem* Item, U
 	// Find traits from blueprint instance for root as it contains inputs for parent -> child graph relationships
 	for (const UBF::FBlueprintInstance& BlueprintInstance : ExecutionData.BlueprintInstances)
 	{
-		if (BlueprintInstance.GetBlueprintId() == AssetDataMap.Get(Item->GetAssetID()).RenderGraphInstance.GetId())
+		if (BlueprintInstance.GetBlueprintId() == AssetDataMap.Get(RenderData->GetAssetID()).RenderGraphInstance.GetId())
 		{
 			for (const auto& BindingObjectMapTuple : UBFUtils::AsBindingObjectMap(BlueprintInstance.GetInputs()))
 			{
@@ -241,14 +229,14 @@ void UFutureverseUBFControllerSubsystem::ExecuteGraph(UUBFInventoryItem* Item, U
 		UE_LOG(LogFutureverseUBFController, Verbose, TEXT("UFutureverseUBFControllerSubsystem::ParseInputs ResolvedInput %s"), *Input.Value->ToString());
 	}
 	
-	if (!Controller)
+	if (!IsValid(Controller))
 	{
 		UE_LOG(LogFutureverseUBFController, Warning, TEXT("UFutureverseUBFControllerSubsystem::ExecuteGraph null Controller provided. Cannot render."));
 		return;
 	}
 			
 	Controller->SetGraphProviders(APIGraphProvider);
-	Controller->ExecuteBlueprint(AssetDataMap.Get(Item->GetAssetID()).RenderGraphInstance.GetId(), ExecutionData, OnComplete);
+	Controller->ExecuteBlueprint(AssetDataMap.Get(RenderData->GetAssetID()).RenderGraphInstance.GetId(), ExecutionData, OnComplete);
 }
 
 TFuture<bool> UFutureverseUBFControllerSubsystem::TryLoadAssetDatas(const TArray<FFutureverseAssetLoadData>& LoadDatas)
@@ -262,7 +250,11 @@ TFuture<bool> UFutureverseUBFControllerSubsystem::TryLoadAssetDatas(const TArray
 	LoadAssetProfilesAction->TryLoadAssetProfiles(LoadDatas, this)
 	.Next([this, Promise, LoadAssetProfilesAction](bool bSuccess)
 	{
-		if (!IsSubsystemValid()) return;
+		if (!IsSubsystemValid())
+		{
+			Promise->SetValue(false);
+			return;
+		}
 		
 		Promise->SetValue(bSuccess);
 
@@ -291,7 +283,11 @@ TFuture<bool> UFutureverseUBFControllerSubsystem::TryLoadAssetData(const FFuture
 		UE_LOG(LogFutureverseUBFController, Verbose, TEXT("UFutureverseUBFControllerSubsystem::TryLoadAssetData AssetProfile already exists for AssetId %s"), *LoadData.AssetID);
 		TryLoadAssetProfileData(LoadData.AssetID).Next([this, Promise, LoadData](bool bResult)
 		{
-			if (!IsSubsystemValid()) return;
+			if (!IsSubsystemValid())
+			{
+				Promise->SetValue(false);
+				return;
+			}
 			
 			if (!bResult|| !AssetDataMap.Contains(LoadData.AssetID))
 			{
@@ -312,7 +308,11 @@ TFuture<bool> UFutureverseUBFControllerSubsystem::TryLoadAssetData(const FFuture
 	UE_LOG(LogFutureverseUBFController, Verbose, TEXT("UFutureverseUBFControllerSubsystem::TryLoadAssetData No AssetProfile exists for AssetId %s Attempting to load..."), *LoadData.AssetID);
 	TryLoadAssetProfile(LoadData).Next([this, Promise, LoadData](bool bResult)
 	{
-		if (!IsSubsystemValid()) return;
+		if (!IsSubsystemValid())
+		{
+			Promise->SetValue(false);
+			return;
+		}
 		
 		if (!bResult || !AssetProfiles.Contains(LoadData.AssetID))
 		{
@@ -348,7 +348,11 @@ TFuture<bool> UFutureverseUBFControllerSubsystem::TryLoadAssetProfileData(const 
 
 	AssetProfileDataAction->TryLoadAssetProfileData(AssetProfile, MemoryCacheLoader, TempCacheLoader).Next([this, AssetProfileDataAction, Promise](bool bSuccess)
 	{
-		if (!IsSubsystemValid()) return;
+		if (!IsSubsystemValid())
+		{
+			Promise->SetValue(false);
+			return;
+		}
 		
 		if (bSuccess)
 		{
@@ -391,26 +395,26 @@ void UFutureverseUBFControllerSubsystem::RegisterAssetProfilesFromData(
 	}
 }
 
-void UFutureverseUBFControllerSubsystem::ExecuteItemGraph(UUBFInventoryItem* Item,
+void UFutureverseUBFControllerSubsystem::ExecuteItemGraph(FUBFRenderDataPtr RenderData,
 	UUBFRuntimeController* Controller, const bool bShouldBuildContextTree,
     const TMap<FString, UUBFBindingObject*>& InputMap, const FOnComplete& OnComplete)
 {
-	const auto& AssetData = AssetDataMap.Get(Item->GetAssetID());
+	const auto& AssetData = AssetDataMap.Get(RenderData->GetAssetID());
 		
 	if (AssetData.ParsingGraphInstance.IsValid())
 	{
-		ParseInputsThenExecute(Item, Controller, InputMap, OnComplete, bShouldBuildContextTree);
+		ParseInputsThenExecute(RenderData, Controller, InputMap, OnComplete, bShouldBuildContextTree);
 		return;
 	}
 
 	if (!AssetData.RenderGraphInstance.IsValid())
 	{
-		UE_LOG(LogFutureverseUBFController, Warning, TEXT("UFutureverseUBFControllerSubsystem::ExecuteGraph Item %s provided invalid Rendering Graph Instance. Cannot render."), *Item->GetAssetID());
+		UE_LOG(LogFutureverseUBFController, Warning, TEXT("UFutureverseUBFControllerSubsystem::ExecuteGraph Item %s provided invalid Rendering Graph Instance. Cannot render."), *RenderData->GetAssetID());
 		OnComplete.ExecuteIfBound(false, FUBFExecutionReport::Failure());
 		return;
 	}
 	
-	ExecuteGraph(Item, Controller, InputMap, bShouldBuildContextTree, OnComplete);
+	ExecuteGraph(RenderData, Controller, InputMap, bShouldBuildContextTree, OnComplete);
 }
 
 void UFutureverseUBFControllerSubsystem::CreateBlueprintInstancesFromContextTree(
@@ -536,6 +540,59 @@ void UFutureverseUBFControllerSubsystem::Initialize(FSubsystemCollectionBase& Co
 	Super::Initialize(Collection);
 
 	bIsInitialized = true;
+}
+
+void UFutureverseUBFControllerSubsystem::RenderItemInternal(FUBFRenderDataPtr RenderData,
+	UUBFRuntimeController* Controller, const TMap<FString, UUBFBindingObject*>& InputMap, const FOnComplete& OnComplete)
+{
+	TryLoadAssetData(FFutureverseAssetLoadData(RenderData->GetAssetID(), RenderData->GetContractID())).Next([this, RenderData, Controller, InputMap, OnComplete](const bool bIsAssetProfileLoaded)
+	{
+		if (!IsSubsystemValid()) return;
+			
+		if (!bIsAssetProfileLoaded)
+		{
+			UE_LOG(LogFutureverseUBFController, Warning, TEXT("UFutureverseUBFControllerSubsystem::RenderItem Item %s provided invalid AssetProfile. Cannot render."), *RenderData->GetAssetID());
+			OnComplete.ExecuteIfBound(false, FUBFExecutionReport::Failure());
+			return;
+		}
+			
+		if (!AssetDataMap.Contains(RenderData->GetAssetID()))
+		{
+			UE_LOG(LogFutureverseUBFController, Warning, TEXT("UFutureverseUBFControllerSubsystem::RenderItem AssetDataMap does not contian Item %s. Cannot render."), *RenderData->GetAssetID());
+			OnComplete.ExecuteIfBound(false, FUBFExecutionReport::Failure());
+			return;
+		}
+			
+		ExecuteItemGraph(RenderData, Controller, false, InputMap, OnComplete);
+	});
+}
+
+void UFutureverseUBFControllerSubsystem::RenderItemTreeInternal(FUBFRenderDataPtr RenderData,
+	UUBFRuntimeController* Controller, const TMap<FString, UUBFBindingObject*>& InputMap, const FOnComplete& OnComplete)
+{
+	TArray<FFutureverseAssetLoadData> AssetLoadDatas = RenderData->GetLinkedAssetLoadData();
+
+	if (AssetLoadDatas.IsEmpty())
+		UE_LOG(LogFutureverseUBFController, Warning, TEXT("UFutureverseUBFControllerSubsystem::RenderItemTree AssetLoadDatas empty for Item %s."), *RenderData->GetAssetID());
+	
+	TryLoadAssetDatas(AssetLoadDatas).Next([this, RenderData, Controller, InputMap, OnComplete](const bool bIsAssetProfileLoaded)
+	{
+		if (!IsSubsystemValid()) return;
+		
+		if (!bIsAssetProfileLoaded)
+		{
+			UE_LOG(LogFutureverseUBFController, Warning, TEXT("UFutureverseUBFControllerSubsystem::RenderItemTree Item %s asset tree failed to load one or many AssetDatas. This will cause asset tree to not render fully"), *RenderData->GetAssetID());
+		}
+		
+		if (!AssetDataMap.Contains(RenderData->GetAssetID()))
+		{
+			UE_LOG(LogFutureverseUBFController, Warning, TEXT("UFutureverseUBFControllerSubsystem::RenderItemTree AssetDataMap does not contian Item %s. Cannot render."), *RenderData->GetAssetID());
+			OnComplete.ExecuteIfBound(false, FUBFExecutionReport::Failure());
+			return;
+		}
+		
+		ExecuteItemGraph(RenderData, Controller, true, InputMap, OnComplete);
+	});
 }
 
 UFutureverseUBFControllerSubsystem* UFutureverseUBFControllerSubsystem::Get(const UObject* WorldContext)

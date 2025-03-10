@@ -9,6 +9,7 @@
 #include "ControllerLayers/MemoryCacheLoader.h"
 #include "ControllerLayers/TempCacheLoader.h"
 #include "Items/UBFInventoryItem.h"
+#include "Items/UBFRenderDataContainer.h"
 #include "Subsystems/GameInstanceSubsystem.h"
 #include "FutureverseUBFControllerSubsystem.generated.h"
 
@@ -90,18 +91,24 @@ public:
 	virtual void Initialize(FSubsystemCollectionBase& Collection) override;
 
 private:
-	void ExecuteItemGraph(UUBFInventoryItem* Item,
-	                  UUBFRuntimeController* Controller, const bool bShouldBuildContextTree,
-	                  const TMap<FString, UUBFBindingObject*>& InputMap, const FOnComplete& OnComplete);
+	void RenderItemInternal(FUBFRenderDataPtr RenderData, UUBFRuntimeController* Controller,
+		const TMap<FString, UUBFBindingObject*>& InputMap, const FOnComplete& OnComplete);
+	
+	void RenderItemTreeInternal(FUBFRenderDataPtr RenderData, UUBFRuntimeController* Controller,
+		const TMap<FString, UUBFBindingObject*>& InputMap, const FOnComplete& OnComplete);
+	
+	void ExecuteItemGraph(
+		FUBFRenderDataPtr RenderData, UUBFRuntimeController* Controller,
+		const bool bShouldBuildContextTree, const TMap<FString, UUBFBindingObject*>& InputMap, const FOnComplete& OnComplete);
 	
 	void CreateBlueprintInstancesFromContextTree(const TArray<FUBFContextTreeData>& UBFContextTree,
 	                                        const FString& RootAssetId, const TMap<FString, UBF::FDynamicHandle>& RootTraits, TArray<UBF::FBlueprintInstance>& OutBlueprintInstances) const;
 
-	void ParseInputsThenExecute(UUBFInventoryItem* Item, UUBFRuntimeController* Controller,
+	void ParseInputsThenExecute(FUBFRenderDataPtr RenderData, UUBFRuntimeController* Controller,
 	                            const TMap<FString, UUBFBindingObject*>& InputMap, const FOnComplete& OnComplete,
 	                            const bool bShouldBuildContextTree);
 
-	void ExecuteGraph(UUBFInventoryItem* Item, UUBFRuntimeController* Controller, const TMap<FString, UUBFBindingObject*>& InputMap, bool
+	void ExecuteGraph(FUBFRenderDataPtr RenderData, UUBFRuntimeController* Controller, const TMap<FString, UUBFBindingObject*>& InputMap, bool
 	                  bShouldBuildContextTree, const FOnComplete& OnComplete);
 
 	TFuture<bool> TryLoadAssetDatas(const TArray<struct FFutureverseAssetLoadData>& LoadDatas);
