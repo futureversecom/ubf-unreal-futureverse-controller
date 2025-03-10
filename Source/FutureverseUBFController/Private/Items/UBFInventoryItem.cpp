@@ -18,36 +18,6 @@ FUBFItemData UUBFInventoryItem::CreateItemDataFromMetadataJson(const FString& Co
 	return FUBFItemData(AssetID, AssetName, ContractID, TokenID, CollectionID, MetadataJson, MetadataJsonWrapper);
 }
 
-TArray<FFutureverseAssetLoadData> UUBFInventoryItem::GetLinkedAssetLoadData() const
-{
-	TArray<FFutureverseAssetLoadData> OutContractIds;
-		
-	for (auto& ContextTreeData : ContextTree)
-	{
-		TArray<FString> Out;
-
-		ContextTreeData.RootNodeID.ParseIntoArray(Out, TEXT(":"), true);
-		if (!Out.IsEmpty())
-		{
-			OutContractIds.Add(FFutureverseAssetLoadData(ContextTreeData.RootNodeID, Out[0]));
-		}
-		
-		for (auto& Relationship: ContextTreeData.Relationships)
-		{
-			Relationship.ChildAssetID.ParseIntoArray(Out, TEXT(":"), true);
-
-			if (Out.IsEmpty()) continue;
-			
-			OutContractIds.Add(FFutureverseAssetLoadData(Relationship.ChildAssetID, Out[0]));
-		}
-	}
-
-	if (OutContractIds.IsEmpty())
-		OutContractIds.Add(FFutureverseAssetLoadData(GetAssetID(), GetContractID()));
-		
-	return OutContractIds;
-}
-
 FUBFRenderData UUBFInventoryItem::GetRenderData()
 {
 	return FUBFRenderData(GetAssetID(), GetContractID(), GetMetadataJson(), GetContextTreeRef());

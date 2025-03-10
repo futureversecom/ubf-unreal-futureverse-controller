@@ -165,8 +165,6 @@ public:
 	UFUNCTION(BlueprintCallable)
 	FString GetMetadataJson() const { return ItemData.MetadataJson; }
 
-	TArray<FFutureverseAssetLoadData> GetLinkedAssetLoadData() const;
-
 	UFUNCTION(BlueprintCallable)
 	FUBFRenderData GetRenderData();
 
