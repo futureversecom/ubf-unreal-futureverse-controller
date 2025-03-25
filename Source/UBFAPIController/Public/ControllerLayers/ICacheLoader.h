@@ -1,3 +1,5 @@
+// Copyright (c) 2025, Futureverse Corporation Limited. All rights reserved.
+
 #pragma once
 
 class UBFAPICONTROLLER_API ICacheLoader

@@ -1,3 +1,5 @@
+// Copyright (c) 2025, Futureverse Corporation Limited. All rights reserved.
+
 #include "ControllerLayers/UBFAPIControllerLog.h"
 
 DEFINE_LOG_CATEGORY(LogUBFAPIController);
