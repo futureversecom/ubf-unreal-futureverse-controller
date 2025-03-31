@@ -135,15 +135,13 @@ namespace AssetProfileUtils
 			{
 				if (!ResourceObject->HasField(TEXT("id"))
 					|| !ResourceObject->HasField(TEXT("uri"))
-					|| !ResourceObject->HasField(TEXT("type"))
 					|| !ResourceObject->HasField(TEXT("hash")))
 				{
-					UE_LOG(LogUBFAPIController, Error, TEXT("Cannot parse Json, missing id, uri, type or hash field in element %s in json %s"), *Value->AsString(), *Json);
+					UE_LOG(LogUBFAPIController, Error, TEXT("Cannot parse Json, missing id, uri or hash field in element %s in json %s"), *Value->AsString(), *Json);
 					continue;
 				}
 				FCatalogElement CatalogElement;
 				CatalogElement.Id = ResourceObject->GetStringField(TEXT("id"));
-				CatalogElement.Type = ResourceObject->GetStringField(TEXT("type"));
 				CatalogElement.Uri = ResourceObject->GetStringField(TEXT("uri"));
 				CatalogElement.Hash = ResourceObject->GetStringField(TEXT("hash"));
 				CatalogElementMap.Add(CatalogElement.Id, CatalogElement);
