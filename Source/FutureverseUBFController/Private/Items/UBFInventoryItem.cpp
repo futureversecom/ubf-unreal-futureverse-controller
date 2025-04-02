@@ -19,7 +19,7 @@ FUBFItemData UUBFInventoryItem::CreateItemDataFromMetadataJson(const FString& Co
 
 FUBFRenderData UUBFInventoryItem::GetRenderData()
 {
-	return FUBFRenderData(GetAssetID(), GetContractID(), GetMetadataJson(), GetContextTreeRef());
+	return FUBFRenderData(ItemData.AssetID, ItemData.ContractID, GetMetadataJson(), GetContextTreeRef());
 }
 
 void UUBFInventoryItem::InitializeFromRenderData(const FUBFRenderData& RenderData)

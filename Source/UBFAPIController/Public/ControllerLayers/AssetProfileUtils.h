@@ -35,111 +35,76 @@ namespace AssetProfileUtils
 	{
 		// Create a JSON Reader
 		TSharedRef<TJsonReader<>> Reader = TJsonReaderFactory<>::Create(Json);
-		TSharedPtr<FJsonObject> JsonObject;
+		TSharedPtr<FJsonObject> MainJsonObject;
     
 		// Deserialize the JSON string into a JSON object
-		if (!FJsonSerializer::Deserialize(Reader, JsonObject) || !JsonObject.IsValid())
+		if (!FJsonSerializer::Deserialize(Reader, MainJsonObject) || !MainJsonObject.IsValid())
 		{
 			UE_LOG(LogUBFAPIController, Warning, TEXT("AssetProfileUtils::ParseAssetProfileJson Failed to parse JSON string\n %s."), *Json);
 			return;
 		}
-
-		// Handle case when this is single profile
-		if (JsonObject->HasField(RenderInstance))
+		
+		for (const auto& AssetPair : MainJsonObject->Values)
 		{
+			// extract the AssetId name
+			const FString AssetId = AssetPair.Key; 
+	
+			TSharedPtr<FJsonObject> AssetObject = AssetPair.Value->AsObject();
+			if (!AssetObject.IsValid()) continue;
+
+			// extract the versions
+			TArray<FString> Versions;
+			AssetObject->Values.GetKeys(Versions);
+
+			TArray<UBF::FGraphVersion> AssetProfileVersions;
+			for (auto VersionString : Versions)
+			{
+				// only add the supported versions
+				const auto AssetProfileVersion = UBF::FGraphVersion(VersionString);
+				if (!(AssetProfileVersion >= UBF::MinSupportedGraphVersion && AssetProfileVersion <= UBF::MaxSupportedGraphVersion)) continue;
+				AssetProfileVersions.Add(AssetProfileVersion);
+			}
+
+			// sort it by version and use the latest supported version
+			AssetProfileVersions.Sort();
+			const auto LatestSupportedVersion = AssetProfileVersions.Last().ToString();
+			TSharedPtr<FJsonObject> AssetProfile = AssetObject->Values.Find(LatestSupportedVersion)->Get()->AsObject();
+		
+			if (!AssetProfile->HasField(RenderInstance) || !AssetProfile->HasField(RenderCatalog))
+			{
+				UE_LOG(LogUBFAPIController, Warning, TEXT("AssetProfile json: \n %s \n doesn't have required '%s' or '%s' fields. Source Json: \n %s")
+					, *JsonObjectToString(*AssetProfile), *RenderInstance, *RenderCatalog, *Json);
+			}
+				
 			// Extract the RenderBlueprintUrl
-			FString RenderBlueprintInstanceUri = JsonObject->HasField(RenderInstance)
-					? JsonObject->GetStringField(RenderInstance)
+			FString RenderBlueprintInstanceUri = AssetProfile->HasField(RenderInstance)
+					? AssetProfile->GetStringField(RenderInstance)
 					: "";
 				
-			FString RenderCatalogUri = JsonObject->HasField(RenderCatalog)
-					? JsonObject->GetStringField(RenderCatalog)
+			FString RenderCatalogUri = AssetProfile->HasField(RenderCatalog)
+					? AssetProfile->GetStringField(RenderCatalog)
 					: "";
 				
-			FString ParsingBlueprintInstanceUri = JsonObject->HasField(ParsingInstance)
-					? JsonObject->GetStringField(ParsingInstance)
+			FString ParsingBlueprintInstanceUri = AssetProfile->HasField(ParsingInstance)
+					? AssetProfile->GetStringField(ParsingInstance)
 					: "";
 				
-			FString ParsingCatalogUri = JsonObject->HasField(ParsingCatalog)
-					? JsonObject->GetStringField(ParsingCatalog)
+			FString ParsingCatalogUri = AssetProfile->HasField(ParsingCatalog)
+					? AssetProfile->GetStringField(ParsingCatalog)
 					: "";
-				
+
+			UE_LOG(LogUBFAPIController, VeryVerbose, TEXT("AssetProfileUtils::ParseAssetProfileJson "
+					"Added AssetProfile Id: %s Version: %s"), *AssetId, *LatestSupportedVersion);
+					
 			// Register the graph and catalog locations
 			FAssetProfile AssetProfileEntry;
-			AssetProfileEntry.Id = "";
+			AssetProfileEntry.Id = AssetId;
 			AssetProfileEntry.RenderBlueprintInstanceUri = RenderBlueprintInstanceUri;
 			AssetProfileEntry.RenderCatalogUri = RenderCatalogUri;
 			AssetProfileEntry.ParsingBlueprintInstanceUri = ParsingBlueprintInstanceUri;
 			AssetProfileEntry.ParsingCatalogUri = ParsingCatalogUri;
 				
 			AssetProfileEntries.Add(AssetProfileEntry);
-		}
-
-		if (!JsonObject->HasField(AssetProfilesName)) return;
-		
-		// Get the "AssetProfiles" array from the JSON object
-		TArray<TSharedPtr<FJsonValue>> AssetProfiles = JsonObject->GetArrayField(AssetProfilesName);
-
-		// Iterate over each element in the "AssetProfiles" array
-		for (const TSharedPtr<FJsonValue>& Value : AssetProfiles)
-		{
-			// Get the AssetProfile object
-			TSharedPtr<FJsonObject> AssetProfileObject = Value->AsObject();
-			
-			if (!AssetProfileObject.IsValid())
-				continue;
-
-			if (!AssetProfileObject->HasField(AssetIdName))
-			{
-				UE_LOG(LogUBFAPIController, Warning, TEXT("ParseAssetProfileJson() missing '%s' field. Source Json: \n %s"), *AssetIdName, *Json);
-			}
-
-			if (!AssetProfileObject->HasField(ProfileName))
-			{
-				UE_LOG(LogUBFAPIController, Warning, TEXT("ParseAssetProfileJson() missing '%s' field. Source Json: \n %s"), *ProfileName, *Json);
-			}
-			
-			// Extract the InventoryItemName
-			FString AssetId = AssetProfileObject->GetStringField(AssetIdName);
-
-			// Get the nested AssetProfile object
-			TSharedPtr<FJsonObject> AssetProfile = AssetProfileObject->GetObjectField(ProfileName);
-			
-			if (AssetProfile.IsValid())
-			{
-				if (!AssetProfile->HasField(RenderInstance) || !AssetProfile->HasField(RenderCatalog))
-				{
-					UE_LOG(LogUBFAPIController, Warning, TEXT("AssetProfile json: \n %s \n doesn't have required '%s' or '%s' fields. Source Json: \n %s")
-						, *JsonObjectToString(*AssetProfile.Get()), *RenderInstance, *RenderCatalog, *Json);
-				}
-				
-				// Extract the RenderBlueprintUrl
-				FString RenderBlueprintInstanceUri = AssetProfile->HasField(RenderInstance)
-						? AssetProfile->GetStringField(RenderInstance)
-						: "";
-				
-				FString RenderCatalogUri = AssetProfile->HasField(RenderCatalog)
-						? AssetProfile->GetStringField(RenderCatalog)
-						: "";
-				
-				FString ParsingBlueprintInstanceUri = AssetProfile->HasField(ParsingInstance)
-						? AssetProfile->GetStringField(ParsingInstance)
-						: "";
-				
-				FString ParsingCatalogUri = AssetProfile->HasField(ParsingCatalog)
-						? AssetProfile->GetStringField(ParsingCatalog)
-						: "";
-				
-				// Register the graph and catalog locations
-				FAssetProfile AssetProfileEntry;
-				AssetProfileEntry.Id = AssetId;
-				AssetProfileEntry.RenderBlueprintInstanceUri = RenderBlueprintInstanceUri;
-				AssetProfileEntry.RenderCatalogUri = RenderCatalogUri;
-				AssetProfileEntry.ParsingBlueprintInstanceUri = ParsingBlueprintInstanceUri;
-				AssetProfileEntry.ParsingCatalogUri = ParsingCatalogUri;
-				
-				AssetProfileEntries.Add(AssetProfileEntry);
-			}
 		}
 	}
 	
@@ -170,15 +135,13 @@ namespace AssetProfileUtils
 			{
 				if (!ResourceObject->HasField(TEXT("id"))
 					|| !ResourceObject->HasField(TEXT("uri"))
-					|| !ResourceObject->HasField(TEXT("type"))
 					|| !ResourceObject->HasField(TEXT("hash")))
 				{
-					UE_LOG(LogUBFAPIController, Error, TEXT("Cannot parse Json, missing id, uri, type or hash field in element %s in json %s"), *Value->AsString(), *Json);
+					UE_LOG(LogUBFAPIController, Error, TEXT("Cannot parse Json, missing id, uri or hash field in element %s in json %s"), *Value->AsString(), *Json);
 					continue;
 				}
 				FCatalogElement CatalogElement;
 				CatalogElement.Id = ResourceObject->GetStringField(TEXT("id"));
-				CatalogElement.Type = ResourceObject->GetStringField(TEXT("type"));
 				CatalogElement.Uri = ResourceObject->GetStringField(TEXT("uri"));
 				CatalogElement.Hash = ResourceObject->GetStringField(TEXT("hash"));
 				CatalogElementMap.Add(CatalogElement.Id, CatalogElement);

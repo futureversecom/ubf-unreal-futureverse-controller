@@ -39,6 +39,4 @@ protected:
 	
 	FOnRequestCompleted OnInventoryRequestCompleted;
 	FOnRequestCompleted OnFilteredInventoryRequestCompleted;
-
-	int32 PendingNumberOfAssetTreeRequests = 0;
 };
