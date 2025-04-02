@@ -133,12 +133,12 @@ UUBFInventoryItem* UCollectionTestWidget::GetItemForAsset(const FString& AssetID
 TArray<FUBFContextTreeData> UCollectionTestWidget::MakeContextTree(const FString& RootAssetID,
 	const TArray<UCollectionTestInputBindingObject*>& Inputs)
 {
-	TMap<FString, FString> InputMap;
+	TArray<FUBFContextTreeRelationshipData> Relationships;
 	for (const UCollectionTestInputBindingObject* Input : Inputs)
 	{
-		InputMap.Add(Input->GetId(), Input->GetValue());
+		Relationships.Add(FUBFContextTreeRelationshipData(Input->GetId(), Input->GetValue()));
 	}
 
-	const TArray ContextTree {FUBFContextTreeData(RootAssetID, InputMap)};
+	const TArray ContextTree {FUBFContextTreeData(RootAssetID, Relationships)};
 	return ContextTree;
 }

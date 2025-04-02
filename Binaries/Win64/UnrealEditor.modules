@@ -3,6 +3,7 @@
 	"Modules": 
 	{
 		"FutureverseUBFController": "UnrealEditor-FutureverseUBFController.dll",
-		"UBFAPIController": "UnrealEditor-UBFAPIController.dll"
+		"UBFAPIController": "UnrealEditor-UBFAPIController.dll",
+		"UBFAssetTest": "UnrealEditor-UBFAssetTest.dll"
 	}
 }
