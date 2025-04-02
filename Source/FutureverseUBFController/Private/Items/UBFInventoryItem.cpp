@@ -1,13 +1,13 @@
-// Fill out your copyright notice in the Description page of Project Settings.
-
+// Copyright (c) 2025, Futureverse Corporation Limited. All rights reserved.
 
 #include "Items/UBFInventoryItem.h"
 
 #include "FutureverseAssetLoadData.h"
 #include "MetadataJsonUtils.h"
 
+
 FUBFItemData UUBFInventoryItem::CreateItemDataFromMetadataJson(const FString& ContractID, const FString& TokenID,
-		const FJsonObjectWrapper& MetadataJsonWrapper)
+																const FJsonObjectWrapper& MetadataJsonWrapper)
 {
 	const FString AssetName = MetadataJsonUtils::GetAssetName(MetadataJsonWrapper.JsonObject); 
 	const FString CollectionID = MetadataJsonUtils::GetCollectionID(MetadataJsonWrapper.JsonObject); 
@@ -17,32 +17,15 @@ FUBFItemData UUBFInventoryItem::CreateItemDataFromMetadataJson(const FString& Co
 	return FUBFItemData(AssetID, AssetName, ContractID, TokenID, CollectionID, MetadataJson, MetadataJsonWrapper);
 }
 
-TArray<FFutureverseAssetLoadData> UUBFInventoryItem::GetLinkedAssetLoadData() const
+FUBFRenderData UUBFInventoryItem::GetRenderData()
 {
-	TArray<FFutureverseAssetLoadData> OutContractIds;
-		
-	for (auto& ContextTreeData : ContextTree)
-	{
-		TArray<FString> Out;
+	return FUBFRenderData(GetAssetID(), GetContractID(), GetMetadataJson(), GetContextTreeRef());
+}
 
-		ContextTreeData.RootNodeID.ParseIntoArray(Out, TEXT(":"), true);
-		if (!Out.IsEmpty())
-		{
-			OutContractIds.Add(FFutureverseAssetLoadData(ContextTreeData.RootNodeID, Out[0]));
-		}
-		
-		for (auto& ChildItemTuple: ContextTreeData.Children)
-		{
-			ChildItemTuple.Value.ParseIntoArray(Out, TEXT(":"), true);
-
-			if (Out.IsEmpty()) continue;
-			
-			OutContractIds.Add(FFutureverseAssetLoadData(ChildItemTuple.Value, Out[0]));
-		}
-	}
-
-	if (OutContractIds.IsEmpty())
-		OutContractIds.Add(FFutureverseAssetLoadData(GetAssetID(), GetContractID()));
-		
-	return OutContractIds;
+void UUBFInventoryItem::InitializeFromRenderData(const FUBFRenderData& RenderData)
+{
+	ItemData.AssetID = RenderData.AssetID;
+	ItemData.ContractID = RenderData.ContractID;
+	ItemData.MetadataJson = RenderData.MetadataJson;
+	ContextTree = RenderData.ContextTree;
 }

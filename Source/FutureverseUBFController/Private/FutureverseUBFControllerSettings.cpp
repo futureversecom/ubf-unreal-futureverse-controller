@@ -1,4 +1,3 @@
-// Fill out your copyright notice in the Description page of Project Settings.
-
+// Copyright (c) 2025, Futureverse Corporation Limited. All rights reserved.
 
 #include "FutureverseUBFControllerSettings.h"

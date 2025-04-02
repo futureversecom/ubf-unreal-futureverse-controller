@@ -1,3 +1,5 @@
+// Copyright (c) 2025, Futureverse Corporation Limited. All rights reserved.
+
 #include "LoadMultipleAssetDatasAction.h"
 #include "FutureverseAssetLoadData.h"
 #include "FutureverseUBFControllerSubsystem.h"
