@@ -2,6 +2,7 @@
 
 #pragma once
 #include "AssetProfile.h"
+#include "Graph.h"
 #include "UBFAPIControllerLog.h"
 #include "GlobalArtifactProvider/CatalogElement.h"
 

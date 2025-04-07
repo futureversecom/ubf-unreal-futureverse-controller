@@ -198,7 +198,7 @@ void UFutureverseUBFControllerSubsystem::ExecuteGraph(const FUBFRenderDataPtr& R
 		}
 	}
 
-	if (!InstanceID.IsEmpty())
+	if (InstanceID.IsEmpty())
 	{
 		UE_LOG(LogFutureverseUBFController, Warning, TEXT("UFutureverseUBFControllerSubsystem::ExecuteGraph no InstanceID found, cannot Execute"));
 		return;
