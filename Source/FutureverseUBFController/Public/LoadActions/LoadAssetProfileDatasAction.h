@@ -2,7 +2,7 @@
 
 #pragma once
 #include "LoadAction.h"
-#include "ControllerLayers/APIGraphProvider.h"
+#include "ControllerLayers/AssetProfile.h"
 
 class FTempCacheLoader;
 class FMemoryCacheLoader;
@@ -12,7 +12,7 @@ class FUTUREVERSEUBFCONTROLLER_API FLoadAssetProfileDatasAction : public TLoadAc
 {
 public:
 	FLoadAssetProfileDatasAction() {}
-	TFuture<bool> TryLoadAssetProfileDatas(const TArray<FAssetProfile>& AssetProfiles, const TSharedPtr<FMemoryCacheLoader>& MemoryCacheLoader, const TSharedPtr<FTempCacheLoader>& TempCacheLoader);
+	TFuture<bool> TryLoadAssetProfileDatas(const TArray<FAssetProfile>& AssetProfiles, const TSharedPtr<FMemoryCacheLoader>& MemoryCacheLoader);
 
 	TArray<TSharedPtr<FLoadAssetProfileDataAction>> ProfileLoadActions;
 };

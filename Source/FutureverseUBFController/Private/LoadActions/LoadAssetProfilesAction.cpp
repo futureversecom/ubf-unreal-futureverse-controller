@@ -6,13 +6,10 @@
 
 #include "FutureverseAssetLoadData.h"
 #include "FutureverseUBFControllerLog.h"
-#include "ControllerLayers/APIGraphProvider.h"
 #include "ControllerLayers/AssetProfileUtils.h"
-#include "ControllerLayers/DownloadRequestManager.h"
-#include "ControllerLayers/MemoryCacheLoader.h"
-#include "ControllerLayers/TempCacheLoader.h"
+#include "GlobalArtifactProvider/DownloadRequestManager.h"
 
-TFuture<bool> FLoadAssetProfilesAction::TryLoadAssetProfile(const FFutureverseAssetLoadData& LoadData, const TSharedPtr<FMemoryCacheLoader>& MemoryCacheLoader, const TSharedPtr<FTempCacheLoader>& TempCacheLoader)
+TFuture<bool> FLoadAssetProfilesAction::TryLoadAssetProfile(const FFutureverseAssetLoadData& LoadData, const TSharedPtr<FMemoryCacheLoader>& MemoryCacheLoader)
 {
 	Promise = MakeShareable(new TPromise<bool>());
 	TFuture<bool> Future = Promise->GetFuture();

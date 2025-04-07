@@ -1,8 +1,9 @@
 // Copyright (c) 2025, Futureverse Corporation Limited. All rights reserved.
 
 #pragma once
-#include "APIGraphProvider.h"
+#include "AssetProfile.h"
 #include "UBFAPIControllerLog.h"
+#include "GlobalArtifactProvider/CatalogElement.h"
 
 namespace AssetProfileUtils
 {
@@ -143,7 +144,7 @@ namespace AssetProfileUtils
 		}
 	}
 	
-	inline void ParseCatalog(const FString& Json, TMap<FString, FCatalogElement>& CatalogElementMap)
+	inline void ParseCatalog(const FString& Json, TMap<FString, UBF::FCatalogElement>& CatalogElementMap)
 	{
 		// Create a shared pointer to hold the JSON object
 		TSharedPtr<FJsonObject> JsonObject;
@@ -176,7 +177,7 @@ namespace AssetProfileUtils
 					UE_LOG(LogUBFAPIController, Error, TEXT("Cannot parse Json, missing id, uri, type or hash field in element %s in json %s"), *Value->AsString(), *Json);
 					continue;
 				}
-				FCatalogElement CatalogElement;
+				UBF::FCatalogElement CatalogElement;
 				CatalogElement.Id = ResourceObject->GetStringField(TEXT("id"));
 				CatalogElement.Type = ResourceObject->GetStringField(TEXT("type"));
 				CatalogElement.Uri = ResourceObject->GetStringField(TEXT("uri"));

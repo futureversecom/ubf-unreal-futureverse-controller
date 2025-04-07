@@ -3,7 +3,7 @@
 #pragma once
 
 #include "CoreMinimal.h"
-#include "ControllerLayers/APIGraphProvider.h"
+#include "ControllerLayers/AssetProfile.h"
 #include "Engine/DataAsset.h"
 #include "CollectionAssetProfiles.generated.h"
 

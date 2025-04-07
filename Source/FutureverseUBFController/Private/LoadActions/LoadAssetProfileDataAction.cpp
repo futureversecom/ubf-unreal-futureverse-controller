@@ -4,7 +4,7 @@
 
 #include "FutureverseUBFControllerLog.h"
 #include "ControllerLayers/AssetProfileUtils.h"
-#include "ControllerLayers/DownloadRequestManager.h"
+#include "GlobalArtifactProvider/DownloadRequestManager.h"
 
 namespace LoadBlueprintInstanceUtil
 {
@@ -30,7 +30,7 @@ namespace LoadBlueprintInstanceUtil
 	}
 }
 
-TFuture<bool> FLoadAssetProfileDataAction::TryLoadAssetProfileData(const FAssetProfile& AssetProfile, const TSharedPtr<FMemoryCacheLoader>& MemoryCacheLoader, const TSharedPtr<FTempCacheLoader>& TempCacheLoader)
+TFuture<bool> FLoadAssetProfileDataAction::TryLoadAssetProfileData(const FAssetProfile& AssetProfile, const TSharedPtr<FMemoryCacheLoader>& MemoryCacheLoader)
 {
 	Promise = MakeShareable(new TPromise<bool>());
 	TFuture<bool> Future = Promise->GetFuture();
@@ -68,7 +68,7 @@ TFuture<bool> FLoadAssetProfileDataAction::TryLoadAssetProfileData(const FAssetP
 						return;
 					}
 				
-					TMap<FString, FCatalogElement> CatalogMap;
+					TMap<FString, UBF::FCatalogElement> CatalogMap;
 					AssetProfileUtils::ParseCatalog(LoadResult.Result.Value, SharedThis->RenderCatalogMap);
 					UE_LOG(LogFutureverseUBFController, Verbose, TEXT("Adding rendering catalog from %s"), *AssetProfile.GetRenderCatalogUri());
 					SharedThis->CompletePendingLoad();

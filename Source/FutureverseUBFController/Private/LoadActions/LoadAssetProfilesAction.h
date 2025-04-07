@@ -3,16 +3,15 @@
 #pragma once
 
 #include "FutureverseAssetLoadData.h"
-#include "ControllerLayers/APIGraphProvider.h"
-#include "ControllerLayers/MemoryCacheLoader.h"
-#include "ControllerLayers/TempCacheLoader.h"
+#include "ControllerLayers/AssetProfile.h"
+#include "GlobalArtifactProvider/CacheLoading/MemoryCacheLoader.h"
 #include "LoadActions/LoadAction.h"
 
 class FLoadAssetProfilesAction : public TLoadAction<FLoadAssetProfilesAction>
 {
 public:
 	FLoadAssetProfilesAction() {}
-	TFuture<bool> TryLoadAssetProfile(const struct FFutureverseAssetLoadData& LoadData, const TSharedPtr<FMemoryCacheLoader>& MemoryCacheLoader, const TSharedPtr<FTempCacheLoader>& TempCacheLoader);
+	TFuture<bool> TryLoadAssetProfile(const struct FFutureverseAssetLoadData& LoadData, const TSharedPtr<FMemoryCacheLoader>& MemoryCacheLoader);
 
 	TMap<FString, FAssetProfile> AssetProfiles;
 };

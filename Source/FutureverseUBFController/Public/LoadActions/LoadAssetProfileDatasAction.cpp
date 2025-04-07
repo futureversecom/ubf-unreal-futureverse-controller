@@ -5,7 +5,7 @@
 #include "LoadAssetProfileDataAction.h"
 
 TFuture<bool> FLoadAssetProfileDatasAction::TryLoadAssetProfileDatas(const TArray<FAssetProfile>& AssetProfiles,
-	const TSharedPtr<FMemoryCacheLoader>& MemoryCacheLoader, const TSharedPtr<FTempCacheLoader>& TempCacheLoader)
+	const TSharedPtr<FMemoryCacheLoader>& MemoryCacheLoader)
 {
 	Promise = MakeShareable(new TPromise<bool>());
 	TFuture<bool> Future = Promise->GetFuture();
@@ -19,7 +19,7 @@ TFuture<bool> FLoadAssetProfileDatasAction::TryLoadAssetProfileDatas(const TArra
 
 		TSharedPtr<FLoadAssetProfileDataAction> LoadAction = MakeShared<FLoadAssetProfileDataAction>();
 		
-		LoadAction->TryLoadAssetProfileData(AssetProfile, MemoryCacheLoader, TempCacheLoader).Next([SharedThis](bool bSuccess)
+		LoadAction->TryLoadAssetProfileData(AssetProfile, MemoryCacheLoader).Next([SharedThis](bool bSuccess)
 		{
 			if (!bSuccess)
 				SharedThis->bFailure = true;
