@@ -4,14 +4,11 @@
 
 FAssetProfile FAssetProfileData::CreateProfileFromData(const FString& BasePath) const
 {
-	FAssetProfile AssetProfile;
-
-	AssetProfile.Id = Id;
-	AssetProfile.RenderBlueprintInstanceUri = RenderBlueprintInstanceUri;
-	AssetProfile.RenderCatalogUri = RenderCatalogUri;
-	AssetProfile.ParsingBlueprintInstanceUri = ParsingBlueprintInstanceUri;
-	AssetProfile.ParsingCatalogUri = ParsingCatalogUri;
-	AssetProfile.RelativePath = BasePath;
+	FAssetProfileVariant Variant(TEXT("Default"), RenderBlueprintInstanceUri,
+		ParsingBlueprintInstanceUri, RenderCatalogUri, ParsingCatalogUri);
+	
+	Variant.RelativePath = BasePath;
+	FAssetProfile AssetProfile(Id, TArray{Variant});
 	
 	return AssetProfile;
 }

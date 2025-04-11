@@ -2,18 +2,20 @@
 
 #pragma once
 
+#include "FutureverseAssetLoadData.h"
+
 #include "FutureverseUBFControllerSubsystem.h"
 #include "ControllerLayers/AssetProfile.h"
-#include "LoadActions/LoadAction.h"
 #include "GlobalArtifactProvider/CatalogElement.h"
+#include "LoadActions/LoadAction.h"
 
-class FLoadAssetProfileDataAction : public TLoadAction<FLoadAssetProfileDataAction>
+class FLoadAssetCatalogAction : public TLoadAction<FLoadAssetCatalogAction>
 {
 public:
-	TFuture<bool> TryLoadAssetProfileData(const FAssetProfile& AssetProfile, const TSharedPtr<FMemoryCacheLoader>& MemoryCacheLoader);
-
-	FFutureverseAssetData AssetData;
+	TFuture<bool> TryLoadAssetCatalog(const FAssetProfile& AssetProfile, const FFutureverseAssetLoadData& LoadData, const TSharedPtr<FMemoryCacheLoader>& MemoryCacheLoader);
+	
 	FAssetProfile AssetProfileLoaded;
+	FFutureverseAssetLoadData LoadData;
 	TMap<FString, UBF::FCatalogElement> RenderCatalogMap;
 	TMap<FString, UBF::FCatalogElement> ParsingCatalogMap;
 };

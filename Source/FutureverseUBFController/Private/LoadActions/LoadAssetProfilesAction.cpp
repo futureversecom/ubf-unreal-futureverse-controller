@@ -50,15 +50,15 @@ TFuture<bool> FLoadAssetProfilesAction::TryLoadAssetProfile(const FFutureverseAs
 		for (FAssetProfile& AssetProfile : AssetProfileEntries)
 		{
 			// no need to provide base path here as the values are remote not local
-			AssetProfile.RelativePath = "";
+			AssetProfile.OverrideRelativePaths("");
 			
-			if (AssetProfile.Id.IsEmpty())
-				AssetProfile.Id = LoadData.AssetID;
+			if (AssetProfile.GetId().IsEmpty())
+				AssetProfile.ModifyId(LoadData.AssetID);
 			
-			if (!AssetProfile.Id.Contains(LoadData.ContractID))
-				AssetProfile.Id = FString::Printf(TEXT("%s:%s"), *LoadData.ContractID, *AssetProfile.Id);
+			if (!AssetProfile.GetId().Contains(LoadData.ContractID))
+				AssetProfile.ModifyId(FString::Printf(TEXT("%s:%s"), *LoadData.ContractID, *AssetProfile.GetId()));
 			
-			SharedThis->AssetProfiles.Add(AssetProfile.Id, AssetProfile);
+			SharedThis->AssetProfiles.Add(AssetProfile.GetId(), AssetProfile);
 		};
 
 		SharedThis->Promise->SetValue(true);

@@ -7,9 +7,6 @@
 #include "UObject/Object.h"
 #include "UBFInventoryItem.generated.h"
 
-
-struct FFutureverseAssetLoadData;
-
 USTRUCT(Blueprintable)
 struct FUBFItemData
 {

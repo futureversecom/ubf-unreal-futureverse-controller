@@ -4,7 +4,7 @@
 #include "FutureverseAssetLoadData.h"
 #include "FutureverseUBFControllerSubsystem.h"
 
-TFuture<bool> FLoadMultipleAssetDatasAction::TryLoadAssetProfiles(const TArray<FFutureverseAssetLoadData>& AssetLoadDatas, UFutureverseUBFControllerSubsystem* FutureverseUbfControllerSubsystem)
+TFuture<bool> FLoadMultipleAssetDatasAction::TryLoadMultipleAssetDatasAction(const TArray<FFutureverseAssetLoadData>& AssetLoadDatas, UFutureverseUBFControllerSubsystem* FutureverseUbfControllerSubsystem)
 {
 	Promise = MakeShareable(new TPromise<bool>());
 	TFuture<bool> Future = Promise->GetFuture();
@@ -15,7 +15,7 @@ TFuture<bool> FLoadMultipleAssetDatasAction::TryLoadAssetProfiles(const TArray<F
 	for (const FFutureverseAssetLoadData& AssetLoadData : AssetLoadDatas)
 	{
 		AddPendingLoad();
-		FutureverseUbfControllerSubsystem->TryLoadAssetData(AssetLoadData).Next([SharedThis](bool bSuccess)
+		FutureverseUbfControllerSubsystem->EnsureAssetDataLoaded(AssetLoadData).Next([SharedThis](bool bSuccess)
 		{
 			if (!bSuccess)
 				SharedThis->bFailure = true;

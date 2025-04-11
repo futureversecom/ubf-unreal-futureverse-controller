@@ -5,6 +5,7 @@
 #include "CoreMinimal.h"
 #include "AssetIdMap.h"
 #include "UBFRuntimeController.h"
+#include "ControllerLayers/AssetProfile.h"
 #include "GlobalArtifactProvider/CacheLoading/MemoryCacheLoader.h"
 #include "Items/UBFInventoryItem.h"
 #include "Items/UBFRenderDataContainer.h"
@@ -15,14 +16,6 @@ class FLoadMultipleAssetDatasAction;
 class FLoadAssetProfilesAction;
 class UCollectionRemappings;
 class UCollectionAssetProfiles;
-
-struct FFutureverseAssetData
-{
-	FFutureverseAssetData(){}
-	
-	FBlueprintJson RenderGraphInstance;
-	FBlueprintJson ParsingGraphInstance;
-};
 
 UENUM(BlueprintType)
 enum class EEnvironment : uint8
@@ -46,22 +39,22 @@ public:
 	
 	// Used for rendering an item by itself without asset tree
 	UFUNCTION(BlueprintCallable, meta = (AutoCreateRefTerm = "OnComplete"))
-	void RenderItem(UUBFInventoryItem* Item, UUBFRuntimeController* Controller,
+	void RenderItem(UUBFInventoryItem* Item, const FString& VariantID, UUBFRuntimeController* Controller,
 		const TMap<FString, UUBFBindingObject*>& InputMap, const FOnComplete& OnComplete);
 	
 	// Used for rendering an item and other linked items using context tree
 	UFUNCTION(BlueprintCallable, meta = (AutoCreateRefTerm = "OnComplete"))
-	void RenderItemTree(UUBFInventoryItem* Item, UUBFRuntimeController* Controller,
+	void RenderItemTree(UUBFInventoryItem* Item, const FString& VariantID, UUBFRuntimeController* Controller,
 		const TMap<FString, UUBFBindingObject*>& InputMap, const FOnComplete& OnComplete);
 	
 	// Used for rendering an item by itself without asset tree
 	UFUNCTION(BlueprintCallable, meta = (AutoCreateRefTerm = "OnComplete"))
-	void RenderItemFromRenderData(const FUBFRenderData& RenderData, UUBFRuntimeController* Controller,
+	void RenderItemFromRenderData(const FUBFRenderData& RenderData, const FString& VariantID, UUBFRuntimeController* Controller,
 		const TMap<FString, UUBFBindingObject*>& InputMap, const FOnComplete& OnComplete);
 
 	// Used for rendering an item by itself without asset tree
 	UFUNCTION(BlueprintCallable, meta = (AutoCreateRefTerm = "OnComplete"))
-	void RenderItemTreeFromRenderData(const FUBFRenderData& RenderData,UUBFRuntimeController* Controller,
+	void RenderItemTreeFromRenderData(const FUBFRenderData& RenderData, const FString& VariantID, UUBFRuntimeController* Controller,
 		const TMap<FString, UUBFBindingObject*>& InputMap, const FOnComplete& OnComplete);
 
 	// Asset profiles contain the path for Blueprints, Parsing Blueprints and ResourceManifests associated with an UFuturePassInventoryItem
@@ -79,10 +72,7 @@ public:
 	// Clears all registered AssetProfiles
 	UFUNCTION(BlueprintCallable)
 	void ClearAssetProfiles();
-
-	// Asset data contains the actual blueprint instances that were fetched using the urls from asset profiles
-	void RegisterAssetData(const FString& AssetId, const FFutureverseAssetData& AssetData);
-
+	
 	virtual void Deinitialize() override;
 	virtual void Initialize(FSubsystemCollectionBase& Collection) override;
 
@@ -95,9 +85,9 @@ private:
 	
 	void ExecuteItemGraph(
 		FUBFRenderDataPtr RenderData, UUBFRuntimeController* Controller,
-		const bool bShouldBuildContextTree, const TMap<FString, UUBFBindingObject*>& InputMap, const FOnComplete& OnComplete);
+		const bool bShouldBuildContextTree, const TMap<FString, UUBFBindingObject*>& InputMap, const FOnComplete& OnComplete) const;
 	
-	void CreateBlueprintInstancesFromContextTree(const TArray<FUBFContextTreeData>& UBFContextTree,
+	void CreateBlueprintInstancesFromContextTree(const FUBFRenderDataPtr& RenderData, const TArray<FUBFContextTreeData>& UBFContextTree,
 	                                        const FString& RootAssetId, TArray<UBF::FExecutionInstanceData>& OutBlueprintInstances) const;
 
 	void ParseInputsThenExecute(FUBFRenderDataPtr RenderData, UUBFRuntimeController* Controller,
@@ -107,12 +97,14 @@ private:
 	void ExecuteGraph(const FUBFRenderDataPtr& RenderData, UUBFRuntimeController* Controller, const TMap<FString, UUBFBindingObject*>& InputMap, bool
 	                  bShouldBuildContextTree, const FOnComplete& OnComplete) const;
 
-	TFuture<bool> TryLoadAssetDatas(const TArray<struct FFutureverseAssetLoadData>& LoadDatas);
+	TFuture<bool> EnsureAssetDatasLoaded(const TArray<struct FFutureverseAssetLoadData>& LoadDatas);
+	TFuture<bool> EnsureAssetDataLoaded(const FFutureverseAssetLoadData& LoadData);
 	
-	TFuture<bool> TryLoadAssetData(const FFutureverseAssetLoadData& LoadData);
-	TFuture<bool> TryLoadAssetProfileData(const FString& AssetID);
-	TFuture<bool> TryLoadAssetProfile(const FFutureverseAssetLoadData& LoadData);
-	
+	TFuture<bool> EnsureAssetProfilesLoaded(const FFutureverseAssetLoadData& LoadData);
+	TFuture<bool> EnsureCatalogsLoaded(const FFutureverseAssetLoadData& LoadData);
+
+	bool IsAssetProfileLoaded(const FFutureverseAssetLoadData& LoadData) const;
+	bool IsCatalogLoaded(const FFutureverseAssetLoadData& LoadData) const;
 	
 	TFuture<TMap<FString, UUBFBindingObject*>> GetTraitsForItem(const FString& ParsingGraphId,
 		UUBFRuntimeController* Controller, const TMap<FString, UBF::FDynamicHandle>& ParsingInputs) const;
@@ -120,13 +112,9 @@ private:
 	bool IsSubsystemValid() const;
 
 	TAssetIdMap<FAssetProfile> AssetProfiles;
-	TAssetIdMap<FFutureverseAssetData> AssetDataMap;
+	TSet<FString> LoadedVariantCatalogs;
 
 	bool bIsInitialized = false;
-
-	TSet<TSharedPtr<FLoadAssetProfilesAction>> PendingActions;
-	TSet<TSharedPtr<class FLoadAssetProfileDataAction>> PendingDataActions;
-	TSet<TSharedPtr<FLoadMultipleAssetDatasAction>> PendingMultiLoadActions;
 
 	TSharedPtr<FMemoryCacheLoader> MemoryCacheLoader = MakeShared<FMemoryCacheLoader>();
 	
