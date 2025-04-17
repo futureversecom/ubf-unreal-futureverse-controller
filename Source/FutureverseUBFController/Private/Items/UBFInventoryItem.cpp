@@ -12,7 +12,7 @@ FUBFItemData UUBFInventoryItem::CreateItemDataFromMetadataJson(const FString& Co
 	const FString AssetName = MetadataJsonUtils::GetAssetName(MetadataJsonWrapper.JsonObject); 
 	const FString CollectionID = MetadataJsonUtils::GetCollectionID(MetadataJsonWrapper.JsonObject); 
 	const FString MetadataJson = MetadataJsonUtils::GetMetadataJson(MetadataJsonWrapper.JsonObject);
-	const FString AssetID = FString::Printf(TEXT("%s:%s"), *ContractID, *AssetName);
+	const FString AssetID = FString::Printf(TEXT("%s:%s"), *ContractID, *TokenID);
 	
 	return FUBFItemData(AssetID, AssetName, ContractID, TokenID, CollectionID, MetadataJson, MetadataJsonWrapper);
 }
