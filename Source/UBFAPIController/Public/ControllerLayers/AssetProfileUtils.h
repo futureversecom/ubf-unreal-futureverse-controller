@@ -8,14 +8,18 @@
 
 namespace AssetProfileUtils
 {
+	const FString ProfileVersion = TEXT("profile_verison");
+	const FString UBFVariants = TEXT("ubf-variants");
+	
 	const FString RenderInstance = TEXT("render-instance");
 	const FString RenderCatalog = TEXT("render-catalog");
-	
 	const FString ParsingInstance = TEXT("parsing-instance");
 	const FString ParsingCatalog = TEXT("parsing-catalog");
-	const FString AssetProfilesName = TEXT("asset-profiles");
-	const FString AssetIdName = TEXT("asset-id");
-	const FString ProfileName = TEXT("profile");
+	
+	const FString Resources = TEXT("resources");
+	const FString Id = TEXT("id");
+	const FString Uri = TEXT("uri");
+	const FString Hash = TEXT("hash");
 	
 	inline FString JsonObjectToString(const FJsonObject& JsonObject)
 	{
@@ -52,11 +56,19 @@ namespace AssetProfileUtils
 			const FString AssetId = AssetPair.Key; 
 	
 			TSharedPtr<FJsonObject> AssetJsonObject = AssetPair.Value->AsObject();
-			if (!AssetJsonObject.IsValid()) continue;
 
+			if (!AssetJsonObject.IsValid()) continue;
+			if (!AssetJsonObject->HasField(UBFVariants))
+			{
+				UE_LOG(LogUBFAPIController, Warning, TEXT("AssetProfile json: %s \n doesn't have required field: %s."),
+					*JsonObjectToString(*AssetJsonObject), *UBFVariants);
+				continue;
+			}
+			
+			TSharedPtr<FJsonObject> VariantObjects = AssetJsonObject->GetObjectField(UBFVariants);
 			TArray<FAssetProfileVariant> Variants;
 			
-			for (const auto& VariantTuple : AssetJsonObject->Values)
+			for (const auto& VariantTuple : VariantObjects->Values)
 			{
 				// extract the versions
 				TArray<FString> Versions;
@@ -74,7 +86,7 @@ namespace AssetProfileUtils
 
 				if (AssetProfileVersions.IsEmpty())
 				{
-					UE_LOG(LogTemp, Warning, TEXT("ParseAssetProfileJson() AssetProfileVersions.IsEmpty() for JSON: %s"), *Json);
+					UE_LOG(LogUBFAPIController, Warning, TEXT("ParseAssetProfileJson() Failed to find any supported asset profile version for: %s"), *VariantTuple.Key);
 					continue;
 				}
 
@@ -107,7 +119,7 @@ namespace AssetProfileUtils
 						: "";
 
 				UE_LOG(LogUBFAPIController, VeryVerbose, TEXT("AssetProfileUtils::ParseAssetProfileJson "
-						"Added AssetProfile Id: %s Version: %s"), *AssetId, *LatestSupportedVersion);
+						"Added AssetProfile Variant: %s Id: %s Version: %s"), *VariantTuple.Key, *AssetId, *LatestSupportedVersion);
 						
 				// Register the graph and catalog locations
 				FString VariantId = VariantTuple.Key;
@@ -139,7 +151,7 @@ namespace AssetProfileUtils
 		}
 		
 		// Get the "resources" array from the JSON
-		TArray<TSharedPtr<FJsonValue>> ResourcesArray = JsonObject->GetArrayField(TEXT("resources"));
+		TArray<TSharedPtr<FJsonValue>> ResourcesArray = JsonObject->GetArrayField(Resources);
 
 		// Iterate over each element in the resources array
 		for (const TSharedPtr<FJsonValue>& Value : ResourcesArray)
@@ -148,21 +160,22 @@ namespace AssetProfileUtils
 			TSharedPtr<FJsonObject> ResourceObject = Value->AsObject();
 			if (ResourceObject.IsValid())
 			{
-				if (!ResourceObject->HasField(TEXT("id"))
-					|| !ResourceObject->HasField(TEXT("uri"))
-					|| !ResourceObject->HasField(TEXT("hash")))
+				if (!ResourceObject->HasField(Id)
+					|| !ResourceObject->HasField(Uri)
+					|| !ResourceObject->HasField(Hash))
 				{
-					UE_LOG(LogUBFAPIController, Error, TEXT("Cannot parse Json, missing id, uri or hash field in element %s in json %s"), *Value->AsString(), *Json);
+					UE_LOG(LogUBFAPIController, Error, TEXT("Cannot parse Json, missing %s, %s or %s field in element %s in json %s"),
+						*Id, *Uri, *Hash, *Value->AsString(), *Json);
 					continue;
 				}
 				UBF::FCatalogElement CatalogElement;
-				CatalogElement.Id = ResourceObject->GetStringField(TEXT("id"));
-				CatalogElement.Uri = ResourceObject->GetStringField(TEXT("uri"));
-				CatalogElement.Hash = ResourceObject->GetStringField(TEXT("hash"));
+				CatalogElement.Id = ResourceObject->GetStringField(Id);
+				CatalogElement.Uri = ResourceObject->GetStringField(Uri);
+				CatalogElement.Hash = ResourceObject->GetStringField(Hash);
 				CatalogElementMap.Add(CatalogElement.Id, CatalogElement);
 				UE_LOG(LogUBFAPIController, VeryVerbose, TEXT("AssetProfileUtils::ParseCatalog "
-					"Added CatalogElement Id: %s Type: %s Uri: %s hash: %s"),
-					*CatalogElement.Id, *CatalogElement.Type, *CatalogElement.Uri, *CatalogElement.Hash);
+					"Added CatalogElement %s: %s %s: %s %s: %s"),
+					*Id, *CatalogElement.Id, *Uri, *CatalogElement.Uri, *Hash, *CatalogElement.Hash);
 			}
 		}
 	}

@@ -22,7 +22,7 @@ TFuture<bool> FLoadAssetProfilesAction::TryLoadAssetProfile(const FFutureverseAs
 		FString AssetNameFormatted = LoadData.GetAssetName().ToLower().Replace(TEXT("-"), TEXT(""));
 		
 		ProfileRemotePath = FPaths::Combine(Settings->GetDefaultAssetProfilePath(),
-			FString::Printf(TEXT("profiles_%s.json"), *LoadData.ContractID));
+			FString::Printf(TEXT("%s.json"), *LoadData.ContractID));
 		
 		ProfileRemotePath = ProfileRemotePath.Replace(TEXT(" "), TEXT(""));
 	}
