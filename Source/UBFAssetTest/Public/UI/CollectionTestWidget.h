@@ -4,7 +4,7 @@
 
 #include "CoreMinimal.h"
 #include "Blueprint/UserWidget.h"
-#include "ControllerLayers/APIGraphProvider.h"
+#include "ControllerLayers/AssetProfile.h"
 #include "CollectionTestWidget.generated.h"
 
 class UCollectionTestInputBindingObject;

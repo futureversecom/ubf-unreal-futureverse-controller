@@ -76,8 +76,6 @@ public:
 	virtual void Deinitialize() override;
 	virtual void Initialize(FSubsystemCollectionBase& Collection) override;
 
-	TFuture<bool> TryLoadAssetDatas(const TArray<struct FFutureverseAssetLoadData>& LoadDatas);
-
 private:
 	void RenderItemInternal(FUBFRenderDataPtr RenderData, UUBFRuntimeController* Controller,
 		const TMap<FString, UUBFBindingObject*>& InputMap, const FOnComplete& OnComplete);
@@ -122,4 +120,5 @@ private:
 	
 	friend class UUBFInventoryItem;
 	friend class FLoadMultipleAssetDatasAction;
+	friend class UCollectionTestWidget;
 };

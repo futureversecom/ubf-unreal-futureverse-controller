@@ -8,10 +8,8 @@
 #include "FutureverseUBFControllerSettings.h"
 #include "FutureverseUBFControllerSubsystem.h"
 #include "UBFAssetTestLog.h"
-#include "ControllerLayers/APIGraphProvider.h"
 #include "ControllerLayers/AssetProfileUtils.h"
-#include "ControllerLayers/DownloadRequestManager.h"
-#include "ControllerLayers/MemoryCacheLoader.h"
+#include "GlobalArtifactProvider/DownloadRequestManager.h"
 #include "TestData/CollectionTestData.h"
 
 void UCollectionTestWidget::InitializeWidget()
@@ -78,35 +76,36 @@ void UCollectionTestWidget::LoadAllTestAssets(const UCollectionTestData* TestDat
 			TArray<FFutureverseAssetLoadData> AssetLoadDatas;
 			for (FAssetProfile& AssetProfile : AssetProfileEntries)
 			{
-				// no need to provide base path here as the values are remote not local
-				AssetProfile.RelativePath = "";
-			
-				if (AssetProfile.Id.IsEmpty())
-					AssetProfile.Id = "override";
-			
+				if (AssetProfile.GetId().IsEmpty())
+					AssetProfile.ModifyId(TEXT("override"));
+				
 				SubSystem->RegisterAssetProfile(AssetProfile);
 			
-				AssetLoadDatas.Add(FFutureverseAssetLoadData(AssetProfile.Id, ContractID));
+				AssetLoadDatas.Add(FFutureverseAssetLoadData(AssetProfile.GetId(), ContractID));
 
 				UUBFInventoryItem* UBFItem = NewObject<UUBFInventoryItem>(this);
 				FUBFItemData ItemData;
-				ItemData.AssetID = AssetProfile.Id;
+				ItemData.AssetID = AssetProfile.GetId();
 				ItemData.ContractID = ContractID;
 				UBFItem->SetItemData(ItemData);
 				
 				TestAssetInventory.Add(UBFItem);
-				UE_LOG(LogUBFAssetTest, Verbose, TEXT("UCollectionTestWidget::LoadAllTestAssets Registering AssetProfile for %s and created UBFItem"), *AssetProfile.Id);
+				UE_LOG(LogUBFAssetTest, Verbose, TEXT("UCollectionTestWidget::LoadAllTestAssets "
+					"Registering AssetProfile for %s and created UBFItem"), *AssetProfile.GetId());
 			}
 		
 			auto NumberOfTestAssets = AssetLoadDatas.Num();
-			SubSystem->TryLoadAssetDatas(AssetLoadDatas).Next([this, NumberOfTestAssets, OnLoadCompleted](const bool bAssetsLoaded)
+			SubSystem->EnsureAssetDatasLoaded(AssetLoadDatas).Next([this, NumberOfTestAssets, OnLoadCompleted]
+				(const bool bAssetsLoaded)
 			{
 				if (!bAssetsLoaded)
 				{
-					UE_LOG(LogUBFAssetTest, Warning, TEXT("UCollectionTestWidget::LoadAllTestAssets Failed to load Test Assets"));
+					UE_LOG(LogUBFAssetTest, Warning, TEXT("UCollectionTestWidget::LoadAllTestAssets "
+						"Failed to load Test Assets"));
 				}
 
-				UE_LOG(LogUBFAssetTest, Log, TEXT("UCollectionTestWidget::LoadAllTestAssets Successfully loaded %d Test Assets"), NumberOfTestAssets);
+				UE_LOG(LogUBFAssetTest, Log, TEXT("UCollectionTestWidget::LoadAllTestAssets "
+					"Successfully loaded %d Test Assets"), NumberOfTestAssets);
 			});
 				
 			if (NumberOfDownloadedProfiles >= NumProfiles)
