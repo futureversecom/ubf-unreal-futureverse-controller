@@ -6,13 +6,10 @@
 
 #include "FutureverseAssetLoadData.h"
 #include "FutureverseUBFControllerLog.h"
-#include "ControllerLayers/APIGraphProvider.h"
 #include "ControllerLayers/AssetProfileUtils.h"
-#include "ControllerLayers/DownloadRequestManager.h"
-#include "ControllerLayers/MemoryCacheLoader.h"
-#include "ControllerLayers/TempCacheLoader.h"
+#include "GlobalArtifactProvider/DownloadRequestManager.h"
 
-TFuture<bool> FLoadAssetProfilesAction::TryLoadAssetProfile(const FFutureverseAssetLoadData& LoadData, const TSharedPtr<FMemoryCacheLoader>& MemoryCacheLoader, const TSharedPtr<FTempCacheLoader>& TempCacheLoader)
+TFuture<bool> FLoadAssetProfilesAction::TryLoadAssetProfile(const FFutureverseAssetLoadData& LoadData, const TSharedPtr<FMemoryCacheLoader>& MemoryCacheLoader)
 {
 	Promise = MakeShareable(new TPromise<bool>());
 	TFuture<bool> Future = Promise->GetFuture();
@@ -25,7 +22,7 @@ TFuture<bool> FLoadAssetProfilesAction::TryLoadAssetProfile(const FFutureverseAs
 		FString AssetNameFormatted = LoadData.GetAssetName().ToLower().Replace(TEXT("-"), TEXT(""));
 		
 		ProfileRemotePath = FPaths::Combine(Settings->GetDefaultAssetProfilePath(),
-			FString::Printf(TEXT("profiles_%s.json"), *LoadData.ContractID));
+			FString::Printf(TEXT("%s.json"), *LoadData.ContractID));
 		
 		ProfileRemotePath = ProfileRemotePath.Replace(TEXT(" "), TEXT(""));
 	}
@@ -53,15 +50,15 @@ TFuture<bool> FLoadAssetProfilesAction::TryLoadAssetProfile(const FFutureverseAs
 		for (FAssetProfile& AssetProfile : AssetProfileEntries)
 		{
 			// no need to provide base path here as the values are remote not local
-			AssetProfile.RelativePath = "";
+			AssetProfile.OverrideRelativePaths("");
 			
-			if (AssetProfile.Id.IsEmpty())
-				AssetProfile.Id = LoadData.AssetID;
+			if (AssetProfile.GetId().IsEmpty())
+				AssetProfile.ModifyId(LoadData.AssetID);
 			
-			if (!AssetProfile.Id.Contains(LoadData.ContractID))
-				AssetProfile.Id = FString::Printf(TEXT("%s:%s"), *LoadData.ContractID, *AssetProfile.Id);
+			if (!AssetProfile.GetId().Contains(LoadData.ContractID))
+				AssetProfile.ModifyId(FString::Printf(TEXT("%s:%s"), *LoadData.ContractID, *AssetProfile.GetId()));
 			
-			SharedThis->AssetProfiles.Add(AssetProfile.Id, AssetProfile);
+			SharedThis->AssetProfiles.Add(AssetProfile.GetId(), AssetProfile);
 		};
 
 		SharedThis->Promise->SetValue(true);

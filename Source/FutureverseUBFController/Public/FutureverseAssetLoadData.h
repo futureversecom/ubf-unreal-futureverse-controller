@@ -9,6 +9,12 @@ struct FFutureverseAssetLoadData
 
 	FString AssetID;
 	FString ContractID;
+	FString VariantID = FString(TEXT("Default"));
+
+	FString GetCombinedVariantID() const
+	{
+		return FString::Printf(TEXT("%s-%s"), *AssetID, *VariantID);
+	}
 
 	// Function to extract AssetName from AssetID
 	FString GetAssetName() const

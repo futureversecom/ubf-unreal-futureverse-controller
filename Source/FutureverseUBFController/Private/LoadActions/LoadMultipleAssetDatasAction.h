@@ -10,7 +10,7 @@ class FLoadMultipleAssetDatasAction : public TLoadAction<FLoadMultipleAssetDatas
 {
 public:
 	FLoadMultipleAssetDatasAction() {}
-	TFuture<bool> TryLoadAssetProfiles(const TArray<struct FFutureverseAssetLoadData>& AssetLoadDatas, class UFutureverseUBFControllerSubsystem*
+	TFuture<bool> TryLoadMultipleAssetDatasAction(const TArray<struct FFutureverseAssetLoadData>& AssetLoadDatas, class UFutureverseUBFControllerSubsystem*
 	                                   FutureverseUbfControllerSubsystem);
 
 	

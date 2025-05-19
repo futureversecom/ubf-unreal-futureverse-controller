@@ -4,14 +4,15 @@
 
 #include "FutureverseAssetLoadData.h"
 
-FUBFRenderDataContainer::FUBFRenderDataContainer(const FUBFRenderData& InData) : RenderData(InData)
+FUBFRenderDataContainer::FUBFRenderDataContainer(const FUBFRenderData& InData, const FString& VariantID) : VariantID(VariantID), RenderData(InData)
 {
-	
+	if (this->VariantID.IsEmpty())
+		this->VariantID = FString(TEXT("Default"));
 }
 
-FUBFRenderDataPtr FUBFRenderDataContainer::GetFromData(const FUBFRenderData& InData)
+FUBFRenderDataPtr FUBFRenderDataContainer::GetFromData(const FUBFRenderData& InData, const FString& VariantID)
 {
-	return MakeShared<FUBFRenderDataContainer>(InData);
+	return MakeShared<FUBFRenderDataContainer>(InData, VariantID);
 }
 
 TArray<FFutureverseAssetLoadData> FUBFRenderDataContainer::GetLinkedAssetLoadData() const
