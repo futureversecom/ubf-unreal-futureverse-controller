@@ -43,18 +43,19 @@ void UCollectionTestWidget::LoadAllTestAssets(const UCollectionTestData* TestDat
 	NumberOfDownloadedProfiles = 0;
 	
 	UE_LOG(LogUBFAssetTest, Verbose, TEXT("UCollectionTestWidget::LoadAllTestAssets attempting to download %d profiles"), NumProfiles);
-	
+	const auto CollectionID = TestData->CollectionID;
 	for (auto TestAssetDefinition : TestData->TestAssetDefinitions)
 	{
 		const auto ContractID = TestAssetDefinition.ContractID;
+	
 		FString ProfileRemotePath = FPaths::Combine(Settings->GetDefaultAssetProfilePath(),
-			FString::Printf(TEXT("profiles_%s.json"), *TestAssetDefinition.ContractID));
+			FString::Printf(TEXT("%s.json"), *TestAssetDefinition.ContractID));
 		
 		ProfileRemotePath = ProfileRemotePath.Replace(TEXT(" "), TEXT(""));
 			
 		// fetch remote asset profile, then parse and register all the blueprint instances and catalogs
 		FDownloadRequestManager::GetInstance()->LoadStringFromURI(TEXT("AssetProfile"), ProfileRemotePath, "", MemoryCacheLoader).Next(
-			[this, ProfileRemotePath, NumProfiles, SubSystem, ContractID, OnLoadCompleted](const UBF::FLoadStringResult& AssetProfileResult)
+			[this, ProfileRemotePath, NumProfiles, SubSystem, ContractID, CollectionID, OnLoadCompleted](const UBF::FLoadStringResult& AssetProfileResult)
 		{
 			NumberOfDownloadedProfiles++;
 				
@@ -77,7 +78,10 @@ void UCollectionTestWidget::LoadAllTestAssets(const UCollectionTestData* TestDat
 			for (FAssetProfile& AssetProfile : AssetProfileEntries)
 			{
 				if (AssetProfile.GetId().IsEmpty())
-					AssetProfile.ModifyId(TEXT("override"));
+					AssetProfile.ModifyId(ContractID);
+			
+				if (!AssetProfile.GetId().Contains(ContractID))
+					AssetProfile.ModifyId(FString::Printf(TEXT("%s:%s"), *ContractID, *AssetProfile.GetId()));
 				
 				SubSystem->RegisterAssetProfile(AssetProfile);
 			
@@ -87,6 +91,7 @@ void UCollectionTestWidget::LoadAllTestAssets(const UCollectionTestData* TestDat
 				FUBFItemData ItemData;
 				ItemData.AssetID = AssetProfile.GetId();
 				ItemData.ContractID = ContractID;
+				ItemData.CollectionID = FString::Printf(TEXT("%s:%s"), *CollectionID, *ContractID);
 				UBFItem->SetItemData(ItemData);
 				
 				TestAssetInventory.Add(UBFItem);

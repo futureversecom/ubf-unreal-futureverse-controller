@@ -45,5 +45,8 @@ class UBFASSETTEST_API UCollectionTestData : public UDataAsset
 
 public:
 	UPROPERTY(EditAnywhere, BlueprintReadWrite)
+	FString CollectionID;
+	
+	UPROPERTY(EditAnywhere, BlueprintReadWrite)
 	TArray<FCollectionTestAssetDefinition> TestAssetDefinitions;
 };
