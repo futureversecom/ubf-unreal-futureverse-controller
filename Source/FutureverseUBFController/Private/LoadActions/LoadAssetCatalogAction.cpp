@@ -18,23 +18,22 @@ TFuture<bool> FLoadAssetCatalogAction::TryLoadAssetCatalog(const FAssetProfile& 
 	AssetProfileLoaded = AssetProfile;
 	LoadData = InLoadData;
 	
-	if(!AssetProfile.GetRenderBlueprintId(LoadData.VariantID).IsEmpty() && !AssetProfile.GetRenderCatalogUri(LoadData.VariantID).IsEmpty())
+	if (!AssetProfile.GetRenderBlueprintId(LoadData.VariantID).IsEmpty() && !AssetProfile.GetRenderCatalogUri(LoadData.VariantID).IsEmpty())
 	{
 		SharedThis->AddPendingLoad();
 		
 		FDownloadRequestManager::GetInstance()->LoadStringFromURI(TEXT("Catalog"),
-			AssetProfile.GetRenderCatalogUri(LoadData.VariantID),
-			AssetProfile.GetRenderCatalogUri(LoadData.VariantID), MemoryCacheLoader)
+			AssetProfile.GetRenderCatalogUri(LoadData.VariantID))
 			.Next([SharedThis, AssetProfile, this](const UBF::FLoadStringResult& LoadResult)
 		{
-			if (!LoadResult.Result.Key)
+			if (!LoadResult.bSuccess)
 			{
 				UE_LOG(LogFutureverseUBFController, Warning, TEXT("Failed to load render catalog from %s"), *AssetProfile.GetRenderCatalogUri(LoadData.VariantID));
 				SharedThis->CompletePendingLoad();
 				return;
 			}
 				
-			AssetProfileUtils::ParseCatalog(LoadResult.Result.Value, SharedThis->RenderCatalogMap);
+			AssetProfileUtils::ParseCatalog(LoadResult.Value, SharedThis->RenderCatalogMap);
 			UE_LOG(LogFutureverseUBFController, Verbose, TEXT("Adding rendering catalog from %s"), *AssetProfile.GetRenderCatalogUri(LoadData.VariantID));
 			SharedThis->CompletePendingLoad();
 		});
@@ -44,17 +43,17 @@ TFuture<bool> FLoadAssetCatalogAction::TryLoadAssetCatalog(const FAssetProfile& 
 	{
 		SharedThis->AddPendingLoad();
 		
-		FDownloadRequestManager::GetInstance()->LoadStringFromURI(TEXT("Catalog"), AssetProfile.GetParsingCatalogUri(LoadData.VariantID), AssetProfile.GetParsingCatalogUri(LoadData.VariantID), MemoryCacheLoader)
+		FDownloadRequestManager::GetInstance()->LoadStringFromURI(TEXT("Catalog"), AssetProfile.GetParsingCatalogUri(LoadData.VariantID))
 			.Next([SharedThis, AssetProfile, this](const UBF::FLoadStringResult& LoadResult)
 		{
-			if (!LoadResult.Result.Key)
+			if (!LoadResult.bSuccess)
 			{
 				UE_LOG(LogFutureverseUBFController, Warning, TEXT("Failed to load parsing catalog from %s"), *AssetProfile.GetParsingCatalogUri(LoadData.VariantID));
 				SharedThis->CompletePendingLoad();
 				return;
 			}
 						
-			AssetProfileUtils::ParseCatalog(LoadResult.Result.Value, SharedThis->ParsingCatalogMap);
+			AssetProfileUtils::ParseCatalog(LoadResult.Value, SharedThis->ParsingCatalogMap);
 			UE_LOG(LogFutureverseUBFController, Verbose, TEXT("Adding parsing catalog from %s"), *AssetProfile.GetParsingCatalogUri(LoadData.VariantID));
 			SharedThis->CompletePendingLoad();
 		});

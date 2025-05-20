@@ -34,10 +34,10 @@ TFuture<bool> FLoadAssetProfilesAction::TryLoadAssetProfile(const FFutureverseAs
 
 	TSharedPtr<FLoadAssetProfilesAction> SharedThis = AsShared();
 	// fetch remote asset profile, then parse and register all the blueprint instances and catalogs
-	FDownloadRequestManager::GetInstance()->LoadStringFromURI(TEXT("AssetProfile"), ProfileRemotePath, "", MemoryCacheLoader).Next(
+	FDownloadRequestManager::GetInstance()->LoadStringFromURI(TEXT("AssetProfile"), ProfileRemotePath).Next(
 		[SharedThis, ProfileRemotePath, LoadData](const UBF::FLoadStringResult& AssetProfileResult)
 	{
-		if(!AssetProfileResult.Result.Key)
+		if (!AssetProfileResult.bSuccess)
 		{
 			UE_LOG(LogFutureverseUBFController, Error, TEXT("UFutureverseUBFControllerSubsystem::LoadRemoteAssetProfile failed to load remote AssetProfile from %s"), *ProfileRemotePath);
 			SharedThis->Promise->SetValue(false);
@@ -45,7 +45,7 @@ TFuture<bool> FLoadAssetProfilesAction::TryLoadAssetProfile(const FFutureverseAs
 		}
 			
 		TArray<FAssetProfile> AssetProfileEntries;
-		AssetProfileUtils::ParseAssetProfileJson(AssetProfileResult.Result.Value, AssetProfileEntries);
+		AssetProfileUtils::ParseAssetProfileJson(AssetProfileResult.Value, AssetProfileEntries);
 			
 		for (FAssetProfile& AssetProfile : AssetProfileEntries)
 		{
