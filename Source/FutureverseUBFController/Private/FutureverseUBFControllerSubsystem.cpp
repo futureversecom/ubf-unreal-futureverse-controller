@@ -6,7 +6,7 @@
 #include "FutureverseAssetLoadData.h"
 #include "FutureverseUBFControllerLog.h"
 #include "UBFLogData.h"
-#include "UBFUtils.h"
+#include "Util/UBFUtils.h"
 #include "CollectionData/CollectionAssetProfiles.h"
 #include "ControllerLayers/AssetProfileUtils.h"
 #include "ExecutionSets/ExecutionSetData.h"
