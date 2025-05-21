@@ -120,4 +120,5 @@ private:
 	
 	friend class UUBFInventoryItem;
 	friend class FLoadMultipleAssetDatasAction;
+	friend class UCollectionTestWidget;
 };
