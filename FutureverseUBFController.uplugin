@@ -29,6 +29,10 @@
 	{
 		"Name": "UBF",
 		"Enabled": true
+	},
+	{
+		"Name": "UnrealSyloPlugin",
+		"Enabled": true
 	}
 ]
 }
