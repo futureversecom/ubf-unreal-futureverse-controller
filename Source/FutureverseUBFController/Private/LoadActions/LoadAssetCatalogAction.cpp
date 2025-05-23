@@ -3,11 +3,11 @@
 #include "LoadActions/LoadAssetCatalogAction.h"
 
 #include "FutureverseUBFControllerLog.h"
-#include "ControllerLayers/AssetProfileUtils.h"
 #include "GlobalArtifactProvider/DownloadRequestManager.h"
+#include "Util/CatalogUtils.h"
 
 TFuture<bool> FLoadAssetCatalogAction::TryLoadAssetCatalog(const FAssetProfile& AssetProfile,
-	const FFutureverseAssetLoadData& InLoadData, const TSharedPtr<FMemoryCacheLoader>& MemoryCacheLoader)
+															const FFutureverseAssetLoadData& InLoadData, const TSharedPtr<FMemoryCacheLoader>& MemoryCacheLoader)
 {
 	Promise = MakeShareable(new TPromise<bool>());
 	TFuture<bool> Future = Promise->GetFuture();
@@ -34,7 +34,7 @@ TFuture<bool> FLoadAssetCatalogAction::TryLoadAssetCatalog(const FAssetProfile& 
 				return;
 			}
 				
-			AssetProfileUtils::ParseCatalog(LoadResult.Result.Value, SharedThis->RenderCatalogMap);
+			CatalogUtils::ParseCatalog(LoadResult.Result.Value, SharedThis->RenderCatalogMap);
 			UE_LOG(LogFutureverseUBFController, Verbose, TEXT("Adding rendering catalog from %s"), *AssetProfile.GetRenderCatalogUri(LoadData.VariantID));
 			SharedThis->CompletePendingLoad();
 		});
@@ -54,7 +54,7 @@ TFuture<bool> FLoadAssetCatalogAction::TryLoadAssetCatalog(const FAssetProfile& 
 				return;
 			}
 						
-			AssetProfileUtils::ParseCatalog(LoadResult.Result.Value, SharedThis->ParsingCatalogMap);
+			CatalogUtils::ParseCatalog(LoadResult.Result.Value, SharedThis->ParsingCatalogMap);
 			UE_LOG(LogFutureverseUBFController, Verbose, TEXT("Adding parsing catalog from %s"), *AssetProfile.GetParsingCatalogUri(LoadData.VariantID));
 			SharedThis->CompletePendingLoad();
 		});
