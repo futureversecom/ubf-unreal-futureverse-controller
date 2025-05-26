@@ -1,8 +1,0 @@
-{
-	"BuildId": "37670630",
-	"Modules": 
-	{
-		"FutureverseUBFController": "UnrealEditor-FutureverseUBFController.dll",
-		"UBFAPIController": "UnrealEditor-UBFAPIController.dll"
-	}
-}
