@@ -40,7 +40,7 @@ public class FutureverseUBFController : ModuleRules
 				"SlateCore",
 				"Json",
 				"JsonUtilities",
-				"DeveloperSettings"
+				"DeveloperSettings", "UnrealSyloPlugin"
 				// ... add private dependencies that you statically link with here ...	
 			}
 			);
