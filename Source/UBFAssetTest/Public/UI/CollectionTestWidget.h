@@ -25,9 +25,6 @@ class UBFASSETTEST_API UCollectionTestWidget : public UUserWidget
 
 public:
 	UFUNCTION(BlueprintCallable)
-	void InitializeWidget();
-	
-	UFUNCTION(BlueprintCallable)
 	void LoadAllTestAssets(const UCollectionTestData* TestData, const FOnLoadCompleted& OnLoadCompleted);
 	
 	UFUNCTION(BlueprintCallable)

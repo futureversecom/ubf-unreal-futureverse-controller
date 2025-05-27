@@ -12,11 +12,6 @@
 #include "GlobalArtifactProvider/DownloadRequestManager.h"
 #include "TestData/CollectionTestData.h"
 
-void UCollectionTestWidget::InitializeWidget()
-{
-	MemoryCacheLoader = MakeShared<FMemoryCacheLoader>();
-}
-
 void UCollectionTestWidget::LoadAllTestAssets(const UCollectionTestData* TestData, const FOnLoadCompleted& OnLoadCompleted)
 {
 	if (!TestData)
@@ -54,12 +49,12 @@ void UCollectionTestWidget::LoadAllTestAssets(const UCollectionTestData* TestDat
 		ProfileRemotePath = ProfileRemotePath.Replace(TEXT(" "), TEXT(""));
 			
 		// fetch remote asset profile, then parse and register all the blueprint instances and catalogs
-		FDownloadRequestManager::GetInstance()->LoadStringFromURI(TEXT("AssetProfile"), ProfileRemotePath, "", MemoryCacheLoader).Next(
+		FDownloadRequestManager::GetInstance()->LoadStringFromURI(TEXT("AssetProfile"), ProfileRemotePath).Next(
 			[this, ProfileRemotePath, NumProfiles, SubSystem, ContractID, CollectionID, OnLoadCompleted](const UBF::FLoadStringResult& AssetProfileResult)
 		{
 			NumberOfDownloadedProfiles++;
 				
-			if (!AssetProfileResult.Result.Key)
+			if (!AssetProfileResult.bSuccess)
 			{
 				UE_LOG(LogUBFAssetTest, Error, TEXT("UCollectionTestWidget::LoadAllTestAssets "
 					"failed to load remote AssetProfile from %s "), *ProfileRemotePath);
@@ -72,7 +67,7 @@ void UCollectionTestWidget::LoadAllTestAssets(const UCollectionTestData* TestDat
 			}
 			
 			TArray<FAssetProfile> AssetProfileEntries;
-			AssetProfileUtils::ParseAssetProfileJson(AssetProfileResult.Result.Value, AssetProfileEntries);
+			AssetProfileUtils::ParseAssetProfileJson(AssetProfileResult.Value, AssetProfileEntries);
 
 			TArray<FFutureverseAssetLoadData> AssetLoadDatas;
 			for (FAssetProfile& AssetProfile : AssetProfileEntries)
