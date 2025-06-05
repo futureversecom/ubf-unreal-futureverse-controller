@@ -13,5 +13,8 @@ public:
 	FLoadAssetProfilesAction() {}
 	TFuture<bool> TryLoadAssetProfile(const struct FFutureverseAssetLoadData& LoadData, const TSharedPtr<FMemoryCacheLoader>& MemoryCacheLoader);
 
+	// temp code, to be replaced with AssetRegister SDK
+	static TFuture<FString> GetAssetProfileURLFromAssetRegister(const FString& CollectionId, const FString& TokenId);
+	
 	TMap<FString, FAssetProfile> AssetProfiles;
 };

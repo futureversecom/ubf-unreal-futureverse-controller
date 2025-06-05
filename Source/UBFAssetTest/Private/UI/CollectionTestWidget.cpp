@@ -42,7 +42,8 @@ void UCollectionTestWidget::LoadAllTestAssets(const UCollectionTestData* TestDat
 	for (auto TestAssetDefinition : TestData->TestAssetDefinitions)
 	{
 		const auto ContractID = TestAssetDefinition.ContractID;
-	
+
+		// todo: use query from AR SDK
 		FString ProfileRemotePath = FPaths::Combine(Settings->GetDefaultAssetProfilePath(),
 			FString::Printf(TEXT("%s.json"), *TestAssetDefinition.ContractID));
 		
@@ -80,7 +81,7 @@ void UCollectionTestWidget::LoadAllTestAssets(const UCollectionTestData* TestDat
 				
 				SubSystem->RegisterAssetProfile(AssetProfile);
 			
-				AssetLoadDatas.Add(FFutureverseAssetLoadData(AssetProfile.GetId(), ContractID));
+				AssetLoadDatas.Add(FFutureverseAssetLoadData(AssetProfile.GetId()));
 
 				UUBFInventoryItem* UBFItem = NewObject<UUBFInventoryItem>(this);
 				FUBFItemData ItemData;

@@ -12,20 +12,19 @@ FUBFItemData UUBFInventoryItem::CreateItemDataFromMetadataJson(const FString& Co
 	const FString AssetName = MetadataJsonUtils::GetAssetName(MetadataJsonWrapper.JsonObject); 
 	const FString CollectionID = MetadataJsonUtils::GetCollectionID(MetadataJsonWrapper.JsonObject); 
 	const FString MetadataJson = MetadataJsonUtils::GetMetadataJson(MetadataJsonWrapper.JsonObject);
-	const FString AssetID = FString::Printf(TEXT("%s:%s"), *ContractID, *TokenID);
+	const FString AssetID = FString::Printf(TEXT("%s:%s"), *CollectionID, *TokenID);
 	
 	return FUBFItemData(AssetID, AssetName, ContractID, TokenID, CollectionID, MetadataJson, MetadataJsonWrapper);
 }
 
 FUBFRenderData UUBFInventoryItem::GetRenderData()
 {
-	return FUBFRenderData(ItemData.AssetID, ItemData.ContractID, GetMetadataJson(), GetContextTreeRef());
+	return FUBFRenderData(ItemData.AssetID, GetMetadataJson(), GetContextTreeRef());
 }
 
 void UUBFInventoryItem::InitializeFromRenderData(const FUBFRenderData& RenderData)
 {
 	ItemData.AssetID = RenderData.AssetID;
-	ItemData.ContractID = RenderData.ContractID;
 	ItemData.MetadataJson = RenderData.MetadataJson;
 	ContextTree = RenderData.ContextTree;
 }

@@ -461,7 +461,7 @@ void UFutureverseUBFControllerSubsystem::Initialize(FSubsystemCollectionBase& Co
 void UFutureverseUBFControllerSubsystem::RenderItemInternal(FUBFRenderDataPtr RenderData,
 	UUBFRuntimeController* Controller, const TMap<FString, UUBFBindingObject*>& InputMap, const FOnComplete& OnComplete)
 {
-	FFutureverseAssetLoadData LoadData = FFutureverseAssetLoadData(RenderData->GetAssetID(), RenderData->GetContractID());
+	FFutureverseAssetLoadData LoadData = FFutureverseAssetLoadData(RenderData->GetAssetID());
 	LoadData.VariantID = RenderData->GetVariantID();
 	
 	EnsureAssetDataLoaded(LoadData).Next([this, RenderData, Controller, InputMap, OnComplete](const bool bIsAssetProfileLoaded)
