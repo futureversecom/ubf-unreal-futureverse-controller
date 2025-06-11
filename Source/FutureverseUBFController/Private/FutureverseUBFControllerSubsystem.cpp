@@ -71,12 +71,12 @@ void UFutureverseUBFControllerSubsystem::RenderItemTreeFromRenderData(const FUBF
 }
 
 TFuture<TMap<FString, UUBFBindingObject*>> UFutureverseUBFControllerSubsystem::GetTraitsForItem(
-	const FString& ParsingGraphId, UUBFRuntimeController* Controller, const TMap<FString, UBF::FDynamicHandle>& ParsingInputs) const
+	const FString& ParsingGraphId, const TWeakObjectPtr<UUBFRuntimeController>& Controller, const TMap<FString, UBF::FDynamicHandle>& ParsingInputs) const
 {
 	TSharedPtr<TPromise<TMap<FString, UUBFBindingObject*>>> Promise = MakeShareable(new TPromise<TMap<FString, UUBFBindingObject*>>());
 	TFuture<TMap<FString, UUBFBindingObject*>> Future = Promise->GetFuture();
 	
-	if (!IsSubsystemValid())
+	if (!IsSubsystemValid() || !Controller.IsValid() || !IsValid(Controller.Get()) || !IsValid(Controller->RootComponent))
 	{
 		TMap<FString, UBF::FDynamicHandle> Traits;
 		Promise->SetValue(UBFUtils::AsBindingObjectMap(Traits));
@@ -103,9 +103,8 @@ bool UFutureverseUBFControllerSubsystem::IsSubsystemValid() const
 	return IsValid(this) && bIsInitialized;
 }
 
-void UFutureverseUBFControllerSubsystem::ParseInputsThenExecute(FUBFRenderDataPtr RenderData, UUBFRuntimeController* Controller,
-                                                                const TMap<FString, UUBFBindingObject*>& InputMap, const FOnComplete& OnComplete,
-                                                                const bool bShouldBuildContextTree) const
+void UFutureverseUBFControllerSubsystem::ParseInputsThenExecute(FUBFRenderDataPtr RenderData, const TWeakObjectPtr<UUBFRuntimeController>& Controller,
+    const TMap<FString, UUBFBindingObject*>& InputMap, const FOnComplete& OnComplete, const bool bShouldBuildContextTree) const
 {
 	// get metadata json string from original json
 	UE_LOG(LogFutureverseUBFController, VeryVerbose, TEXT("UFutureverseUBFControllerSubsystem::ParseInputs Parsing Metadata: %s"), *RenderData->GetMetadataJson());
@@ -127,7 +126,7 @@ void UFutureverseUBFControllerSubsystem::ParseInputsThenExecute(FUBFRenderDataPt
 	});
 }
 
-void UFutureverseUBFControllerSubsystem::ExecuteGraph(const FUBFRenderDataPtr& RenderData, UUBFRuntimeController* Controller, const TMap<FString, UUBFBindingObject*>& InputMap, bool bShouldBuildContextTree, const FOnComplete& OnComplete) const
+void UFutureverseUBFControllerSubsystem::ExecuteGraph(const FUBFRenderDataPtr& RenderData, const TWeakObjectPtr<UUBFRuntimeController>& Controller, const TMap<FString, UUBFBindingObject*>& InputMap, bool bShouldBuildContextTree, const FOnComplete& OnComplete) const
 {
 	FBlueprintExecutionData ExecutionData;
 
@@ -168,9 +167,9 @@ void UFutureverseUBFControllerSubsystem::ExecuteGraph(const FUBFRenderDataPtr& R
 		UE_LOG(LogFutureverseUBFController, Verbose, TEXT("UFutureverseUBFControllerSubsystem::ExecuteGraph ResolvedInput %s"), *Input.Value->ToString());
 	}
 	
-	if (!IsValid(Controller))
+	if (!Controller.IsValid() || !IsValid(Controller.Get()) && !IsValid(Controller->RootComponent))
 	{
-		UE_LOG(LogFutureverseUBFController, Warning, TEXT("UFutureverseUBFControllerSubsystem::ExecuteGraph null Controller provided. Cannot render."));
+		UE_LOG(LogFutureverseUBFController, Warning, TEXT("UFutureverseUBFControllerSubsystem::ExecuteGraph null Controller or null root component provided. Cannot render."));
 		return;
 	}
 	
@@ -333,7 +332,7 @@ void UFutureverseUBFControllerSubsystem::RegisterAssetProfilesFromData(
 }
 
 void UFutureverseUBFControllerSubsystem::ExecuteItemGraph(FUBFRenderDataPtr RenderData,
-	UUBFRuntimeController* Controller, const bool bShouldBuildContextTree,
+	const TWeakObjectPtr<UUBFRuntimeController>& Controller, const bool bShouldBuildContextTree,
     const TMap<FString, UUBFBindingObject*>& InputMap, const FOnComplete& OnComplete) const
 {
 	const auto& AssetProfile = AssetProfiles.Get(RenderData->GetAssetID());
@@ -459,7 +458,7 @@ void UFutureverseUBFControllerSubsystem::Initialize(FSubsystemCollectionBase& Co
 }
 
 void UFutureverseUBFControllerSubsystem::RenderItemInternal(FUBFRenderDataPtr RenderData,
-	UUBFRuntimeController* Controller, const TMap<FString, UUBFBindingObject*>& InputMap, const FOnComplete& OnComplete)
+	const TWeakObjectPtr<UUBFRuntimeController>& Controller, const TMap<FString, UUBFBindingObject*>& InputMap, const FOnComplete& OnComplete)
 {
 	FFutureverseAssetLoadData LoadData = FFutureverseAssetLoadData(RenderData->GetAssetID());
 	LoadData.VariantID = RenderData->GetVariantID();
@@ -487,7 +486,7 @@ void UFutureverseUBFControllerSubsystem::RenderItemInternal(FUBFRenderDataPtr Re
 }
 
 void UFutureverseUBFControllerSubsystem::RenderItemTreeInternal(FUBFRenderDataPtr RenderData,
-	UUBFRuntimeController* Controller, const TMap<FString, UUBFBindingObject*>& InputMap, const FOnComplete& OnComplete)
+	const TWeakObjectPtr<UUBFRuntimeController>& Controller, const TMap<FString, UUBFBindingObject*>& InputMap, const FOnComplete& OnComplete)
 {
 	TArray<FFutureverseAssetLoadData> AssetLoadDatas = RenderData->GetLinkedAssetLoadData();
 

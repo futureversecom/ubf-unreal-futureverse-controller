@@ -77,24 +77,24 @@ public:
 	virtual void Initialize(FSubsystemCollectionBase& Collection) override;
 
 private:
-	void RenderItemInternal(FUBFRenderDataPtr RenderData, UUBFRuntimeController* Controller,
+	void RenderItemInternal(FUBFRenderDataPtr RenderData, const TWeakObjectPtr<UUBFRuntimeController>& Controller,
 		const TMap<FString, UUBFBindingObject*>& InputMap, const FOnComplete& OnComplete);
 	
-	void RenderItemTreeInternal(FUBFRenderDataPtr RenderData, UUBFRuntimeController* Controller,
+	void RenderItemTreeInternal(FUBFRenderDataPtr RenderData, const TWeakObjectPtr<UUBFRuntimeController>& Controller,
 		const TMap<FString, UUBFBindingObject*>& InputMap, const FOnComplete& OnComplete);
 	
 	void ExecuteItemGraph(
-		FUBFRenderDataPtr RenderData, UUBFRuntimeController* Controller,
+		FUBFRenderDataPtr RenderData, const TWeakObjectPtr<UUBFRuntimeController>& Controller,
 		const bool bShouldBuildContextTree, const TMap<FString, UUBFBindingObject*>& InputMap, const FOnComplete& OnComplete) const;
 	
 	void CreateBlueprintInstancesFromContextTree(const FUBFRenderDataPtr& RenderData, const TArray<FUBFContextTreeData>& UBFContextTree,
 	                                        const FString& RootAssetId, TArray<UBF::FExecutionInstanceData>& OutBlueprintInstances) const;
 
-	void ParseInputsThenExecute(FUBFRenderDataPtr RenderData, UUBFRuntimeController* Controller,
+	void ParseInputsThenExecute(FUBFRenderDataPtr RenderData, const TWeakObjectPtr<UUBFRuntimeController>& Controller,
 	                            const TMap<FString, UUBFBindingObject*>& InputMap, const FOnComplete& OnComplete,
 	                            const bool bShouldBuildContextTree) const;
 
-	void ExecuteGraph(const FUBFRenderDataPtr& RenderData, UUBFRuntimeController* Controller, const TMap<FString, UUBFBindingObject*>& InputMap, bool
+	void ExecuteGraph(const FUBFRenderDataPtr& RenderData, const TWeakObjectPtr<UUBFRuntimeController>& Controller, const TMap<FString, UUBFBindingObject*>& InputMap, bool
 	                  bShouldBuildContextTree, const FOnComplete& OnComplete) const;
 
 	TFuture<bool> EnsureAssetDatasLoaded(const TArray<struct FFutureverseAssetLoadData>& LoadDatas);
@@ -107,7 +107,7 @@ private:
 	bool IsCatalogLoaded(const FFutureverseAssetLoadData& LoadData) const;
 	
 	TFuture<TMap<FString, UUBFBindingObject*>> GetTraitsForItem(const FString& ParsingGraphId,
-		UUBFRuntimeController* Controller, const TMap<FString, UBF::FDynamicHandle>& ParsingInputs) const;
+		const TWeakObjectPtr<UUBFRuntimeController>& Controller, const TMap<FString, UBF::FDynamicHandle>& ParsingInputs) const;
 
 	bool IsSubsystemValid() const;
 
