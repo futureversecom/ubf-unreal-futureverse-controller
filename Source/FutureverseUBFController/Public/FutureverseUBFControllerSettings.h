@@ -9,13 +9,15 @@
 /**
  * 
  */
-UCLASS(Config=Game, defaultconfig, meta = (DisplayName = "Futureverse UBF Controller Settings"))
+UCLASS(Config=Engine, defaultconfig, meta = (DisplayName = "Futureverse Controller Layer"))
 class FUTUREVERSEUBFCONTROLLER_API UFutureverseUBFControllerSettings : public UDeveloperSettings
 {
 	GENERATED_BODY()
 public:
+	UFutureverseUBFControllerSettings();
+	
 	FString GetDefaultAssetProfilePath() const { return DefaultAssetProfilePath.TrimStartAndEnd(); } 
 private:
 	UPROPERTY(EditAnywhere, Config)
-	FString DefaultAssetProfilePath = "https://fv-ubf-assets-dev.s3.us-west-2.amazonaws.com/Profiles";
+	FString DefaultAssetProfilePath = "https://fv-ubf-assets-dev.s3.us-west-2.amazonaws.com/Genesis/Profiles/1.0/";
 };
