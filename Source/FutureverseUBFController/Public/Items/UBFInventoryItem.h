@@ -3,6 +3,7 @@
 #pragma once
 
 #include "CoreMinimal.h"
+#include "AssetIdUtils.h"
 #include "JsonObjectWrapper.h"
 #include "UObject/Object.h"
 #include "UBFInventoryItem.generated.h"
@@ -100,16 +101,11 @@ struct FUBFRenderData
 
 	FUBFRenderData() {}
 
-	FUBFRenderData(const FString& AssetID, const FString& ContractID,
-			const FString& MetadataJson,const TArray<FUBFContextTreeData>& ContextTree)
-		: AssetID(AssetID), ContractID(ContractID),
-		  MetadataJson(MetadataJson), ContextTree(ContextTree) {}
+	FUBFRenderData(const FString& AssetID, const FString& MetadataJson,const TArray<FUBFContextTreeData>& ContextTree)
+		: AssetID(AssetID), MetadataJson(MetadataJson), ContextTree(ContextTree) {}
 	
 	UPROPERTY(BlueprintReadOnly)
 	FString AssetID = "Invalid";
-
-	UPROPERTY(BlueprintReadOnly)
-	FString ContractID;
 
 	UPROPERTY(BlueprintReadOnly)
 	FString MetadataJson;

@@ -1,37 +1,20 @@
 // Copyright (c) 2025, Futureverse Corporation Limited. All rights reserved.
 
 #pragma once
+#include "AssetIdUtils.h"
 
 template<typename T>
 class TAssetIdMap
 {
 public:
-	static FString ConvertAssetIdToOverrideId(const FString& AssetId)
-	{
-		FString CollectionId, AssetName;
-
-		// Split the AssetId into CollectionId and AssetName based on the delimiter ':'
-		if (AssetId.Split(TEXT(":"), &CollectionId, &AssetName))
-		{
-			// Combine the CollectionId with "override" to create the OverrideId
-			return FString::Printf(TEXT("%s:override"), *CollectionId);
-		}
-		
-		return AssetId;
-	}
-	
-	static FString FormatAssetId(const FString& AssetId)
-	{
-		return AssetId.ToLower().Replace(TEXT(" "), TEXT("")).Replace(TEXT("-"), TEXT(""));
-	}
 	
 	bool Contains(const FString& AssetId) const
 	{
-		FString FormatedAssetId = FormatAssetId(AssetId);
+		FString FormatedAssetId = AssetIdUtils::FormatAssetId(AssetId);
 		if (InternalMap.Contains(FormatedAssetId))
 			return true;
 
-		if (InternalMap.Contains(ConvertAssetIdToOverrideId(AssetId)))
+		if (InternalMap.Contains(AssetIdUtils::ConvertAssetIdToOverrideId(AssetId)))
 			return true;
 
 		return false;
@@ -39,11 +22,11 @@ public:
 	
 	T Get(const FString& AssetId) const
 	{
-		FString FormatedAssetId = FormatAssetId(AssetId);
+		FString FormatedAssetId = AssetIdUtils::FormatAssetId(AssetId);
 		if (InternalMap.Contains(FormatedAssetId))
 			return InternalMap[FormatedAssetId];
 
-		FString OverrideKey = ConvertAssetIdToOverrideId(AssetId);
+		FString OverrideKey = AssetIdUtils::ConvertAssetIdToOverrideId(AssetId);
 		if (InternalMap.Contains(OverrideKey))
 			return InternalMap[OverrideKey];
 
@@ -52,11 +35,11 @@ public:
 	
 	void Add(const FString& AssetId, const T& Value)
 	{
-		InternalMap.Add(FormatAssetId(AssetId), Value);
+		InternalMap.Add(AssetIdUtils::FormatAssetId(AssetId), Value);
 	}
 	void Remove(const FString& AssetId)
 	{
-		InternalMap.Remove(FormatAssetId(AssetId));
+		InternalMap.Remove(AssetIdUtils::FormatAssetId(AssetId));
 	}
 	void Clear()
 	{

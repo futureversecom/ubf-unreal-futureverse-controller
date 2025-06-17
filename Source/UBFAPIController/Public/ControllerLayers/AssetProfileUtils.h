@@ -31,6 +31,77 @@ namespace AssetProfileUtils
 		return TEXT("Failed to serialize JSON object.");
 	}
 	
+	inline void ParseAssetProfileVariant(const FString& Json, TArray<FAssetProfile>& AssetProfileEntries, const FString& AssetId, TSharedPtr<FJsonObject> AssetJsonObject)
+	{
+		TSharedPtr<FJsonObject> VariantObjects = AssetJsonObject->GetObjectField(UBFVariants);
+		TArray<FAssetProfileVariant> Variants;
+			
+		for (const auto& VariantTuple : VariantObjects->Values)
+		{
+			// extract the versions
+			TArray<FString> Versions;
+			TSharedPtr<FJsonObject> VariantObject = VariantTuple.Value->AsObject();
+			VariantObject->Values.GetKeys(Versions);
+
+			TArray<UBF::FGraphVersion> AssetProfileVersions;
+			for (auto VersionString : Versions)
+			{
+				// only add the supported versions
+				const auto AssetProfileVersion = UBF::FGraphVersion(VersionString);
+				if (!(AssetProfileVersion >= UBF::MinSupportedGraphVersion && AssetProfileVersion <= UBF::MaxSupportedGraphVersion)) continue;
+				AssetProfileVersions.Add(AssetProfileVersion);
+			}
+
+			if (AssetProfileVersions.IsEmpty())
+			{
+				UE_LOG(LogUBFAPIController, Warning, TEXT("ParseAssetProfileJson() Failed to find any supported asset profile version for: %s"), *VariantTuple.Key);
+				continue;
+			}
+
+			// sort it by version and use the latest supported version
+			AssetProfileVersions.Sort();
+			const auto LatestSupportedVersion = AssetProfileVersions.Last().ToString();
+			TSharedPtr<FJsonObject> AssetProfile = VariantObject->Values.Find(LatestSupportedVersion)->Get()->AsObject();
+			
+			if (!AssetProfile->HasField(RenderInstance) || !AssetProfile->HasField(RenderCatalog))
+			{
+				UE_LOG(LogUBFAPIController, Warning, TEXT("AssetProfile json: \n %s \n doesn't have required '%s' or '%s' fields. Source Json: \n %s")
+						, *JsonObjectToString(*AssetProfile), *RenderInstance, *RenderCatalog, *Json);
+			}
+					
+			// Extract the RenderBlueprintUrl
+			FString RenderBlueprintInstanceUri = AssetProfile->HasField(RenderInstance)
+													? AssetProfile->GetStringField(RenderInstance)
+													: "";
+					
+			FString RenderCatalogUri = AssetProfile->HasField(RenderCatalog)
+											? AssetProfile->GetStringField(RenderCatalog)
+											: "";
+					
+			FString ParsingBlueprintInstanceUri = AssetProfile->HasField(ParsingInstance)
+													? AssetProfile->GetStringField(ParsingInstance)
+													: "";
+					
+			FString ParsingCatalogUri = AssetProfile->HasField(ParsingCatalog)
+											? AssetProfile->GetStringField(ParsingCatalog)
+											: "";
+
+			UE_LOG(LogUBFAPIController, VeryVerbose, TEXT("AssetProfileUtils::ParseAssetProfileJson "
+						"Added AssetProfile Variant: %s Id: %s Version: %s"), *VariantTuple.Key, *AssetId, *LatestSupportedVersion);
+						
+			// Register the graph and catalog locations
+			FString VariantId = VariantTuple.Key;
+			FAssetProfileVariant Variant(VariantId, RenderBlueprintInstanceUri, ParsingBlueprintInstanceUri,
+										RenderCatalogUri, ParsingCatalogUri);
+					
+			Variants.Add(Variant);
+		}
+
+		FAssetProfile AssetProfileEntry(AssetId, Variants);
+			
+		AssetProfileEntries.Add(AssetProfileEntry);
+	}
+
 	inline void ParseAssetProfileJson(const FString& Json, TArray<FAssetProfile>& AssetProfileEntries)
 	{
 		// Create a JSON Reader
@@ -41,6 +112,13 @@ namespace AssetProfileUtils
 		if (!FJsonSerializer::Deserialize(Reader, MainJsonObject) || !MainJsonObject.IsValid())
 		{
 			UE_LOG(LogUBFAPIController, Warning, TEXT("AssetProfileUtils::ParseAssetProfileJson Failed to parse JSON string\n %s."), *Json);
+			return;
+		}
+		
+		// Handle case when this is single profile
+		if (MainJsonObject->HasField(UBFVariants))
+		{
+			ParseAssetProfileVariant(Json, AssetProfileEntries, "", MainJsonObject);
 			return;
 		}
 		
@@ -59,73 +137,7 @@ namespace AssetProfileUtils
 				continue;
 			}
 			
-			TSharedPtr<FJsonObject> VariantObjects = AssetJsonObject->GetObjectField(UBFVariants);
-			TArray<FAssetProfileVariant> Variants;
-			
-			for (const auto& VariantTuple : VariantObjects->Values)
-			{
-				// extract the versions
-				TArray<FString> Versions;
-				TSharedPtr<FJsonObject> VariantObject = VariantTuple.Value->AsObject();
-				VariantObject->Values.GetKeys(Versions);
-
-				TArray<UBF::FGraphVersion> AssetProfileVersions;
-				for (auto VersionString : Versions)
-				{
-					// only add the supported versions
-					const auto AssetProfileVersion = UBF::FGraphVersion(VersionString);
-					if (!(AssetProfileVersion >= UBF::MinSupportedGraphVersion && AssetProfileVersion <= UBF::MaxSupportedGraphVersion)) continue;
-					AssetProfileVersions.Add(AssetProfileVersion);
-				}
-
-				if (AssetProfileVersions.IsEmpty())
-				{
-					UE_LOG(LogUBFAPIController, Warning, TEXT("ParseAssetProfileJson() Failed to find any supported asset profile version for: %s"), *VariantTuple.Key);
-					continue;
-				}
-
-				// sort it by version and use the latest supported version
-				AssetProfileVersions.Sort();
-				const auto LatestSupportedVersion = AssetProfileVersions.Last().ToString();
-				TSharedPtr<FJsonObject> AssetProfile = VariantObject->Values.Find(LatestSupportedVersion)->Get()->AsObject();
-			
-				if (!AssetProfile->HasField(RenderInstance) || !AssetProfile->HasField(RenderCatalog))
-				{
-					UE_LOG(LogUBFAPIController, Warning, TEXT("AssetProfile json: \n %s \n doesn't have required '%s' or '%s' fields. Source Json: \n %s")
-						, *JsonObjectToString(*AssetProfile), *RenderInstance, *RenderCatalog, *Json);
-				}
-					
-				// Extract the RenderBlueprintUrl
-				FString RenderBlueprintInstanceUri = AssetProfile->HasField(RenderInstance)
-						? AssetProfile->GetStringField(RenderInstance)
-						: "";
-					
-				FString RenderCatalogUri = AssetProfile->HasField(RenderCatalog)
-						? AssetProfile->GetStringField(RenderCatalog)
-						: "";
-					
-				FString ParsingBlueprintInstanceUri = AssetProfile->HasField(ParsingInstance)
-						? AssetProfile->GetStringField(ParsingInstance)
-						: "";
-					
-				FString ParsingCatalogUri = AssetProfile->HasField(ParsingCatalog)
-						? AssetProfile->GetStringField(ParsingCatalog)
-						: "";
-
-				UE_LOG(LogUBFAPIController, VeryVerbose, TEXT("AssetProfileUtils::ParseAssetProfileJson "
-						"Added AssetProfile Variant: %s Id: %s Version: %s"), *VariantTuple.Key, *AssetId, *LatestSupportedVersion);
-						
-				// Register the graph and catalog locations
-				FString VariantId = VariantTuple.Key;
-				FAssetProfileVariant Variant(VariantId, RenderBlueprintInstanceUri, ParsingBlueprintInstanceUri,
-					RenderCatalogUri, ParsingCatalogUri);
-					
-				Variants.Add(Variant);
-			}
-
-			FAssetProfile AssetProfileEntry(AssetId, Variants);
-			
-			AssetProfileEntries.Add(AssetProfileEntry);
+			ParseAssetProfileVariant(Json, AssetProfileEntries, AssetId, AssetJsonObject);
 		}
 	}
 }

@@ -17,7 +17,11 @@ public:
 	UFutureverseUBFControllerSettings();
 	
 	FString GetDefaultAssetProfilePath() const { return DefaultAssetProfilePath.TrimStartAndEnd(); } 
+	bool GetUseAssetRegisterProfiles() const { return bUseAssetRegisterProfiles; } 
 private:
 	UPROPERTY(EditAnywhere, Config)
 	FString DefaultAssetProfilePath = "https://fv-ubf-assets-dev.s3.us-west-2.amazonaws.com/Genesis/Profiles/1.0/";
+
+	UPROPERTY(EditAnywhere, Config)
+	bool bUseAssetRegisterProfiles = false;
 };
