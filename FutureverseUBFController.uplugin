@@ -38,6 +38,10 @@
         {
             "Name": "UnrealSyloPlugin",
             "Enabled": true
-        }
+        },
+		{
+			"Name": "FuturepassSDK",
+			"Enabled": true
+		}
     ]
 }
