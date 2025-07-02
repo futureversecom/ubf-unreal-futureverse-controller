@@ -25,7 +25,7 @@ public class FutureverseUBFController : ModuleRules
 		PublicDependencyModuleNames.AddRange(
 			new string[]
 			{
-				"Core", "UBF", "UBFAPIController", "HTTP", "UnrealSyloPlugin", "FuturepassSDK"
+				"Core", "UBF", "UBFAPIController", "HTTP", "UnrealSyloPlugin", "FuturepassSDK", "AssetRegister"
 				// ... add other public dependencies that you statically link with here ...
 			}
 			);
@@ -40,7 +40,7 @@ public class FutureverseUBFController : ModuleRules
 				"SlateCore",
 				"Json",
 				"JsonUtilities",
-				"DeveloperSettings", "UnrealSyloPlugin"
+				"DeveloperSettings", "UnrealSyloPlugin", "AssetRegister"
 				// ... add private dependencies that you statically link with here ...	
 			}
 			);
