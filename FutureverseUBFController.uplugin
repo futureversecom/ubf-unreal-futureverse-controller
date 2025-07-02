@@ -42,6 +42,10 @@
 		{
 			"Name": "AssetRegister",
 			"Enabled": true
+		},
+		{
+			"Name": "FuturepassSDK",
+			"Enabled": true
 		}
     ]
 }
