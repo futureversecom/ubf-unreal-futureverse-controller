@@ -16,7 +16,83 @@ namespace MetadataJsonUtils
 	
 		UE_LOG(LogFutureverseUBFController, Warning, TEXT("Used JsonString: %s"), *JsonString);
 	}
+	
+	inline TSharedPtr<FJsonValue> FindFieldRecursively(const TSharedPtr<FJsonObject>& JsonObject, const FString& TargetField)
+	{
+		if (!JsonObject.IsValid()) return nullptr;
 
+		for (const auto& Pair : JsonObject->Values)
+		{
+			// Direct match
+			if (Pair.Key == TargetField)
+			{
+				return Pair.Value;
+			}
+
+			// If value is an object, search inside it
+			if (Pair.Value->Type == EJson::Object)
+			{
+				TSharedPtr<FJsonObject> SubObject = Pair.Value->AsObject();
+				if (SubObject.IsValid())
+				{
+					TSharedPtr<FJsonValue> Found = FindFieldRecursively(SubObject, TargetField);
+					if (Found.IsValid())
+					{
+						return Found;
+					}
+				}
+			}
+
+			// If value is an array, search inside any object elements
+			else if (Pair.Value->Type == EJson::Array)
+			{
+				const TArray<TSharedPtr<FJsonValue>>& Array = Pair.Value->AsArray();
+				for (const TSharedPtr<FJsonValue>& Element : Array)
+				{
+					if (Element.IsValid() && Element->Type == EJson::Object)
+					{
+						TSharedPtr<FJsonObject> ElementObj = Element->AsObject();
+						TSharedPtr<FJsonValue> Found = FindFieldRecursively(ElementObj, TargetField);
+						if (Found.IsValid())
+						{
+							return Found;
+						}
+					}
+				}
+			}
+		}
+
+		return nullptr;
+	}
+
+	inline void FindAllFieldsRecursively(const TSharedPtr<FJsonObject>& JsonObject, const FString& TargetField, TArray<TSharedPtr<FJsonValue>>& OutValues)
+	{
+		if (!JsonObject.IsValid()) return;
+
+		for (const auto& Pair : JsonObject->Values)
+		{
+			if (Pair.Key == TargetField)
+			{
+				OutValues.Add(Pair.Value);
+			}
+
+			if (Pair.Value->Type == EJson::Object)
+			{
+				FindAllFieldsRecursively(Pair.Value->AsObject(), TargetField, OutValues);
+			}
+			else if (Pair.Value->Type == EJson::Array)
+			{
+				for (const auto& Element : Pair.Value->AsArray())
+				{
+					if (Element->Type == EJson::Object)
+					{
+						FindAllFieldsRecursively(Element->AsObject(), TargetField, OutValues);
+					}
+				}
+			}
+		}
+	}
+	
 	inline FString GetAssetName(const TSharedPtr<FJsonObject>& JsonObject)
 	{
 		FString AssetName;
@@ -88,28 +164,13 @@ namespace MetadataJsonUtils
 	inline FString GetMetadataJson(const TSharedPtr<FJsonObject>& JsonObject)
 	{
 		FString MetadataJson;
-		
-		// Check if the "node" field exists
-		const TSharedPtr<FJsonObject>* NodeObject;
-		if (!JsonObject->TryGetObjectField(TEXT("node"), NodeObject) || !NodeObject->IsValid())
+
+		if (const auto MetadataProperty = FindFieldRecursively(JsonObject, TEXT("metadata")))
 		{
-			UE_LOG(LogFutureverseUBFController, Warning, TEXT("MetadataJsonUtils::GetMetadataJson Missing or invalid 'node' field in JsonObject"));
-			LogJsonString(JsonObject);
-			return MetadataJson;
+			const TSharedRef<TJsonWriter<>> Writer = TJsonWriterFactory<>::Create(&MetadataJson);
+			FJsonSerializer::Serialize(MetadataProperty->AsObject().ToSharedRef(), Writer);
 		}
 		
-		// Check if the "metadata" field exists
-		const TSharedPtr<FJsonObject>* MetadataObject;
-		if (!NodeObject->Get()->TryGetObjectField(TEXT("metadata"), MetadataObject) || !MetadataObject->IsValid())
-		{
-			UE_LOG(LogFutureverseUBFController, Warning, TEXT("MetadataJsonUtils::GetMetadataJson Missing or invalid 'metadata' field in node object"));
-			LogJsonString(JsonObject);
-		}
-		
-		const TSharedRef<TJsonWriter<>> Writer = TJsonWriterFactory<>::Create(&MetadataJson);
-		FJsonSerializer::Serialize(MetadataObject->ToSharedRef(), Writer);
-	
 		return MetadataJson;
 	}
-
 };
