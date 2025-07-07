@@ -7,7 +7,7 @@
 #include "FutureverseUBFControllerLog.h"
 #include "JsonObjectConverter.h"
 #include "MetadataJsonUtils.h"
-#include "Items/UBFInventoryItem.h"
+#include "Items/UBFItem.h"
 #include "Schemas/AssetLink.h"
 #include "Schemas/NFTAssetLink.h"
 
@@ -64,25 +64,12 @@ void UAssetRegisterInventoryComponent::HandleGetFuturepassInventory(bool bSucces
 	for (auto& AssetEdge : Assets.Edges)
 	{
 		const auto Asset = AssetEdge.Node;
-		UUBFInventoryItem* UBFItem = NewObject<UUBFInventoryItem>(this);
+		UUBFItem* UBFItem = NewObject<UUBFItem>(this);
 		const auto ItemData = CreateItemDataFromAsset(Asset);
 		UBFItem->SetItemData(ItemData);
-
-		// // add context tree
-		// TArray<FUBFContextTreeData> ContextTree;
-		// TArray<FUBFContextTreeRelationshipData> Relationships;
-		// if (auto NFTAssetLink = Cast<UNFTAssetLink>(Asset.LinkWrapper.Links))
-		// {
-		// 	for (const FLink& ChildLink : NFTAssetLink->ChildLinks)
-		// 	{
-		// 		const FString ChildAssetID = FString::Printf(TEXT("%s:%s"), *ChildLink.Asset.CollectionId, *ChildLink.Asset.TokenId);
-		// 		UE_LOG(LogFutureverseUBFController, Verbose, TEXT("UAssetRegisterInventoryComponent::CreateItemDataFromAsset Adding Child Item: %s with Relationship: %s"), *ChildAssetID, *ChildLink.Path);
-		// 		Relationships.Add(FUBFContextTreeRelationshipData(ChildLink.Path, ChildAssetID));
-		// 	}
-		// }
-		//
-		// ContextTree.Add(FUBFContextTreeData(ItemData.AssetID, Relationships));
-		// UBFItem->SetContextTree(ContextTree);
+		UBFItem->SetItemRegistry(ItemRegistry);
+		
+		ItemRegistry->RegisterItem(UBFItem->GetAssetID(), UBFItem);
 		
 		Inventory.Add(UBFItem);
 	}

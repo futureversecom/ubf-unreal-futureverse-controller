@@ -6,10 +6,11 @@
 struct FFutureverseAssetLoadData
 {
 	FFutureverseAssetLoadData(){}
-	FFutureverseAssetLoadData(const FString& AssetID) : AssetID(AssetID){}
+	FFutureverseAssetLoadData(const FString& AssetID, const FString& ProfileURI) : AssetID(AssetID), ProfileURI(ProfileURI) {}
 
 	FString AssetID;
 	FString VariantID = FString(TEXT("Default"));
+	FString ProfileURI;
 
 	FString GetCombinedVariantID() const { return FString::Printf(TEXT("%s-%s"), *AssetID, *VariantID); }
 	

@@ -7,11 +7,13 @@
 #include "UBFRuntimeController.h"
 #include "ControllerLayers/AssetProfile.h"
 #include "GlobalArtifactProvider/CacheLoading/MemoryCacheLoader.h"
-#include "Items/UBFInventoryItem.h"
+#include "Items/UBFItem.h"
 #include "Items/UBFRenderDataContainer.h"
 #include "Subsystems/GameInstanceSubsystem.h"
 #include "FutureverseUBFControllerSubsystem.generated.h"
 
+struct FLoadAssetProfileResult;
+struct FLoadLinkedAssetProfilesResult;
 class FLoadMultipleAssetDatasAction;
 class FLoadAssetProfilesAction;
 class UCollectionRemappings;
@@ -39,12 +41,12 @@ public:
 	
 	// Used for rendering an item by itself without asset tree
 	UFUNCTION(BlueprintCallable, meta = (AutoCreateRefTerm = "OnComplete"))
-	void RenderItem(UUBFInventoryItem* Item, const FString& VariantID, UUBFRuntimeController* Controller,
+	void RenderItem(UUBFItem* Item, const FString& VariantID, UUBFRuntimeController* Controller,
 		const TMap<FString, UUBFBindingObject*>& InputMap, const FOnComplete& OnComplete);
 	
 	// Used for rendering an item and other linked items using context tree
 	UFUNCTION(BlueprintCallable, meta = (AutoCreateRefTerm = "OnComplete"))
-	void RenderItemTree(UUBFInventoryItem* Item, const FString& VariantID, UUBFRuntimeController* Controller,
+	void RenderItemTree(UUBFItem* Item, const FString& VariantID, UUBFRuntimeController* Controller,
 		const TMap<FString, UUBFBindingObject*>& InputMap, const FOnComplete& OnComplete);
 	
 	// Used for rendering an item by itself without asset tree
@@ -85,7 +87,8 @@ private:
 	
 	void ExecuteItemGraph(
 		FUBFRenderDataPtr RenderData, const TWeakObjectPtr<UUBFRuntimeController>& Controller,
-		const bool bShouldBuildContextTree, const TMap<FString, UUBFBindingObject*>& InputMap, const FOnComplete& OnComplete) const;
+		const bool bShouldBuildContextTree, const TAssetIdMap<FAssetProfile>& AssetProfiles,
+		const TMap<FString, UUBFBindingObject*>& InputMap, const FOnComplete& OnComplete) const;
 	
 	void CreateBlueprintInstancesFromContextTree(const FUBFRenderDataPtr& RenderData, const TArray<FUBFContextTreeData>& UBFContextTree,
 	                                        const FString& RootAssetId, TArray<UBF::FExecutionInstanceData>& OutBlueprintInstances) const;
@@ -97,11 +100,11 @@ private:
 	void ExecuteGraph(const FUBFRenderDataPtr& RenderData, const TWeakObjectPtr<UUBFRuntimeController>& Controller, const TMap<FString, UUBFBindingObject*>& InputMap, bool
 	                  bShouldBuildContextTree, const FOnComplete& OnComplete) const;
 
-	TFuture<bool> EnsureAssetDatasLoaded(const TArray<struct FFutureverseAssetLoadData>& LoadDatas);
-	TFuture<bool> EnsureAssetDataLoaded(const FFutureverseAssetLoadData& LoadData);
+	TFuture<FLoadLinkedAssetProfilesResult> EnsureAssetDatasLoaded(const TArray<struct FFutureverseAssetLoadData>& LoadDatas) const;
+	TFuture<FLoadAssetProfileResult> EnsureAssetDataLoaded(const FFutureverseAssetLoadData& LoadData);
 	
-	TFuture<bool> EnsureAssetProfilesLoaded(const FFutureverseAssetLoadData& LoadData);
-	TFuture<bool> EnsureCatalogsLoaded(const FFutureverseAssetLoadData& LoadData);
+	TFuture<FLoadAssetProfileResult> EnsureAssetProfilesLoaded(const FFutureverseAssetLoadData& LoadData) const;
+	TFuture<bool> EnsureCatalogsLoaded(const FFutureverseAssetLoadData& LoadData, const FAssetProfile& AssetProfile);
 
 	bool IsAssetProfileLoaded(const FFutureverseAssetLoadData& LoadData) const;
 	bool IsCatalogLoaded(const FFutureverseAssetLoadData& LoadData) const;

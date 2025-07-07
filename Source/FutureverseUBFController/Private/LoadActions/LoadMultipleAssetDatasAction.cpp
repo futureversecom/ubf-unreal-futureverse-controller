@@ -2,9 +2,10 @@
 
 #include "LoadMultipleAssetDatasAction.h"
 #include "FutureverseAssetLoadData.h"
-#include "FutureverseUBFControllerSubsystem.h"
+#include "AssetProfile/AssetProfileRegistrySubsystem.h"
 
-TFuture<bool> FLoadMultipleAssetDatasAction::TryLoadMultipleAssetDatasAction(const TArray<FFutureverseAssetLoadData>& AssetLoadDatas, UFutureverseUBFControllerSubsystem* FutureverseUbfControllerSubsystem)
+TFuture<bool> FLoadMultipleAssetDatasAction::TryLoadMultipleAssetDatasAction(const TArray<FFutureverseAssetLoadData>& AssetLoadDatas,
+	UAssetProfileRegistrySubsystem* AssetProfileRegistrySubsystem)
 {
 	Promise = MakeShareable(new TPromise<bool>());
 	TFuture<bool> Future = Promise->GetFuture();
@@ -15,9 +16,10 @@ TFuture<bool> FLoadMultipleAssetDatasAction::TryLoadMultipleAssetDatasAction(con
 	for (const FFutureverseAssetLoadData& AssetLoadData : AssetLoadDatas)
 	{
 		AddPendingLoad();
-		FutureverseUbfControllerSubsystem->EnsureAssetDataLoaded(AssetLoadData).Next([SharedThis](bool bSuccess)
+		AssetProfileRegistrySubsystem->GetAssetProfile(AssetLoadData).Next([SharedThis]
+			(const FLoadAssetProfileResult& Result)
 		{
-			if (!bSuccess)
+			if (!Result.bSuccess)
 				SharedThis->bFailure = true;
 			
 			SharedThis->CompletePendingLoad();

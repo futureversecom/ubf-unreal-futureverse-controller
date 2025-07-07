@@ -22,16 +22,16 @@ TArray<FFutureverseAssetLoadData> FUBFRenderDataContainer::GetLinkedAssetLoadDat
 	for (auto& ContextTreeData : RenderData.ContextTree)
 	{
 		// Ids are in this format {chainId}:{chainType}:{contract}:{token}
-		OutContractIds.Add(FFutureverseAssetLoadData(ContextTreeData.RootNodeID));
+		OutContractIds.Add(FFutureverseAssetLoadData(ContextTreeData.RootNodeID, ContextTreeData.ProfileURI));
 		
 		for (auto& Relationship: ContextTreeData.Relationships)
 		{
-			OutContractIds.Add(FFutureverseAssetLoadData(Relationship.ChildAssetID));
+			OutContractIds.Add(FFutureverseAssetLoadData(Relationship.ChildAssetID, Relationship.ProfileURI));
 		}
 	}
 
 	if (OutContractIds.IsEmpty())
-		OutContractIds.Add(FFutureverseAssetLoadData(GetAssetID()));
+		OutContractIds.Add(FFutureverseAssetLoadData(GetAssetID(), RenderData.ProfileURI));
 		
 	return OutContractIds;
 }

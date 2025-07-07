@@ -3,10 +3,12 @@
 #pragma once
 
 #include "CoreMinimal.h"
-#include "AssetIdUtils.h"
 #include "JsonObjectWrapper.h"
+#include "InventoryComponents/ItemRegistry.h"
 #include "UObject/Object.h"
-#include "UBFInventoryItem.generated.h"
+#include "UBFItem.generated.h"
+
+class FItemRegistry;
 
 USTRUCT(Blueprintable)
 struct FUBFItemData
@@ -66,14 +68,17 @@ struct FUBFContextTreeRelationshipData
 
 	FUBFContextTreeRelationshipData() {}
 
-	FUBFContextTreeRelationshipData(const FString& RelationshipID, const FString& ChildAssetID)
-	: RelationshipID(RelationshipID), ChildAssetID(ChildAssetID) {}
+	FUBFContextTreeRelationshipData(const FString& RelationshipID, const FString& ChildAssetID,
+		const FString& ProfileURI): RelationshipID(RelationshipID), ChildAssetID(ChildAssetID), ProfileURI(ProfileURI){}
 
 	UPROPERTY()
 	FString RelationshipID;
 
 	UPROPERTY()
 	FString ChildAssetID;
+
+	UPROPERTY()
+	FString ProfileURI;
 };
 
 USTRUCT(Blueprintable, BlueprintType)
@@ -91,6 +96,9 @@ struct FUBFContextTreeData
 
 	UPROPERTY()
 	TArray<FUBFContextTreeRelationshipData> Relationships;
+
+	UPROPERTY(BlueprintReadOnly)
+	FString ProfileURI;
 };
 
 // contains the core data that UBF Subsystem needs to render an item
@@ -101,7 +109,7 @@ struct FUBFRenderData
 
 	FUBFRenderData() {}
 
-	FUBFRenderData(const FString& AssetID, const FString& MetadataJson,const TArray<FUBFContextTreeData>& ContextTree)
+	FUBFRenderData(const FString& AssetID, const FString& MetadataJson, const TArray<FUBFContextTreeData>& ContextTree)
 		: AssetID(AssetID), MetadataJson(MetadataJson), ContextTree(ContextTree) {}
 	
 	UPROPERTY(BlueprintReadOnly)
@@ -109,23 +117,25 @@ struct FUBFRenderData
 
 	UPROPERTY(BlueprintReadOnly)
 	FString MetadataJson;
+	
+	UPROPERTY(BlueprintReadOnly)
+	FString ProfileURI;
 
 	UPROPERTY(BlueprintReadOnly)
 	TArray<FUBFContextTreeData> ContextTree;
 };
 
+DECLARE_DYNAMIC_DELEGATE(FOnLoadCompleted);
+
 /**
  * 
  */
 UCLASS(BlueprintType)
-class FUTUREVERSEUBFCONTROLLER_API UUBFInventoryItem : public UObject
+class FUTUREVERSEUBFCONTROLLER_API UUBFItem : public UObject
 {
 	GENERATED_BODY()
-
-public:
-	static FUBFItemData CreateItemDataFromMetadataJson(const FString& ContractID, const FString& TokenID,
-		const FJsonObjectWrapper& MetadataJsonWrapper);
 	
+public:
 	UFUNCTION(BlueprintCallable)
 	void SetItemData(const FUBFItemData& NewItemData) { ItemData = NewItemData; }
 	
@@ -164,17 +174,33 @@ public:
 
 	UFUNCTION(BlueprintCallable)
 	FString GetMetadataJson() const { return ItemData.MetadataJson; }
-
+	
 	UFUNCTION(BlueprintCallable)
-	FUBFRenderData GetRenderData();
-
+	FString GetProfileURI() const { return ProfileURI; }
+	
 	UFUNCTION(BlueprintCallable)
-	void InitializeFromRenderData(const FUBFRenderData& RenderData);
+	FUBFRenderData GetRenderData() { return FUBFRenderData(ItemData.AssetID, GetMetadataJson(), GetContextTreeRef());}
+	
+	UFUNCTION(BlueprintCallable)
+	virtual void InitializeFromRenderData(const FUBFRenderData& RenderData);
+
+	void SetItemRegistry(const TSharedPtr<FItemRegistry>& NewItemRegistry) { ItemRegistry = NewItemRegistry; }
+	
+	virtual TFuture<bool> EnsureContextTreeLoaded();
+	virtual TFuture<bool> EnsureProfileURILoaded();
+	
+	virtual TFuture<bool> LoadContextTree();
+	virtual TFuture<bool> LoadProfileURI();
 
 protected:
 	UPROPERTY()
 	TArray<FUBFContextTreeData> ContextTree;
+
+	UPROPERTY()
+	FString ProfileURI;
 	
 	UPROPERTY()
-    FUBFItemData ItemData;
+	FUBFItemData ItemData;
+	
+	TSharedPtr<FItemRegistry> ItemRegistry;
 };

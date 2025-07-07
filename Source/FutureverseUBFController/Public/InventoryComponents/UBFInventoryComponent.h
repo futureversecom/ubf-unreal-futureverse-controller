@@ -6,7 +6,8 @@
 #include "Components/ActorComponent.h"
 #include "UBFInventoryComponent.generated.h"
 
-class UUBFInventoryItem;
+class UUBFItem;
+class FItemRegistry;
 
 DECLARE_DYNAMIC_DELEGATE(FOnRequestCompleted);
 DECLARE_DYNAMIC_MULTICAST_DELEGATE(FOnInventoryUpdatedEvent);
@@ -14,9 +15,9 @@ DECLARE_DYNAMIC_MULTICAST_DELEGATE(FOnInventoryUpdatedEvent);
 UCLASS(Abstract, Blueprintable)
 class FUTUREVERSEUBFCONTROLLER_API UUBFInventoryComponent : public UActorComponent
 {
-	GENERATED_BODY()
-
 public:
+	virtual void InitializeComponent() override;
+
 	// Request inventory items based off OwnerAddress
 	UFUNCTION(BlueprintCallable)
 	virtual void RequestFuturepassInventory(const FString& OwnerAddress, const FOnRequestCompleted& OnRequestCompleted) {};
@@ -28,14 +29,22 @@ public:
 
 	// Get current received items
 	UFUNCTION(BlueprintCallable)
-	TArray<UUBFInventoryItem*>& GetInventory() { return Inventory; }
+	TArray<UUBFItem*>& GetInventory() { return Inventory; }
+
+	UFUNCTION(BlueprintCallable)
+	virtual UUBFItem* GetItem(const FString& ItemId);
+
+	UFUNCTION(BlueprintCallable)
+	virtual void RegisterItem(const FString& ItemId, UUBFItem* Item);
 
 protected:
 	UPROPERTY()
-	TArray<UUBFInventoryItem*> Inventory;
+	TArray<UUBFItem*> Inventory;
 	
 	UPROPERTY(BlueprintAssignable)
 	FOnInventoryUpdatedEvent OnInventoryUpdated;
+
+	TSharedPtr<FItemRegistry> ItemRegistry;
 	
 	FOnRequestCompleted OnInventoryRequestCompleted;
 	FOnRequestCompleted OnFilteredInventoryRequestCompleted;

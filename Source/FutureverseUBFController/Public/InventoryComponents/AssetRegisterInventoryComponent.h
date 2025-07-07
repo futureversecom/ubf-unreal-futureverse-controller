@@ -5,7 +5,7 @@
 #include "CoreMinimal.h"
 #include "AssetRegisterQueryingLibrary.h"
 #include "InventoryComponents/UBFInventoryComponent.h"
-#include "Items/UBFInventoryItem.h"
+#include "Items/UBFItem.h"
 #include "AssetRegisterInventoryComponent.generated.h"
 
 struct FAssets;

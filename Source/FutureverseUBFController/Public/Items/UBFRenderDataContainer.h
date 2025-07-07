@@ -4,7 +4,7 @@
 
 #include "FutureverseAssetLoadData.h"
 
-#include "UBFInventoryItem.h"
+#include "UBFItem.h"
 
 class FUBFRenderDataContainer;
 
@@ -19,6 +19,7 @@ public:
 	
 	FString GetAssetID() const { return RenderData.AssetID; }
 	FString GetMetadataJson() const { return RenderData.MetadataJson; }
+	FString GetProfileURI() const { return RenderData.ProfileURI; }
 	TArray<FUBFContextTreeData>& GetContextTreeRef() { return RenderData.ContextTree; }
 	TArray<FFutureverseAssetLoadData> GetLinkedAssetLoadData() const;
 
