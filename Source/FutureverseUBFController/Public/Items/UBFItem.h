@@ -109,8 +109,8 @@ struct FUBFRenderData
 
 	FUBFRenderData() {}
 
-	FUBFRenderData(const FString& AssetID, const FString& MetadataJson, const TArray<FUBFContextTreeData>& ContextTree)
-		: AssetID(AssetID), MetadataJson(MetadataJson), ContextTree(ContextTree) {}
+	FUBFRenderData(const FString& AssetID, const FString& MetadataJson, const TArray<FUBFContextTreeData>& ContextTree, const FString& ProfileURI)
+		: AssetID(AssetID), MetadataJson(MetadataJson), ProfileURI(ProfileURI), ContextTree(ContextTree) {}
 	
 	UPROPERTY(BlueprintReadOnly)
 	FString AssetID = "Invalid";
@@ -179,12 +179,13 @@ public:
 	FString GetProfileURI() const { return ProfileURI; }
 	
 	UFUNCTION(BlueprintCallable)
-	FUBFRenderData GetRenderData() { return FUBFRenderData(ItemData.AssetID, GetMetadataJson(), GetContextTreeRef());}
+	FUBFRenderData GetRenderData() { return FUBFRenderData(ItemData.AssetID, GetMetadataJson(), GetContextTreeRef(), ProfileURI);}
 	
 	UFUNCTION(BlueprintCallable)
 	virtual void InitializeFromRenderData(const FUBFRenderData& RenderData);
 
 	void SetItemRegistry(const TSharedPtr<FItemRegistry>& NewItemRegistry) { ItemRegistry = NewItemRegistry; }
+	void SetAssetProfileURI(const FString& InProfileURI) { ProfileURI = InProfileURI; }
 	
 	virtual TFuture<bool> EnsureContextTreeLoaded();
 	virtual TFuture<bool> EnsureProfileURILoaded();

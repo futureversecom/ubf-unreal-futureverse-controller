@@ -1,11 +1,15 @@
 #pragma once
-#include "Items/UBFItem.h"
 
-class FItemRegistry
+#include "CoreMinimal.h"
+
+class UUBFItem;
+
+class FUTUREVERSEUBFCONTROLLER_API FItemRegistry
 {
-
 public:
+	FItemRegistry(){}
 	virtual ~FItemRegistry() = default;
+	
 	UUBFItem* GetItem(const FString& ItemId);
 	void RegisterItem(const FString& ItemId, UUBFItem* Item);
 

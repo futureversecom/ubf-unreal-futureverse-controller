@@ -8,6 +8,7 @@
 #include "FutureverseUBFControllerSettings.h"
 #include "FutureverseUBFControllerSubsystem.h"
 #include "UBFAssetTestLog.h"
+#include "AssetProfile/AssetProfileRegistrySubsystem.h"
 #include "ControllerLayers/AssetProfileUtils.h"
 #include "GlobalArtifactProvider/DownloadRequestManager.h"
 #include "TestData/CollectionTestData.h"
@@ -78,12 +79,14 @@ void UCollectionTestWidget::LoadAllTestAssets(const UCollectionTestData* TestDat
 			
 				if (!AssetProfile.GetId().Contains(ContractID))
 					AssetProfile.ModifyId(FString::Printf(TEXT("%s:%s"), *ContractID, *AssetProfile.GetId()));
-				
-				SubSystem->RegisterAssetProfile(AssetProfile);
-			
-				AssetLoadDatas.Add(FFutureverseAssetLoadData(AssetProfile.GetId()));
 
-				UUBFInventoryItem* UBFItem = NewObject<UUBFInventoryItem>(this);
+				// TODO fix this mike
+				//SubSystem->RegisterAssetProfile(AssetProfile);
+
+				// TODO add back ProfileURI
+				AssetLoadDatas.Add(FFutureverseAssetLoadData(AssetProfile.GetId(), TEXT("")));
+
+				UUBFItem* UBFItem = NewObject<UUBFItem>(this);
 				FUBFItemData ItemData;
 				ItemData.AssetID = AssetProfile.GetId();
 				ItemData.ContractID = ContractID;
@@ -97,9 +100,9 @@ void UCollectionTestWidget::LoadAllTestAssets(const UCollectionTestData* TestDat
 		
 			auto NumberOfTestAssets = AssetLoadDatas.Num();
 			SubSystem->EnsureAssetDatasLoaded(AssetLoadDatas).Next([this, NumberOfTestAssets, OnLoadCompleted]
-				(const bool bAssetsLoaded)
+				(const FLoadLinkedAssetProfilesResult& Result)
 			{
-				if (!bAssetsLoaded)
+				if (!Result.bSuccess)
 				{
 					UE_LOG(LogUBFAssetTest, Warning, TEXT("UCollectionTestWidget::LoadAllTestAssets "
 						"Failed to load Test Assets"));
@@ -117,7 +120,7 @@ void UCollectionTestWidget::LoadAllTestAssets(const UCollectionTestData* TestDat
 	}
 }
 
-UUBFInventoryItem* UCollectionTestWidget::GetItemForAsset(const FString& AssetID)
+UUBFItem* UCollectionTestWidget::GetItemForAsset(const FString& AssetID)
 {
 	for (const auto TestAssetItem : TestAssetInventory)
 	{
@@ -136,7 +139,8 @@ TArray<FUBFContextTreeData> UCollectionTestWidget::MakeContextTree(const FString
 	TArray<FUBFContextTreeRelationshipData> Relationships;
 	for (const UCollectionTestInputBindingObject* Input : Inputs)
 	{
-		Relationships.Add(FUBFContextTreeRelationshipData(Input->GetId(), Input->GetValue()));
+		// TODO add back profile URI
+		Relationships.Add(FUBFContextTreeRelationshipData(Input->GetId(), Input->GetValue(), TEXT("")));
 	}
 
 	const TArray ContextTree {FUBFContextTreeData(RootAssetID, Relationships)};

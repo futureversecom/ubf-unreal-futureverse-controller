@@ -5,19 +5,19 @@
 #include "CoreMinimal.h"
 #include "Blueprint/UserWidget.h"
 #include "ControllerLayers/AssetProfile.h"
+#include "Items/UBFItem.h"
 #include "CollectionTestWidget.generated.h"
 
+class UUBFItem;
 class UCollectionTestInputBindingObject;
 class UUBFInventoryItem;
 class FMemoryCacheLoader;
 class UCollectionTestData;
 struct FUBFContextTreeData;
+
 /**
  * 
  */
-
-DECLARE_DYNAMIC_DELEGATE(FOnLoadCompleted);
-
 UCLASS()
 class UBFASSETTEST_API UCollectionTestWidget : public UUserWidget
 {
@@ -28,16 +28,16 @@ public:
 	void LoadAllTestAssets(const UCollectionTestData* TestData, const FOnLoadCompleted& OnLoadCompleted);
 	
 	UFUNCTION(BlueprintCallable)
-	TArray<UUBFInventoryItem*>& GetInventory() { return TestAssetInventory; }
+	TArray<UUBFItem*>& GetInventory() { return TestAssetInventory; }
 
 	UFUNCTION(BlueprintCallable)
-	UUBFInventoryItem* GetItemForAsset(const FString& AssetID);
+	UUBFItem* GetItemForAsset(const FString& AssetID);
 
 	UFUNCTION(BlueprintCallable)
 	TArray<FUBFContextTreeData> MakeContextTree(const FString& RootAssetID, const TArray<UCollectionTestInputBindingObject*>& Inputs);
 private:
 	UPROPERTY()
-	TArray<UUBFInventoryItem*> TestAssetInventory;
+	TArray<UUBFItem*> TestAssetInventory;
 	
 	TSharedPtr<FMemoryCacheLoader> MemoryCacheLoader;
 	

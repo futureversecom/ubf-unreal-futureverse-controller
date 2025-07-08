@@ -8,7 +8,6 @@
 #include "UBFLogData.h"
 #include "AssetProfile/AssetProfileRegistrySubsystem.h"
 #include "Util/UBFUtils.h"
-#include "CollectionData/CollectionAssetProfiles.h"
 #include "ControllerLayers/AssetProfileUtils.h"
 #include "ExecutionSets/ExecutionSetData.h"
 #include "ExecutionSets/ExecutionSetResult.h"
@@ -38,7 +37,25 @@ void UFutureverseUBFControllerSubsystem::RenderItem(UUBFItem* Item, const FStrin
 		return;
 	}
 	
-	RenderItemInternal(FUBFRenderDataContainer::GetFromData(Item->GetRenderData(), VariantID), Controller, InputMap, OnComplete);
+	TSharedPtr<FRenderItemInfo> RenderItemInfo = MakeShared<FRenderItemInfo>();
+	RenderItemInfo->Controller = Controller;
+	RenderItemInfo->InputMap = InputMap;
+	RenderItemInfo->OnComplete = OnComplete;
+	
+	// TODO what if item becomes invalid while we load this?
+	// TODO what if subsystem becomes invalid while we load this?
+	
+	Item->EnsureProfileURILoaded().Next([this, Item, RenderItemInfo, VariantID](bool bResult)
+	{
+		Item->EnsureContextTreeLoaded().Next([this, Item, RenderItemInfo, VariantID](bool bResult)
+		{
+			if (!IsSubsystemValid()) return;
+			
+			RenderItemInfo->RenderData = FUBFRenderDataContainer::GetFromData(Item->GetRenderData(), VariantID);
+				
+			RenderItemInternal(RenderItemInfo);
+		});
+	});
 }
 
 void UFutureverseUBFControllerSubsystem::RenderItemTree(UUBFItem* Item, const FString& VariantID, 
@@ -55,20 +72,50 @@ void UFutureverseUBFControllerSubsystem::RenderItemTree(UUBFItem* Item, const FS
 		UE_LOG(LogFutureverseUBFController, Warning, TEXT("UFutureverseUBFControllerSubsystem::RenderItemTree was provided invalid Controller. Cannot Render."));
 		return;
 	}
+
+	TSharedPtr<FRenderItemInfo> RenderItemInfo = MakeShared<FRenderItemInfo>();
+	RenderItemInfo->Controller = Controller;
+	RenderItemInfo->InputMap = InputMap;
+	RenderItemInfo->OnComplete = OnComplete;
 	
-	RenderItemTreeInternal(FUBFRenderDataContainer::GetFromData(Item->GetRenderData(), VariantID), Controller, InputMap, OnComplete);
+	// TODO what if item becomes invalid while we load this?
+	// TODO what if subsystem becomes invalid while we load this?
+	
+	Item->EnsureProfileURILoaded().Next([this, Item, RenderItemInfo, VariantID](bool bResult)
+	{
+		Item->EnsureContextTreeLoaded().Next([this, Item, RenderItemInfo, VariantID](bool bResult)
+		{
+			if (!IsSubsystemValid()) return;
+			
+			RenderItemInfo->RenderData = FUBFRenderDataContainer::GetFromData(Item->GetRenderData(), VariantID);
+				
+			RenderItemInternal(RenderItemInfo);
+		});
+	});
 }
 
 void UFutureverseUBFControllerSubsystem::RenderItemFromRenderData(const FUBFRenderData& RenderData, const FString& VariantID, 
 	UUBFRuntimeController* Controller, const TMap<FString, UUBFBindingObject*>& InputMap, const FOnComplete& OnComplete)
 {
-	RenderItemInternal(FUBFRenderDataContainer::GetFromData(RenderData, VariantID), Controller, InputMap, OnComplete);
+	TSharedPtr<FRenderItemInfo> RenderItemInfo = MakeShared<FRenderItemInfo>();
+	RenderItemInfo->RenderData = FUBFRenderDataContainer::GetFromData(RenderData, VariantID);
+	RenderItemInfo->Controller = Controller;
+	RenderItemInfo->InputMap = InputMap;
+	RenderItemInfo->OnComplete = OnComplete;
+	
+	RenderItemInternal(RenderItemInfo);
 }
 
 void UFutureverseUBFControllerSubsystem::RenderItemTreeFromRenderData(const FUBFRenderData& RenderData, const FString& VariantID, 
 	UUBFRuntimeController* Controller, const TMap<FString, UUBFBindingObject*>& InputMap, const FOnComplete& OnComplete)
 {
-	RenderItemTreeInternal(FUBFRenderDataContainer::GetFromData(RenderData, VariantID), Controller, InputMap, OnComplete);
+	TSharedPtr<FRenderItemInfo> RenderItemInfo = MakeShared<FRenderItemInfo>();
+	RenderItemInfo->RenderData = FUBFRenderDataContainer::GetFromData(RenderData, VariantID);
+	RenderItemInfo->Controller = Controller;
+	RenderItemInfo->InputMap = InputMap;
+	RenderItemInfo->OnComplete = OnComplete;
+	
+	RenderItemTreeInternal(RenderItemInfo);
 }
 
 TFuture<TMap<FString, UUBFBindingObject*>> UFutureverseUBFControllerSubsystem::GetTraitsForItem(
@@ -104,45 +151,44 @@ bool UFutureverseUBFControllerSubsystem::IsSubsystemValid() const
 	return IsValid(this) && bIsInitialized;
 }
 
-void UFutureverseUBFControllerSubsystem::ParseInputsThenExecute(FUBFRenderDataPtr RenderData, const TWeakObjectPtr<UUBFRuntimeController>& Controller,
-    const TMap<FString, UUBFBindingObject*>& InputMap, const FOnComplete& OnComplete, const bool bShouldBuildContextTree) const
+void UFutureverseUBFControllerSubsystem::ParseInputsThenExecute(TSharedPtr<FRenderItemInfo> RenderItemInfo,
+								const bool bShouldBuildContextTree) const
 {
 	// get metadata json string from original json
-	UE_LOG(LogFutureverseUBFController, VeryVerbose, TEXT("UFutureverseUBFControllerSubsystem::ParseInputs Parsing Metadata: %s"), *RenderData->GetMetadataJson());
+	UE_LOG(LogFutureverseUBFController, VeryVerbose, TEXT("UFutureverseUBFControllerSubsystem::ParseInputs Parsing Metadata: %s"), *RenderItemInfo->RenderData->GetMetadataJson());
 	TMap<FString, UBF::FDynamicHandle> ParsingInputs =
 	{
-		{TEXT("metadata"), UBF::FDynamicHandle::String(RenderData->GetMetadataJson()) }
+		{TEXT("metadata"), UBF::FDynamicHandle::String(RenderItemInfo->RenderData->GetMetadataJson()) }
 	};
 				
-	const auto ParsingGraphId = AssetProfiles.Get(RenderData->GetAssetID()).GetParsingBlueprintId(RenderData->GetVariantID());
-	GetTraitsForItem(ParsingGraphId, Controller, ParsingInputs).Next(
-		[this, RenderData, bShouldBuildContextTree, InputMap, Controller, OnComplete]
+	const auto ParsingGraphId = RenderItemInfo->AssetProfiles.Get(RenderItemInfo->RenderData->GetAssetID()).GetParsingBlueprintId(RenderItemInfo->RenderData->GetVariantID());
+	GetTraitsForItem(ParsingGraphId, RenderItemInfo->Controller, ParsingInputs).Next(
+		[this, RenderItemInfo, bShouldBuildContextTree]
 		(const TMap<FString, UUBFBindingObject*>& Traits)
 	{
 		if (!IsSubsystemValid()) return;
 			
-		TMap<FString, UUBFBindingObject*> Inputs = InputMap;
-		Inputs.Append(Traits);
-		ExecuteGraph(RenderData, Controller, Inputs, bShouldBuildContextTree, OnComplete);
+		RenderItemInfo->InputMap.Append(Traits);
+		ExecuteGraph(RenderItemInfo, bShouldBuildContextTree);
 	});
 }
 
-void UFutureverseUBFControllerSubsystem::ExecuteGraph(const FUBFRenderDataPtr& RenderData, const TWeakObjectPtr<UUBFRuntimeController>& Controller, const TMap<FString, UUBFBindingObject*>& InputMap, bool bShouldBuildContextTree, const FOnComplete& OnComplete) const
+void UFutureverseUBFControllerSubsystem::ExecuteGraph(TSharedPtr<FRenderItemInfo> RenderItemInfo, const bool bShouldBuildContextTree) const
 {
 	FBlueprintExecutionData ExecutionData;
 
-	FString RenderBlueprintId = AssetProfiles.Get(RenderData->GetAssetID()).GetRenderBlueprintId(RenderData->GetVariantID());
+	FString RenderBlueprintId = RenderItemInfo->AssetProfiles.Get(RenderItemInfo->RenderData->GetAssetID()).GetRenderBlueprintId(RenderItemInfo->RenderData->GetVariantID());
 
 	if (bShouldBuildContextTree)
 	{
-		CreateBlueprintInstancesFromContextTree(RenderData, RenderData->GetContextTreeRef(), RenderData->GetAssetID(), ExecutionData.BlueprintInstances);
+		CreateBlueprintInstancesFromContextTree(RenderItemInfo, RenderItemInfo->RenderData->GetContextTreeRef(), RenderItemInfo->RenderData->GetAssetID(), ExecutionData.BlueprintInstances);
 	}
 	else
 	{
 		ExecutionData.BlueprintInstances.Add(UBF::FExecutionInstanceData(RenderBlueprintId));
 	}
 	
-	ExecutionData.InputMap = InputMap;
+	ExecutionData.InputMap = RenderItemInfo->InputMap;
 
 	FString InstanceID;
 
@@ -168,13 +214,13 @@ void UFutureverseUBFControllerSubsystem::ExecuteGraph(const FUBFRenderDataPtr& R
 		UE_LOG(LogFutureverseUBFController, Verbose, TEXT("UFutureverseUBFControllerSubsystem::ExecuteGraph ResolvedInput %s"), *Input.Value->ToString());
 	}
 	
-	if (!Controller.IsValid() || !IsValid(Controller.Get()) && !IsValid(Controller->RootComponent))
+	if (!RenderItemInfo->Controller.IsValid() || !IsValid(RenderItemInfo->Controller.Get()) && !IsValid(RenderItemInfo->Controller->RootComponent))
 	{
 		UE_LOG(LogFutureverseUBFController, Warning, TEXT("UFutureverseUBFControllerSubsystem::ExecuteGraph null Controller or null root component provided. Cannot render."));
 		return;
 	}
 	
-	Controller->ExecuteBlueprint(InstanceID, ExecutionData, OnComplete);
+	RenderItemInfo->Controller->ExecuteBlueprint(InstanceID, ExecutionData, RenderItemInfo->OnComplete);
 }
 
 TFuture<FLoadLinkedAssetProfilesResult> UFutureverseUBFControllerSubsystem::EnsureAssetDatasLoaded(
@@ -333,61 +379,39 @@ TFuture<bool> UFutureverseUBFControllerSubsystem::EnsureCatalogsLoaded(const FFu
 	return Future;
 }
 
-bool UFutureverseUBFControllerSubsystem::IsAssetProfileLoaded(const FFutureverseAssetLoadData& LoadData) const
-{
-	return AssetProfiles.Contains(LoadData.AssetID);
-}
-
 bool UFutureverseUBFControllerSubsystem::IsCatalogLoaded(const FFutureverseAssetLoadData& LoadData) const
 {
 	return LoadedVariantCatalogs.Contains(LoadData.GetCombinedVariantID());
 }
 
-void UFutureverseUBFControllerSubsystem::RegisterAssetProfilesFromData(
-	const EEnvironment& Environment, UCollectionAssetProfiles* CollectionAssetProfiles)
+void UFutureverseUBFControllerSubsystem::ExecuteItemGraph(TSharedPtr<FRenderItemInfo> RenderItemInfo, const bool bShouldBuildContextTree) const
 {
-	if (!CollectionAssetProfiles->AssetProfilesJsonMap.Contains(Environment)) return;
-	
-	const auto AssetProfilesJson = CollectionAssetProfiles->AssetProfilesJsonMap[Environment];
-	RegisterAssetProfilesFromJson(AssetProfilesJson, CollectionAssetProfiles->BasePath);
-	
-	for (const FAssetProfileData& Data : CollectionAssetProfiles->AdditionalData)
-	{
-		RegisterAssetProfile(Data.CreateProfileFromData(CollectionAssetProfiles->BasePath));
-	}
-}
-
-void UFutureverseUBFControllerSubsystem::ExecuteItemGraph(FUBFRenderDataPtr RenderData,
-	const TWeakObjectPtr<UUBFRuntimeController>& Controller, const bool bShouldBuildContextTree,
-	const TAssetIdMap<FAssetProfile>& AssetProfiles,
-    const TMap<FString, UUBFBindingObject*>& InputMap, const FOnComplete& OnComplete) const
-{
-	const auto& AssetProfile = AssetProfiles.Get(RenderData->GetAssetID());
+	const auto& AssetProfile = RenderItemInfo->AssetProfiles.Get(RenderItemInfo->RenderData->GetAssetID());
 		
-	if (!AssetProfile.GetParsingBlueprintId(RenderData->GetVariantID()).IsEmpty())
+	if (!AssetProfile.GetParsingBlueprintId(RenderItemInfo->RenderData->GetVariantID()).IsEmpty())
 	{
-		ParseInputsThenExecute(RenderData, Controller, InputMap, OnComplete, bShouldBuildContextTree);
+		ParseInputsThenExecute(RenderItemInfo, bShouldBuildContextTree);
 		return;
 	}
 
-	if (AssetProfile.GetRenderBlueprintId(RenderData->GetVariantID()).IsEmpty())
+	if (AssetProfile.GetRenderBlueprintId(RenderItemInfo->RenderData->GetVariantID()).IsEmpty())
 	{
-		UE_LOG(LogFutureverseUBFController, Warning, TEXT("UFutureverseUBFControllerSubsystem::ExecuteGraph Item %s provided invalid Rendering Graph Instance. Cannot render."), *RenderData->GetAssetID());
-		OnComplete.ExecuteIfBound(false, FUBFExecutionReport::Failure());
+		UE_LOG(LogFutureverseUBFController, Warning, TEXT("UFutureverseUBFControllerSubsystem::ExecuteItemGraph Item %s provided invalid Rendering Graph Instance. Cannot render."), *RenderItemInfo->RenderData->GetAssetID());
+		RenderItemInfo->OnComplete.ExecuteIfBound(false, FUBFExecutionReport::Failure());
 		return;
 	}
 	
-	ExecuteGraph(RenderData, Controller, InputMap, bShouldBuildContextTree, OnComplete);
+	ExecuteGraph(RenderItemInfo, bShouldBuildContextTree);
 }
 
-void UFutureverseUBFControllerSubsystem::CreateBlueprintInstancesFromContextTree(const FUBFRenderDataPtr& RenderData,
+void UFutureverseUBFControllerSubsystem::CreateBlueprintInstancesFromContextTree(TSharedPtr<FRenderItemInfo> RenderItemInfo,
 	const TArray<FUBFContextTreeData>& UBFContextTree, const FString& RootAssetId, TArray<UBF::FExecutionInstanceData>& OutBlueprintInstances) const
 {
 	if (UBFContextTree.IsEmpty())
 	{
 		UE_LOG(LogFutureverseUBFController, Verbose, TEXT("UFutureverseUBFControllerSubsystem::CreateBlueprintInstancesFromContextTree Can't build context tree beacuse UBFContextTree is empty."));
 		
-		auto ParentNodeRenderBlueprint = AssetProfiles.Get(RootAssetId).GetRenderBlueprintId(RenderData->GetVariantID());
+		auto ParentNodeRenderBlueprint = RenderItemInfo->AssetProfiles.Get(RootAssetId).GetRenderBlueprintId(RenderItemInfo->RenderData->GetVariantID());
 		UBF::FExecutionInstanceData BlueprintInstance(ParentNodeRenderBlueprint);
 		OutBlueprintInstances.Reset();
 		OutBlueprintInstances.Add(BlueprintInstance);
@@ -398,13 +422,13 @@ void UFutureverseUBFControllerSubsystem::CreateBlueprintInstancesFromContextTree
 
 	for (const auto& ContextTreeData : UBFContextTree)
 	{
-		if (!AssetProfiles.Contains(ContextTreeData.RootNodeID))
+		if (!RenderItemInfo->AssetProfiles.Contains(ContextTreeData.RootNodeID))
 		{
 			UE_LOG(LogFutureverseUBFController, Warning, TEXT("UFutureverseUBFControllerSubsystem::CreateBlueprintInstancesFromContextTree AssetDataMap does not contain %s."), *ContextTreeData.RootNodeID);
 			continue;
 		}
 		
-		auto ParentNodeRenderBlueprint = AssetProfiles.Get(ContextTreeData.RootNodeID).GetRenderBlueprintId(RenderData->GetVariantID());
+		auto ParentNodeRenderBlueprint = RenderItemInfo->AssetProfiles.Get(ContextTreeData.RootNodeID).GetRenderBlueprintId(RenderItemInfo->RenderData->GetVariantID());
 		UBF::FExecutionInstanceData BlueprintInstance(ParentNodeRenderBlueprint);
 
 		UE_LOG(LogFutureverseUBFController, Verbose, TEXT("UFutureverseUBFControllerSubsystem::CreateBlueprintInstancesFromContextTree Adding BlueprintInstance to mapping with Key: %s Value: %s.")
@@ -416,7 +440,7 @@ void UFutureverseUBFControllerSubsystem::CreateBlueprintInstancesFromContextTree
 	{
 		for (const auto& Relationship : ContextTreeData.Relationships)
 		{
-			if (!AssetProfiles.Contains(Relationship.ChildAssetID))
+			if (!RenderItemInfo->AssetProfiles.Contains(Relationship.ChildAssetID))
 			{
 				UE_LOG(LogFutureverseUBFController, Warning, TEXT("UFutureverseUBFControllerSubsystem::CreateBlueprintInstancesFromContextTree AssetDataMap does not contain %s."), *Relationship.ChildAssetID);
 				continue;
@@ -424,13 +448,13 @@ void UFutureverseUBFControllerSubsystem::CreateBlueprintInstancesFromContextTree
 
 			if (!AssetIdToInstanceMap.Contains(Relationship.ChildAssetID))
 			{
-				if (!AssetProfiles.Contains(ContextTreeData.RootNodeID))
+				if (!RenderItemInfo->AssetProfiles.Contains(ContextTreeData.RootNodeID))
 				{
 					UE_LOG(LogFutureverseUBFController, Warning, TEXT("UFutureverseUBFControllerSubsystem::CreateBlueprintInstancesFromContextTree AssetDataMap does not contain %s."), *ContextTreeData.RootNodeID);
 					continue;
 				}
 
-				auto ChildNodeRenderBlueprint = AssetProfiles.Get(Relationship.ChildAssetID).GetRenderBlueprintId(RenderData->GetVariantID());
+				auto ChildNodeRenderBlueprint = RenderItemInfo->AssetProfiles.Get(Relationship.ChildAssetID).GetRenderBlueprintId(RenderItemInfo->RenderData->GetVariantID());
 				UBF::FExecutionInstanceData NewBlueprintInstance(ChildNodeRenderBlueprint);
 				AssetIdToInstanceMap.Add(Relationship.ChildAssetID, NewBlueprintInstance);
 			}
@@ -448,28 +472,6 @@ void UFutureverseUBFControllerSubsystem::CreateBlueprintInstancesFromContextTree
 	AssetIdToInstanceMap.GenerateValueArray(OutBlueprintInstances);
 }
 
-void UFutureverseUBFControllerSubsystem::RegisterAssetProfilesFromJson(const FString& Json, const FString& BasePath)
-{
-	TArray<FAssetProfile> AssetProfileEntries;
-	AssetProfileUtils::ParseAssetProfileJson(Json, AssetProfileEntries);
-
-	for (FAssetProfile& AssetProfile : AssetProfileEntries)
-	{
-		AssetProfile.OverrideRelativePaths(BasePath);
-		RegisterAssetProfile(AssetProfile);
-	}
-}
-
-void UFutureverseUBFControllerSubsystem::RegisterAssetProfile(const FAssetProfile& AssetProfile)
-{
-	AssetProfiles.Add(AssetProfile.GetId(), AssetProfile);
-}
-
-void UFutureverseUBFControllerSubsystem::ClearAssetProfiles()
-{
-	AssetProfiles.Clear();
-}
-
 void UFutureverseUBFControllerSubsystem::Deinitialize()
 {
 	Super::Deinitialize();
@@ -484,53 +486,51 @@ void UFutureverseUBFControllerSubsystem::Initialize(FSubsystemCollectionBase& Co
 	bIsInitialized = true;
 }
 
-void UFutureverseUBFControllerSubsystem::RenderItemInternal(FUBFRenderDataPtr RenderData,
-	const TWeakObjectPtr<UUBFRuntimeController>& Controller, const TMap<FString, UUBFBindingObject*>& InputMap, const FOnComplete& OnComplete)
+void UFutureverseUBFControllerSubsystem::RenderItemInternal(TSharedPtr<FRenderItemInfo> RenderItemInfo)
 {
-	FFutureverseAssetLoadData LoadData = FFutureverseAssetLoadData(RenderData->GetAssetID(), RenderData->GetProfileURI());
-	LoadData.VariantID = RenderData->GetVariantID();
 	
-	EnsureAssetDataLoaded(LoadData).Next([this, RenderData, Controller, LoadData, InputMap, OnComplete]
+	FFutureverseAssetLoadData LoadData = FFutureverseAssetLoadData(RenderItemInfo->RenderData->GetAssetID(), RenderItemInfo->RenderData->GetProfileURI());
+	LoadData.VariantID = RenderItemInfo->RenderData->GetVariantID();
+	
+	EnsureAssetDataLoaded(LoadData).Next([this, RenderItemInfo, LoadData]
 		(const FLoadAssetProfileResult& Result)
 	{
 		if (!IsSubsystemValid()) return;
 			
 		if (!Result.bSuccess)
 		{
-			UE_LOG(LogFutureverseUBFController, Warning, TEXT("UFutureverseUBFControllerSubsystem::RenderItem Item %s provided invalid AssetProfile. Cannot render."), *RenderData->GetAssetID());
-			OnComplete.ExecuteIfBound(false, FUBFExecutionReport::Failure());
+			UE_LOG(LogFutureverseUBFController, Warning, TEXT("UFutureverseUBFControllerSubsystem::RenderItem Item %s provided invalid AssetProfile. Cannot render."), *RenderItemInfo->RenderData->GetAssetID());
+			RenderItemInfo->OnComplete.ExecuteIfBound(false, FUBFExecutionReport::Failure());
 			return;
 		}
-		TAssetIdMap<FAssetProfile> AssetProfiles;
-		AssetProfiles.Add(LoadData.AssetID, Result.Value);
-		ExecuteItemGraph(RenderData, Controller, false, AssetProfiles, InputMap, OnComplete);
+		RenderItemInfo->AssetProfiles.Add(LoadData.AssetID, Result.Value);
+		ExecuteItemGraph(RenderItemInfo, false);
 	});
 }
 
-void UFutureverseUBFControllerSubsystem::RenderItemTreeInternal(FUBFRenderDataPtr RenderData,
-	const TWeakObjectPtr<UUBFRuntimeController>& Controller, const TMap<FString, UUBFBindingObject*>& InputMap, const FOnComplete& OnComplete)
+void UFutureverseUBFControllerSubsystem::RenderItemTreeInternal(TSharedPtr<FRenderItemInfo> RenderItemInfo)
 {
-	TArray<FFutureverseAssetLoadData> AssetLoadDatas = RenderData->GetLinkedAssetLoadData();
+	TArray<FFutureverseAssetLoadData> AssetLoadDatas = RenderItemInfo->RenderData->GetLinkedAssetLoadData();
 
 	for (FFutureverseAssetLoadData& AssetLoadData : AssetLoadDatas)
 	{
-		AssetLoadData.VariantID = RenderData->GetVariantID();
+		AssetLoadData.VariantID = RenderItemInfo->RenderData->GetVariantID();
 	}
 
 	if (AssetLoadDatas.IsEmpty())
-		UE_LOG(LogFutureverseUBFController, Warning, TEXT("UFutureverseUBFControllerSubsystem::RenderItemTree AssetLoadDatas empty for Item %s."), *RenderData->GetAssetID());
+		UE_LOG(LogFutureverseUBFController, Warning, TEXT("UFutureverseUBFControllerSubsystem::RenderItemTree AssetLoadDatas empty for Item %s."), *RenderItemInfo->RenderData->GetAssetID());
 	
-	EnsureAssetDatasLoaded(AssetLoadDatas).Next([this, RenderData, Controller, InputMap, OnComplete]
+	EnsureAssetDatasLoaded(AssetLoadDatas).Next([this, RenderItemInfo]
 		(const FLoadLinkedAssetProfilesResult& Result)
 	{
 		if (!IsSubsystemValid()) return;
 		
 		if (!Result.bSuccess)
 		{
-			UE_LOG(LogFutureverseUBFController, Warning, TEXT("UFutureverseUBFControllerSubsystem::RenderItemTree Item %s asset tree failed to load one or many AssetDatas. This will cause asset tree to not render fully"), *RenderData->GetAssetID());
+			UE_LOG(LogFutureverseUBFController, Warning, TEXT("UFutureverseUBFControllerSubsystem::RenderItemTree Item %s asset tree failed to load one or many AssetDatas. This will cause asset tree to not render fully"), *RenderItemInfo->RenderData->GetAssetID());
 		}
-		
-		ExecuteItemGraph(RenderData, Controller, true, Result.Value, InputMap, OnComplete);
+		RenderItemInfo->AssetProfiles = Result.Value;
+		ExecuteItemGraph(RenderItemInfo, true);
 	});
 }
 

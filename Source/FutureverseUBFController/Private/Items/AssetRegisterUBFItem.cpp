@@ -10,7 +10,7 @@
 
 TFuture<bool> UAssetRegisterUBFItem::LoadContextTree()
 {
- 	TSharedPtr<TPromise<bool>> Promise = MakeShareable(new TPromise<bool>());
+	TSharedPtr<TPromise<bool>> Promise = MakeShared<TPromise<bool>>();
  	TFuture<bool> Future = Promise->GetFuture();
 
 	UAssetRegisterQueryingLibrary::GetAssetLinks(ItemData.TokenID, ItemData.CollectionID).Next([this, Promise]
@@ -33,9 +33,10 @@ TFuture<bool> UAssetRegisterUBFItem::LoadContextTree()
 					continue;
 				}
 
+				// TODO fix this async logic
 				ChildItem->EnsureProfileURILoaded().Next(
 					[this, Promise, &Relationships, ChildLink, ChildAssetID, ChildItem]
-					(const FLoadJsonResult& Result)
+					(const bool& Result)
 				{
 					UE_LOG(LogFutureverseUBFController, Verbose, TEXT("UAssetRegisterUBFItem::HandleGetAssetLinks Adding Child Item: %s with Relationship: %s"), *ChildAssetID, *ChildLink.Path);
 					Relationships.Add(FUBFContextTreeRelationshipData(ChildLink.Path, ChildAssetID, ChildItem->GetProfileURI()));
@@ -58,7 +59,7 @@ TFuture<bool> UAssetRegisterUBFItem::LoadContextTree()
 
  TFuture<bool> UAssetRegisterUBFItem::LoadProfileURI()
 {
-	TSharedPtr<TPromise<bool>> Promise = MakeShareable(new TPromise<bool>());
+	TSharedPtr<TPromise<bool>> Promise = MakeShared<TPromise<bool>>();
 	TFuture<bool> Future = Promise->GetFuture();
 	
 	UAssetRegisterQueryingLibrary::GetAssetProfile(ItemData.TokenID, ItemData.CollectionID).Next([this, Promise]
@@ -75,15 +76,19 @@ TFuture<bool> UAssetRegisterUBFItem::LoadContextTree()
 				FString::Printf(TEXT("%s.json"), *ItemData.ContractID));
 				LegacyProfileURI = LegacyProfileURI.Replace(TEXT(" "), TEXT(""));
 				ProfileURI = LegacyProfileURI;
+
+				UE_LOG(LogFutureverseUBFController, Log, TEXT("UAssetRegisterUBFItem::LoadProfileURI using legacy assetprofile URI %s"), *ProfileURI);
 			}
 			else
 			{
 				UE_LOG(LogFutureverseUBFController, Error, TEXT("UAssetRegisterUBFItem::LoadProfileURI UFutureverseUBFControllerSettings was null. Could not fetch asset profile URI"));
 				Promise->SetValue(false);
+				return;
 			}
 		}
 		else
 		{
+			UE_LOG(LogFutureverseUBFController, Log, TEXT("UAssetRegisterUBFItem::LoadProfileURI got assetprofile URI %s"), *Result.Value);
 			ProfileURI = Result.Value;
 		}
 	

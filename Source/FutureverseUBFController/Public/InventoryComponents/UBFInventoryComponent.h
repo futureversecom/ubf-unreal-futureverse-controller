@@ -3,6 +3,7 @@
 #pragma once
 
 #include "CoreMinimal.h"
+#include "ItemRegistry.h"
 #include "Components/ActorComponent.h"
 #include "UBFInventoryComponent.generated.h"
 
@@ -15,9 +16,10 @@ DECLARE_DYNAMIC_MULTICAST_DELEGATE(FOnInventoryUpdatedEvent);
 UCLASS(Abstract, Blueprintable)
 class FUTUREVERSEUBFCONTROLLER_API UUBFInventoryComponent : public UActorComponent
 {
+	GENERATED_BODY()
 public:
-	virtual void InitializeComponent() override;
-
+	UUBFInventoryComponent();
+	
 	// Request inventory items based off OwnerAddress
 	UFUNCTION(BlueprintCallable)
 	virtual void RequestFuturepassInventory(const FString& OwnerAddress, const FOnRequestCompleted& OnRequestCompleted) {};
@@ -44,7 +46,7 @@ protected:
 	UPROPERTY(BlueprintAssignable)
 	FOnInventoryUpdatedEvent OnInventoryUpdated;
 
-	TSharedPtr<FItemRegistry> ItemRegistry;
+	TSharedPtr<FItemRegistry> ItemRegistry = MakeShared<FItemRegistry>();
 	
 	FOnRequestCompleted OnInventoryRequestCompleted;
 	FOnRequestCompleted OnFilteredInventoryRequestCompleted;

@@ -3,9 +3,8 @@
 #include "InventoryComponents/UBFInventoryComponent.h"
 #include "InventoryComponents/ItemRegistry.h"
 
-void UUBFInventoryComponent::InitializeComponent()
+UUBFInventoryComponent::UUBFInventoryComponent()
 {
-	Super::InitializeComponent();
 	ItemRegistry = MakeShared<FItemRegistry>();
 }
 

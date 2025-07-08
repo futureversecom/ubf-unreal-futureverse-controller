@@ -12,12 +12,13 @@ void UUBFItem::InitializeFromRenderData(const FUBFRenderData& RenderData)
 
 TFuture<bool> UUBFItem::EnsureContextTreeLoaded()
 {
-	TSharedPtr<TPromise<bool>> Promise = MakeShareable(new TPromise<bool>());
+	TSharedPtr<TPromise<bool>> Promise = MakeShared<TPromise<bool>>();
 	TFuture<bool> Future = Promise->GetFuture();
 
 	if (!ContextTree.IsEmpty())
 	{
 		Promise->SetValue(true);
+		return Future;
 	}
 
 	LoadContextTree().Next([Promise](bool bSuccess)
@@ -30,12 +31,13 @@ TFuture<bool> UUBFItem::EnsureContextTreeLoaded()
 
 TFuture<bool> UUBFItem::EnsureProfileURILoaded()
 {
-	TSharedPtr<TPromise<bool>> Promise = MakeShareable(new TPromise<bool>());
+	TSharedPtr<TPromise<bool>> Promise = MakeShared<TPromise<bool>>();
 	TFuture<bool> Future = Promise->GetFuture();
 
 	if (!ProfileURI.IsEmpty())
 	{
 		Promise->SetValue(true);
+		return Future;
 	}
 
 	LoadProfileURI().Next([Promise](bool bSuccess)
@@ -48,15 +50,21 @@ TFuture<bool> UUBFItem::EnsureProfileURILoaded()
 
 TFuture<bool> UUBFItem::LoadContextTree()
 {
-	TSharedPtr<TPromise<bool>> Promise = MakeShareable(new TPromise<bool>());
+	TSharedPtr<TPromise<bool>> Promise = MakeShared<TPromise<bool>>();
 	TFuture<bool> Future = Promise->GetFuture();
+
+	Promise->SetValue(false);
+	
 	return Future;
 }
 
 TFuture<bool> UUBFItem::LoadProfileURI()
 {
-	TSharedPtr<TPromise<bool>> Promise = MakeShareable(new TPromise<bool>());
+	TSharedPtr<TPromise<bool>> Promise = MakeShared<TPromise<bool>>();
 	TFuture<bool> Future = Promise->GetFuture();
+
+	Promise->SetValue(false);
+	
 	return Future;
 }
 

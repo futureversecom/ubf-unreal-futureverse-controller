@@ -7,6 +7,7 @@
 #include "FutureverseUBFControllerLog.h"
 #include "JsonObjectConverter.h"
 #include "MetadataJsonUtils.h"
+#include "Items/AssetRegisterUBFItem.h"
 #include "Items/UBFItem.h"
 #include "Schemas/AssetLink.h"
 #include "Schemas/NFTAssetLink.h"
@@ -45,7 +46,8 @@ FUBFItemData UAssetRegisterInventoryComponent::CreateItemDataFromAsset(const FAs
 	const FString AssetName = Asset.Metadata.Properties.Contains(TEXT("name")) ? Asset.Metadata.Properties[TEXT("name")] : TEXT("");
 	const FString MetadataJson = MetadataJsonUtils::GetMetadataJson(Asset.OriginalJsonData.JsonObject);
 	
-	return FUBFItemData(AssetID, AssetName, Asset.CollectionId, Asset.TokenId, Asset.CollectionId, MetadataJson, Asset.OriginalJsonData);
+	
+	return FUBFItemData(AssetID, AssetName, Asset.Collection.Location, Asset.TokenId, Asset.CollectionId, MetadataJson, Asset.OriginalJsonData);
 }
 
 void UAssetRegisterInventoryComponent::HandleGetFuturepassInventory(bool bSuccess, const FAssets& Assets)
@@ -64,8 +66,14 @@ void UAssetRegisterInventoryComponent::HandleGetFuturepassInventory(bool bSucces
 	for (auto& AssetEdge : Assets.Edges)
 	{
 		const auto Asset = AssetEdge.Node;
-		UUBFItem* UBFItem = NewObject<UUBFItem>(this);
+		UUBFItem* UBFItem = NewObject<UAssetRegisterUBFItem>(this);
 		const auto ItemData = CreateItemDataFromAsset(Asset);
+
+		FString AssetProfilesKey = TEXT("asset-profile");
+
+		if (Asset.Profiles.Contains(AssetProfilesKey))
+			UBFItem->SetAssetProfileURI(Asset.Profiles[AssetProfilesKey]);
+		
 		UBFItem->SetItemData(ItemData);
 		UBFItem->SetItemRegistry(ItemRegistry);
 		

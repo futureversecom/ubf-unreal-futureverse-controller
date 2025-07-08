@@ -40,7 +40,7 @@ TFuture<FLoadAssetProfileResult> UAssetProfileRegistrySubsystem::GetAssetProfile
 				
 		if (!AssetProfileResult.bSuccess)
 		{
-			UE_LOG(LogFutureverseUBFController, Error, TEXT("UAssetProfileRegistrySubsystem::GetAssetProfile failed to load remote AssetProfile from %s"), *LoadData.ProfileURI);
+			UE_LOG(LogFutureverseUBFController, Error, TEXT("UAssetProfileRegistrySubsystem::GetAssetProfile failed to load remote AssetProfile from URI '%s'"), *LoadData.ProfileURI);
 			Result.SetFailure();
 			Promise->SetValue(Result);
 			return;
@@ -86,7 +86,7 @@ TFuture<FLoadLinkedAssetProfilesResult> UAssetProfileRegistrySubsystem::GetLinke
 	.Next([this, Promise, LoadDatas](bool bSuccess)
 	{
 		auto Result = FLoadLinkedAssetProfilesResult();
-		if (!IsSubsystemValid)
+		if (!IsSubsystemValid())
 		{
 			Result.SetFailure();
 			Promise->SetValue(Result);

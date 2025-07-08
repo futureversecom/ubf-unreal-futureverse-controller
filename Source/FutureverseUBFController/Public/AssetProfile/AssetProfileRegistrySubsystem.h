@@ -11,8 +11,26 @@
 
 struct FFutureverseAssetLoadData;
 
-struct FLoadAssetProfileResult final : UBF::TLoadResult<FAssetProfile> {};
-struct FLoadLinkedAssetProfilesResult final : UBF::TLoadResult<TAssetIdMap<FAssetProfile>> {};
+template<typename T>
+struct FUTUREVERSEUBFCONTROLLER_API TAssetProfileLoadResult
+{
+	bool bSuccess = false;
+	T Value;
+
+	void SetResult(const T& InValue)
+	{
+		bSuccess = true;
+		Value = InValue;
+	}
+
+	void SetFailure()
+	{
+		bSuccess = false;
+	}
+};
+
+struct FLoadAssetProfileResult final : TAssetProfileLoadResult<FAssetProfile> {};
+struct FLoadLinkedAssetProfilesResult final : TAssetProfileLoadResult<TAssetIdMap<FAssetProfile>> {};
 
 /**
  * 
