@@ -44,7 +44,6 @@ public:
 	static UAssetProfileRegistrySubsystem* Get(const UObject* WorldContext);
 	
 	TFuture<FLoadAssetProfileResult> GetAssetProfile(const FFutureverseAssetLoadData& LoadData);
-	TFuture<FLoadLinkedAssetProfilesResult> GetLinkedAssetProfiles(const TArray<FFutureverseAssetLoadData>& LoadDatas);
 
 	bool IsSubsystemValid() const;
 	

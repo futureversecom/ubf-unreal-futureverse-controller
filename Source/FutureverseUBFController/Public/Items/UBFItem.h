@@ -88,8 +88,8 @@ struct FUBFContextTreeData
 
 	FUBFContextTreeData() {}
 	
-	FUBFContextTreeData(const FString& RootNodeID, const TArray<FUBFContextTreeRelationshipData>& Relationships)
-	: RootNodeID(RootNodeID), Relationships(Relationships) {}
+	FUBFContextTreeData(const FString& RootNodeID, const TArray<FUBFContextTreeRelationshipData>& Relationships, const FString& ProfileURI)
+	: RootNodeID(RootNodeID), Relationships(Relationships), ProfileURI(ProfileURI) {}
 
 	UPROPERTY()
 	FString RootNodeID;

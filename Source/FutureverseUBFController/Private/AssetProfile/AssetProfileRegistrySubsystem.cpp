@@ -8,7 +8,6 @@
 #include "ControllerLayers/AssetProfileUtils.h"
 #include "GlobalArtifactProvider/DownloadRequestManager.h"
 #include "Kismet/GameplayStatics.h"
-#include "LoadActions/LoadMultipleAssetDatasAction.h"
 
 UAssetProfileRegistrySubsystem* UAssetProfileRegistrySubsystem::Get(const UObject* WorldContext)
 {
@@ -72,45 +71,6 @@ TFuture<FLoadAssetProfileResult> UAssetProfileRegistrySubsystem::GetAssetProfile
 	
 	return Future;
 	
-}
-
-TFuture<FLoadLinkedAssetProfilesResult> UAssetProfileRegistrySubsystem::GetLinkedAssetProfiles(
-	const TArray<FFutureverseAssetLoadData>& LoadDatas)
-{
-	TSharedPtr<TPromise<FLoadLinkedAssetProfilesResult>> Promise = MakeShareable(new TPromise<FLoadLinkedAssetProfilesResult>());
-	TFuture<FLoadLinkedAssetProfilesResult> Future = Promise->GetFuture();
-
-	TSharedPtr<FLoadMultipleAssetDatasAction> LoadMultipleAssetDatasAction = MakeShared<FLoadMultipleAssetDatasAction>();
-
-	LoadMultipleAssetDatasAction->TryLoadMultipleAssetDatasAction(LoadDatas, this)
-	.Next([this, Promise, LoadDatas](bool bSuccess)
-	{
-		auto Result = FLoadLinkedAssetProfilesResult();
-		if (!IsSubsystemValid())
-		{
-			Result.SetFailure();
-			Promise->SetValue(Result);
-			return;
-		}
-		
-		if(!bSuccess)
-		{
-			Result.SetFailure();
-			Promise->SetValue(Result);
-			return;
-		}
-		
-		TAssetIdMap<FAssetProfile> Profiles;
-		for (const FFutureverseAssetLoadData& LoadData : LoadDatas)
-		{
-			Profiles.Add(LoadData.AssetID, AssetProfiles.Get(LoadData.AssetID));
-		}
-		
-		Result.SetResult(Profiles);
-		Promise->SetValue(Result);
-	});
-
-	return Future;
 }
 
 bool UAssetProfileRegistrySubsystem::IsSubsystemValid() const

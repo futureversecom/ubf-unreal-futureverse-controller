@@ -46,6 +46,11 @@ public:
 		InternalMap.Reset();
 	}
 
+	// Support for ranged-for iteration
+	FORCEINLINE auto begin() { return InternalMap.begin(); }
+	FORCEINLINE auto end() { return InternalMap.end(); }
+	FORCEINLINE auto begin() const { return InternalMap.begin(); }
+	FORCEINLINE auto end() const { return InternalMap.end(); }
 	
 private:
 	TMap<FString, T> InternalMap;

@@ -91,7 +91,7 @@ private:
 
 	void ExecuteGraph(TSharedPtr<FRenderItemInfo> RenderItemInfo, const bool bShouldBuildContextTree) const;
 
-	TFuture<FLoadLinkedAssetProfilesResult> EnsureAssetDatasLoaded(const TArray<struct FFutureverseAssetLoadData>& LoadDatas) const;
+	TFuture<FLoadLinkedAssetProfilesResult> EnsureAssetDatasLoaded(const TArray<struct FFutureverseAssetLoadData>& LoadDatas);
 	TFuture<FLoadAssetProfileResult> EnsureAssetDataLoaded(const FFutureverseAssetLoadData& LoadData);
 	
 	TFuture<FLoadAssetProfileResult> EnsureAssetProfilesLoaded(const FFutureverseAssetLoadData& LoadData) const;

@@ -6,7 +6,10 @@
 #include "AssetRegisterQueryingLibrary.h"
 #include "FutureverseUBFControllerLog.h"
 #include "FutureverseUBFControllerSettings.h"
+#include "LoadActions/LoadActionUtils.h"
 #include "Schemas/NFTAssetLink.h"
+
+
 
 TFuture<bool> UAssetRegisterUBFItem::LoadContextTree()
 {
@@ -17,8 +20,9 @@ TFuture<bool> UAssetRegisterUBFItem::LoadContextTree()
 		(const FLoadAssetResult& Result)
 	{
 		const auto Asset = Result.Value;
-		TArray<FUBFContextTreeData> ContextTree;
-		TArray<FUBFContextTreeRelationshipData> Relationships;
+		TSharedPtr<TArray<FUBFContextTreeRelationshipData>> Relationships = MakeShared<TArray<FUBFContextTreeRelationshipData>>();
+
+		TArray<TFuture<bool>> ProfileFutures;
 		
 		if (const UNFTAssetLink* NFTAssetLink = Cast<UNFTAssetLink>(Asset.LinkWrapper.Links))
 		{
@@ -26,21 +30,25 @@ TFuture<bool> UAssetRegisterUBFItem::LoadContextTree()
 			{
 				const FString ChildAssetID = FString::Printf(TEXT("%s:%s"), *ChildLink.Asset.CollectionId, *ChildLink.Asset.TokenId);
 				UUBFItem* ChildItem = ItemRegistry->GetItem(ChildAssetID);
-				
+
 				if (!ChildItem)
 				{
-					UE_LOG(LogFutureverseUBFController, Warning, TEXT("UAssetRegisterUBFItem::HandleGetAssetLinks Failed to add Child Item: %s"), *ChildAssetID);
+					UE_LOG(LogFutureverseUBFController, Warning, TEXT("Failed to add Child Item: %s"), *ChildAssetID);
 					continue;
 				}
 
-				// TODO fix this async logic
-				ChildItem->EnsureProfileURILoaded().Next(
-					[this, Promise, &Relationships, ChildLink, ChildAssetID, ChildItem]
-					(const bool& Result)
-				{
-					UE_LOG(LogFutureverseUBFController, Verbose, TEXT("UAssetRegisterUBFItem::HandleGetAssetLinks Adding Child Item: %s with Relationship: %s"), *ChildAssetID, *ChildLink.Path);
-					Relationships.Add(FUBFContextTreeRelationshipData(ChildLink.Path, ChildAssetID, ChildItem->GetProfileURI()));
-				});
+				TFuture<bool> ProfileFuture = ChildItem->EnsureProfileURILoaded().Next(
+					[ChildLink, ChildAssetID, ChildItem, Relationships](const bool& Result)
+					{
+						if (Result)
+						{
+							Relationships->Add(FUBFContextTreeRelationshipData(ChildLink.Path, ChildAssetID, ChildItem->GetProfileURI()));
+						}
+
+						return Result;
+					});
+	
+				ProfileFutures.Add(MoveTemp(ProfileFuture));
 			}
 		}
 		else
@@ -48,10 +56,19 @@ TFuture<bool> UAssetRegisterUBFItem::LoadContextTree()
 			UE_LOG(LogFutureverseUBFController, Warning, TEXT("UAssetRegisterUBFItem::HandleGetAssetLinks Failed to get NFTAssetLink for Asset: %s:%s"), *Asset.CollectionId, *Asset.TokenId);
 		}
 		
-		ContextTree.Add(FUBFContextTreeData(ItemData.AssetID, Relationships));
-		SetContextTree(ContextTree);
-		
-		Promise->SetValue(Result.bSuccess);
+		LoadActionUtils::WhenAll(ProfileFutures).Next([this, Promise, Relationships](const TArray<bool>& Results)
+		{
+			const bool bAllSuccess = !Results.Contains(false);
+			
+			EnsureProfileURILoaded().Next([this, Promise, Relationships, bAllSuccess](bool bResult)
+			{
+				TArray<FUBFContextTreeData> ContextTree;
+				ContextTree.Add(FUBFContextTreeData(ItemData.AssetID, *Relationships.Get(), GetProfileURI()));
+				SetContextTree(ContextTree);
+				
+				Promise->SetValue(bAllSuccess && bResult);
+			});
+		});
 	});
 
 	return Future;

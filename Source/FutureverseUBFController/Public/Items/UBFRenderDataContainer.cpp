@@ -31,7 +31,10 @@ TArray<FFutureverseAssetLoadData> FUBFRenderDataContainer::GetLinkedAssetLoadDat
 	}
 
 	if (OutContractIds.IsEmpty())
+	{
 		OutContractIds.Add(FFutureverseAssetLoadData(GetAssetID(), RenderData.ProfileURI));
+	}
+		
 		
 	return OutContractIds;
 }

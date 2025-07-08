@@ -13,9 +13,9 @@
 #include "ExecutionSets/ExecutionSetResult.h"
 #include "GlobalArtifactProvider/GlobalArtifactProviderSubsystem.h"
 #include "Kismet/GameplayStatics.h"
+#include "LoadActions/LoadActionUtils.h"
 #include "LoadActions/LoadAssetCatalogAction.h"
 #include "LoadActions/LoadAssetProfilesAction.h"
-#include "LoadActions/LoadMultipleAssetDatasAction.h"
 
 UFutureverseUBFControllerSubsystem::UFutureverseUBFControllerSubsystem()
 {
@@ -47,14 +47,16 @@ void UFutureverseUBFControllerSubsystem::RenderItem(UUBFItem* Item, const FStrin
 	
 	Item->EnsureProfileURILoaded().Next([this, Item, RenderItemInfo, VariantID](bool bResult)
 	{
-		Item->EnsureContextTreeLoaded().Next([this, Item, RenderItemInfo, VariantID](bool bResult)
+		if (!bResult)
 		{
-			if (!IsSubsystemValid()) return;
+			UE_LOG(LogFutureverseUBFController, Warning, TEXT("UFutureverseUBFControllerSubsystem::RenderItem Failed to ensure ProfileURI was loaded"));
+			return;
+		}
+		
+		if (!IsSubsystemValid()) return;
 			
-			RenderItemInfo->RenderData = FUBFRenderDataContainer::GetFromData(Item->GetRenderData(), VariantID);
-				
-			RenderItemInternal(RenderItemInfo);
-		});
+		RenderItemInfo->RenderData = FUBFRenderDataContainer::GetFromData(Item->GetRenderData(), VariantID);
+		RenderItemInternal(RenderItemInfo);
 	});
 }
 
@@ -81,16 +83,19 @@ void UFutureverseUBFControllerSubsystem::RenderItemTree(UUBFItem* Item, const FS
 	// TODO what if item becomes invalid while we load this?
 	// TODO what if subsystem becomes invalid while we load this?
 	
-	Item->EnsureProfileURILoaded().Next([this, Item, RenderItemInfo, VariantID](bool bResult)
+	Item->EnsureContextTreeLoaded().Next([this, Item, RenderItemInfo, VariantID](bool bResult)
 	{
-		Item->EnsureContextTreeLoaded().Next([this, Item, RenderItemInfo, VariantID](bool bResult)
+		if (!bResult)
 		{
-			if (!IsSubsystemValid()) return;
-			
-			RenderItemInfo->RenderData = FUBFRenderDataContainer::GetFromData(Item->GetRenderData(), VariantID);
-				
-			RenderItemInternal(RenderItemInfo);
-		});
+			UE_LOG(LogFutureverseUBFController, Warning, TEXT("UFutureverseUBFControllerSubsystem::RenderItemTree Failed to ensure ContextTree was loaded"));
+			return;
+		}
+		
+		if (!IsSubsystemValid()) return;
+		
+		RenderItemInfo->RenderData = FUBFRenderDataContainer::GetFromData(Item->GetRenderData(), VariantID);
+
+		RenderItemTreeInternal(RenderItemInfo);
 	});
 }
 
@@ -224,40 +229,32 @@ void UFutureverseUBFControllerSubsystem::ExecuteGraph(TSharedPtr<FRenderItemInfo
 }
 
 TFuture<FLoadLinkedAssetProfilesResult> UFutureverseUBFControllerSubsystem::EnsureAssetDatasLoaded(
-	const TArray<FFutureverseAssetLoadData>& LoadDatas) const
+	const TArray<FFutureverseAssetLoadData>& LoadDatas)
 {
-	TSharedPtr<TPromise<FLoadLinkedAssetProfilesResult>> Promise = MakeShareable(new TPromise<FLoadLinkedAssetProfilesResult>());
-	TFuture<FLoadLinkedAssetProfilesResult> Future = Promise->GetFuture();
+	TSharedPtr<TPromise<FLoadLinkedAssetProfilesResult>> Promise = MakeShared<TPromise<FLoadLinkedAssetProfilesResult>>();
 	
-	const auto AssetProfileRegistry = UAssetProfileRegistrySubsystem::Get(GetWorld());
-	check(AssetProfileRegistry);
+	TArray<TFuture<FLoadAssetProfileResult>> Futures;
 	
-	if (!AssetProfileRegistry)
+	for (const auto& LoadData : LoadDatas)
 	{
-		UE_LOG(LogFutureverseUBFController, Error,
-			TEXT("UFutureverseUBFControllerSubsystem Failed to EnsureAssetDatasLoaded because AssetProfileRegistrySubsystem was null!"));
-		
-		auto FailResult = FLoadLinkedAssetProfilesResult();
-		FailResult.SetFailure();
-		Promise->SetValue(FailResult);
-		return Future;
+		Futures.Add(EnsureAssetDataLoaded(LoadData));
 	}
-	
-	AssetProfileRegistry->GetLinkedAssetProfiles(LoadDatas).Next([this, Promise
-		](const FLoadLinkedAssetProfilesResult& Result)
+
+	LoadActionUtils::WhenAll(Futures).Next([Promise](const TArray<FLoadAssetProfileResult>& Results)
 	{
-		if (!IsSubsystemValid())
-		{
-			auto FailResult = FLoadLinkedAssetProfilesResult();
-			FailResult.SetFailure();
-			Promise->SetValue(FailResult);
-			return;
-		}
+		FLoadLinkedAssetProfilesResult OutResults;
+		OutResults.bSuccess = true;
 		
-		Promise->SetValue(Result);
+		for (const auto& Result : Results)
+		{
+			OutResults.bSuccess &= Result.bSuccess;
+			OutResults.Value.Add(Result.Value.GetId(), Result.Value);
+		}
+
+		Promise->SetValue(OutResults);
 	});
 
-	return Future;
+	return Promise->GetFuture();
 }
 
 TFuture<FLoadAssetProfileResult> UFutureverseUBFControllerSubsystem::EnsureAssetDataLoaded(const FFutureverseAssetLoadData& LoadData)
@@ -340,7 +337,7 @@ TFuture<FLoadAssetProfileResult> UFutureverseUBFControllerSubsystem::EnsureAsset
 }
 
 TFuture<bool> UFutureverseUBFControllerSubsystem::EnsureCatalogsLoaded(const FFutureverseAssetLoadData& LoadData,
-	const FAssetProfile& AssetProfile)
+	const FAssetProfile& AssetProfile) 
 {
 	TSharedPtr<TPromise<bool>> Promise = MakeShareable(new TPromise<bool>());
 	TFuture<bool> Future = Promise->GetFuture();

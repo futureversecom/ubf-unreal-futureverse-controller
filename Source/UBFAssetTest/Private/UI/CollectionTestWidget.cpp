@@ -143,6 +143,7 @@ TArray<FUBFContextTreeData> UCollectionTestWidget::MakeContextTree(const FString
 		Relationships.Add(FUBFContextTreeRelationshipData(Input->GetId(), Input->GetValue(), TEXT("")));
 	}
 
-	const TArray ContextTree {FUBFContextTreeData(RootAssetID, Relationships)};
+	// TODO add AssetProfileURI
+	const TArray ContextTree {FUBFContextTreeData(RootAssetID, Relationships, TEXT(""))};
 	return ContextTree;
 }
