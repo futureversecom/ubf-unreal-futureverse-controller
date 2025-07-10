@@ -55,7 +55,7 @@ void UFutureverseUBFControllerSubsystem::RenderItem(UUBFItem* Item, const FStrin
 		
 		if (!IsSubsystemValid()) return;
 			
-		RenderItemInfo->RenderData = FUBFRenderDataContainer::GetFromData(Item->GetRenderData(), VariantID);
+		RenderItemInfo->RenderData = FUBFRenderDataContainer::GetFromData(Item->GetCachedRenderData(), VariantID);
 		RenderItemInternal(RenderItemInfo);
 	});
 }
@@ -93,7 +93,7 @@ void UFutureverseUBFControllerSubsystem::RenderItemTree(UUBFItem* Item, const FS
 		
 		if (!IsSubsystemValid()) return;
 		
-		RenderItemInfo->RenderData = FUBFRenderDataContainer::GetFromData(Item->GetRenderData(), VariantID);
+		RenderItemInfo->RenderData = FUBFRenderDataContainer::GetFromData(Item->GetCachedRenderData(), VariantID);
 
 		RenderItemTreeInternal(RenderItemInfo);
 	});

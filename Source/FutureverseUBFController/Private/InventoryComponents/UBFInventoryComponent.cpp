@@ -8,7 +8,7 @@ UUBFInventoryComponent::UUBFInventoryComponent()
 	ItemRegistry = MakeShared<FItemRegistry>();
 }
 
-UUBFItem* UUBFInventoryComponent::GetItem(const FString& ItemId)
+UUBFItem* UUBFInventoryComponent::GetItem(const FString& ItemId) const
 {
 	return ItemRegistry->GetItem(ItemId);
 }

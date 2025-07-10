@@ -146,13 +146,13 @@ public:
 	FUBFItemData GetItemData() const { return ItemData; }
 
 	UFUNCTION(BlueprintCallable)
-	FUBFItemData& GetItemDataRef() { return ItemData; }
+	const FUBFItemData& GetItemDataRef() const { return ItemData; }
 	
 	UFUNCTION(BlueprintCallable)
 	TArray<FUBFContextTreeData> GetContextTree() const { return ContextTree; }
 
 	UFUNCTION(BlueprintCallable)
-	TArray<FUBFContextTreeData>& GetContextTreeRef() { return ContextTree; }
+	const TArray<FUBFContextTreeData>& GetContextTreeRef() const { return ContextTree; }
 
 	UFUNCTION(BlueprintCallable)
 	FString GetAssetID() const { return ItemData.AssetID; }
@@ -179,13 +179,18 @@ public:
 	FString GetProfileURI() const { return ProfileURI; }
 	
 	UFUNCTION(BlueprintCallable)
-	FUBFRenderData GetRenderData() { return FUBFRenderData(ItemData.AssetID, GetMetadataJson(), GetContextTreeRef(), ProfileURI);}
+	FUBFRenderData GetCachedRenderData() const { return FUBFRenderData(ItemData.AssetID, GetMetadataJson(), GetContextTreeRef(), ProfileURI);}
 	
 	UFUNCTION(BlueprintCallable)
 	virtual void InitializeFromRenderData(const FUBFRenderData& RenderData);
 
 	void SetItemRegistry(const TSharedPtr<FItemRegistry>& NewItemRegistry) { ItemRegistry = NewItemRegistry; }
 	void SetAssetProfileURI(const FString& InProfileURI) { ProfileURI = InProfileURI; }
+
+	UFUNCTION(BlueprintCallable)
+	bool IsContextTreeLoaded() const;
+	UFUNCTION(BlueprintCallable)
+	bool IsProfileURILoaded() const;
 	
 	virtual TFuture<bool> EnsureContextTreeLoaded();
 	virtual TFuture<bool> EnsureProfileURILoaded();

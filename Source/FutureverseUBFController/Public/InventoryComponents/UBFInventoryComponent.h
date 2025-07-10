@@ -31,10 +31,10 @@ public:
 
 	// Get current received items
 	UFUNCTION(BlueprintCallable)
-	TArray<UUBFItem*>& GetInventory() { return Inventory; }
+	const TArray<UUBFItem*>& GetInventory() const { return Inventory; }
 
 	UFUNCTION(BlueprintCallable)
-	virtual UUBFItem* GetItem(const FString& ItemId);
+	virtual UUBFItem* GetItem(const FString& ItemId) const;
 
 	UFUNCTION(BlueprintCallable)
 	virtual void RegisterItem(const FString& ItemId, UUBFItem* Item);

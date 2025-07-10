@@ -1,6 +1,6 @@
 #include "ItemRegistry.h"
 
-UUBFItem* FItemRegistry::GetItem(const FString& ItemId)
+UUBFItem* FItemRegistry::GetItem(const FString& ItemId) const
 {
 	return ItemMap.Contains(ItemId) ? ItemMap[ItemId] : nullptr;
 }

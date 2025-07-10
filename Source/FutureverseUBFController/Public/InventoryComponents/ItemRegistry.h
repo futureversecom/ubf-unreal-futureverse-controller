@@ -10,7 +10,7 @@ public:
 	FItemRegistry(){}
 	virtual ~FItemRegistry() = default;
 	
-	UUBFItem* GetItem(const FString& ItemId);
+	UUBFItem* GetItem(const FString& ItemId) const;
 	void RegisterItem(const FString& ItemId, UUBFItem* Item);
 
 protected:
