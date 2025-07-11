@@ -7,7 +7,7 @@
 #include "FutureverseUBFControllerLog.h"
 #include "FutureverseUBFControllerSettings.h"
 #include "LoadActions/LoadActionUtils.h"
-#include "Schemas/NFTAssetLink.h"
+#include "Schemas/Unions/NFTAssetLink.h"
 
 
 
@@ -26,7 +26,7 @@ TFuture<bool> UAssetRegisterUBFItem::LoadContextTree()
 		
 		if (const UNFTAssetLink* NFTAssetLink = Cast<UNFTAssetLink>(Asset.LinkWrapper.Links))
 		{
-			for (const FLink& ChildLink : NFTAssetLink->ChildLinks)
+			for (const FLink& ChildLink : NFTAssetLink->Data.ChildLinks)
 			{
 				const FString ChildAssetID = FString::Printf(TEXT("%s:%s"), *ChildLink.Asset.CollectionId, *ChildLink.Asset.TokenId);
 				UUBFItem* ChildItem = ItemRegistry->GetItem(ChildAssetID);

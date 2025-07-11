@@ -20,6 +20,9 @@ public:
 	
 	virtual void RequestFuturepassInventoryByCollectionAndOwner(const FString& OwnerAddress,
 		const TArray<FString>& CollectionIds, const FOnRequestCompleted& OnRequestCompleted) override;
+
+	UFUNCTION(BlueprintCallable)
+	void RequestFuturepassInventoryWithInput(const FAssetConnection& AssetConnectionInput, const FOnRequestCompleted& OnRequestCompleted);
 	
 private:
 	FUBFItemData CreateItemDataFromAsset(const FAsset& Asset);

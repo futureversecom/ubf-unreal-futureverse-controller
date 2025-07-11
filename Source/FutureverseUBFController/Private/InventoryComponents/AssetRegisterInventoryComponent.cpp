@@ -9,8 +9,6 @@
 #include "MetadataJsonUtils.h"
 #include "Items/AssetRegisterUBFItem.h"
 #include "Items/UBFItem.h"
-#include "Schemas/AssetLink.h"
-#include "Schemas/NFTAssetLink.h"
 
 
 void UAssetRegisterInventoryComponent::RequestFuturepassInventory(const FString& OwnerAddress,
@@ -37,7 +35,17 @@ void UAssetRegisterInventoryComponent::RequestFuturepassInventoryByCollectionAnd
 	AssetConnectionInput.First = 1000;
 	UAssetRegisterQueryingLibrary::GetAssets(AssetConnectionInput, GetAssetsRequestCompleted);
 	
-	OnFilteredInventoryRequestCompleted = OnRequestCompleted;
+	OnInventoryRequestCompleted = OnRequestCompleted;
+}
+
+void UAssetRegisterInventoryComponent::RequestFuturepassInventoryWithInput(const FAssetConnection& AssetConnectionInput,
+	const FOnRequestCompleted& OnRequestCompleted)
+{
+	GetAssetsRequestCompleted.BindDynamic(this, &ThisClass::HandleGetFuturepassInventory);
+
+	UAssetRegisterQueryingLibrary::GetAssets(AssetConnectionInput, GetAssetsRequestCompleted);
+	
+	OnInventoryRequestCompleted = OnRequestCompleted;
 }
 
 FUBFItemData UAssetRegisterInventoryComponent::CreateItemDataFromAsset(const FAsset& Asset)
@@ -57,7 +65,6 @@ void UAssetRegisterInventoryComponent::HandleGetFuturepassInventory(bool bSucces
 	if (!bSuccess)
 	{
 		OnInventoryRequestCompleted.ExecuteIfBound();
-		OnFilteredInventoryRequestCompleted.ExecuteIfBound();
 		return;
 	}
 	
@@ -83,5 +90,4 @@ void UAssetRegisterInventoryComponent::HandleGetFuturepassInventory(bool bSucces
 	}
 
 	OnInventoryRequestCompleted.ExecuteIfBound();
-	OnFilteredInventoryRequestCompleted.ExecuteIfBound();
 }
