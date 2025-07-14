@@ -10,6 +10,9 @@
 
 struct FAssets;
 
+/**
+ * Example Inventory Component that uses Asset Register SDK to query items
+ */
 UCLASS(ClassGroup=(Custom), meta=(BlueprintSpawnableComponent))
 class FUTUREVERSEUBFCONTROLLER_API UAssetRegisterInventoryComponent : public UUBFInventoryComponent
 {
@@ -32,4 +35,7 @@ private:
 	
 	UPROPERTY()
 	FGetAssetsCompleted GetAssetsRequestCompleted;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, meta=(AllowPrivateAccess=true))
+	int32 NumberOfItemsToQuery = 500;
 };

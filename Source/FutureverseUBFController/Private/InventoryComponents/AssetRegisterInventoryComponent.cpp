@@ -5,7 +5,6 @@
 
 #include "AssetRegisterQueryingLibrary.h"
 #include "FutureverseUBFControllerLog.h"
-#include "JsonObjectConverter.h"
 #include "MetadataJsonUtils.h"
 #include "Items/AssetRegisterUBFItem.h"
 #include "Items/UBFItem.h"
@@ -18,7 +17,7 @@ void UAssetRegisterInventoryComponent::RequestFuturepassInventory(const FString&
 	
 	FAssetConnection AssetConnectionInput;
 	AssetConnectionInput.Addresses = {OwnerAddress};
-	AssetConnectionInput.First = 1000;
+	AssetConnectionInput.First = NumberOfItemsToQuery;
 	UAssetRegisterQueryingLibrary::GetAssets(AssetConnectionInput, GetAssetsRequestCompleted);
 	
 	OnInventoryRequestCompleted = OnRequestCompleted;
@@ -32,7 +31,7 @@ void UAssetRegisterInventoryComponent::RequestFuturepassInventoryByCollectionAnd
 	FAssetConnection AssetConnectionInput;
 	AssetConnectionInput.Addresses = {OwnerAddress};
 	AssetConnectionInput.CollectionIds = CollectionIds;
-	AssetConnectionInput.First = 1000;
+	AssetConnectionInput.First = NumberOfItemsToQuery;
 	UAssetRegisterQueryingLibrary::GetAssets(AssetConnectionInput, GetAssetsRequestCompleted);
 	
 	OnInventoryRequestCompleted = OnRequestCompleted;
@@ -88,6 +87,13 @@ void UAssetRegisterInventoryComponent::HandleGetFuturepassInventory(bool bSucces
 		
 		Inventory.Add(UBFItem);
 	}
+	
+	// FString HasPreviousPage = Assets.PageInfo.HasPreviousPage ? TEXT("true") : TEXT("false");
+	// FString HasNextPage = Assets.PageInfo.HasNextPage ? TEXT("true") : TEXT("false");
+	//
+	// UE_LOG(LogFutureverseUBFController, Verbose,
+	// 	TEXT("Inventory hasPreviousPage: %s hasNextPage: %s NextPage: %s"),
+	// 	*HasPreviousPage, *HasNextPage, *Assets.PageInfo.NextPage);
 
 	OnInventoryRequestCompleted.ExecuteIfBound();
 }
