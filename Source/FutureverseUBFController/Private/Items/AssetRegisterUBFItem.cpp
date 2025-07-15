@@ -24,7 +24,7 @@ TFuture<bool> UAssetRegisterUBFItem::LoadContextTree()
 
 		TArray<TFuture<bool>> ProfileFutures;
 		
-		if (const UNFTAssetLink* NFTAssetLink = Cast<UNFTAssetLink>(Asset.LinkWrapper.Links))
+		if (const UNFTAssetLinkObject* NFTAssetLink = Cast<UNFTAssetLinkObject>(Asset.LinkWrapper.Links))
 		{
 			for (const FLink& ChildLink : NFTAssetLink->Data.ChildLinks)
 			{
