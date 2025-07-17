@@ -74,7 +74,7 @@ TFuture<bool> UAssetRegisterUBFItem::LoadContextTree()
 	return Future;
 }
 
- TFuture<bool> UAssetRegisterUBFItem::LoadProfileURI()
+TFuture<bool> UAssetRegisterUBFItem::LoadProfileURI()
 {
 	TSharedPtr<TPromise<bool>> Promise = MakeShared<TPromise<bool>>();
 	TFuture<bool> Future = Promise->GetFuture();
@@ -94,7 +94,7 @@ TFuture<bool> UAssetRegisterUBFItem::LoadContextTree()
 				LegacyProfileURI = LegacyProfileURI.Replace(TEXT(" "), TEXT(""));
 				ProfileURI = LegacyProfileURI;
 
-				UE_LOG(LogFutureverseUBFController, Log, TEXT("UAssetRegisterUBFItem::LoadProfileURI using legacy assetprofile URI %s"), *ProfileURI);
+				UE_LOG(LogFutureverseUBFController, Verbose, TEXT("UAssetRegisterUBFItem::LoadProfileURI using legacy assetprofile URI %s"), *ProfileURI);
 			}
 			else
 			{
@@ -105,7 +105,7 @@ TFuture<bool> UAssetRegisterUBFItem::LoadContextTree()
 		}
 		else
 		{
-			UE_LOG(LogFutureverseUBFController, Log, TEXT("UAssetRegisterUBFItem::LoadProfileURI got assetprofile URI %s"), *Result.Value);
+			UE_LOG(LogFutureverseUBFController, Verbose, TEXT("UAssetRegisterUBFItem::LoadProfileURI got assetprofile URI %s"), *Result.Value);
 			ProfileURI = Result.Value;
 		}
 	

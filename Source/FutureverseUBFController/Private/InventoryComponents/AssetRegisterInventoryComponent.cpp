@@ -5,6 +5,7 @@
 
 #include "AssetRegisterQueryingLibrary.h"
 #include "FutureverseUBFControllerLog.h"
+#include "FutureverseUBFControllerSettings.h"
 #include "MetadataJsonUtils.h"
 #include "Items/AssetRegisterUBFItem.h"
 #include "Items/UBFItem.h"
@@ -68,17 +69,36 @@ void UAssetRegisterInventoryComponent::HandleGetFuturepassInventory(bool bSucces
 	}
 	
 	Inventory.Empty();
-
+	// force use legacy asset profile uri if UseAssetRegisterProfiles is false
+	const UFutureverseUBFControllerSettings* Settings = GetDefault<UFutureverseUBFControllerSettings>();
+	check(Settings);
+	bool bUseARAssetProfile = false;
+	if (Settings)
+	{
+		bUseARAssetProfile = Settings->GetUseAssetRegisterProfiles();
+	}
 	for (auto& AssetEdge : Assets.Edges)
 	{
 		const auto Asset = AssetEdge.Node;
 		UUBFItem* UBFItem = NewObject<UAssetRegisterUBFItem>(this);
 		const auto ItemData = CreateItemDataFromAsset(Asset);
 
-		FString AssetProfilesKey = TEXT("asset-profile");
+		if (!bUseARAssetProfile)
+		{
+			FString LegacyProfileURI = FPaths::Combine(Settings->GetDefaultAssetProfilePath(),
+			FString::Printf(TEXT("%s.json"), *ItemData.ContractID));
+			LegacyProfileURI = LegacyProfileURI.Replace(TEXT(" "), TEXT(""));
+			UBFItem->SetAssetProfileURI(LegacyProfileURI);
 
-		if (Asset.Profiles.Contains(AssetProfilesKey))
-			UBFItem->SetAssetProfileURI(Asset.Profiles[AssetProfilesKey]);
+			UE_LOG(LogFutureverseUBFController, Verbose, TEXT("UAssetRegisterInventoryComponent::HandleGetFuturepassInventory using legacy assetprofile URI %s"), *LegacyProfileURI);
+		}
+		else
+		{
+			FString AssetProfilesKey = TEXT("asset-profile");
+			
+			if (Asset.Profiles.Contains(AssetProfilesKey))
+				UBFItem->SetAssetProfileURI(Asset.Profiles[AssetProfilesKey]);
+		}
 		
 		UBFItem->SetItemData(ItemData);
 		UBFItem->SetItemRegistry(ItemRegistry);
