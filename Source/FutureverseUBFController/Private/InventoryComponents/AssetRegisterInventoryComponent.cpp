@@ -51,10 +51,13 @@ void UAssetRegisterInventoryComponent::RequestFuturepassInventoryWithInput(const
 FUBFItemData UAssetRegisterInventoryComponent::CreateItemDataFromAsset(const FAsset& Asset)
 {
 	const FString AssetID = FString::Printf(TEXT("%s:%s"), *Asset.CollectionId, *Asset.TokenId);
-	const FString AssetName = Asset.Metadata.Properties.Contains(TEXT("name")) ? Asset.Metadata.Properties[TEXT("name")] : TEXT("");
 	const FString MetadataJson = MetadataJsonUtils::GetMetadataJson(Asset.OriginalJsonData.JsonObject);
-	
-	
+	FString AssetName = TEXT("");
+	const TSharedPtr<FJsonValue> NameField = MetadataJsonUtils::FindFieldRecursively(Asset.Metadata.Properties.JsonObject, TEXT("name"));
+	if (NameField)
+	{
+		NameField->TryGetString(AssetName);
+	}
 	return FUBFItemData(AssetID, AssetName, Asset.Collection.Location, Asset.TokenId, Asset.CollectionId, MetadataJson, Asset.OriginalJsonData);
 }
 
