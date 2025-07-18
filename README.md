@@ -10,7 +10,13 @@ The **Futureverse UBF Controller** is a Unreal Engine plugin that acts as an orc
 
 ## Installation
 
-Download latest release and extract the zip into your unreal project's plugin folder.
+Requires unreal engine 5.3 and above c++ project.
+
+1. Download latest release
+2. Find or create the 'Plugins' folder in your unreal engine project
+3. Extract the zip into the plugins folder.
+4. Compile or Build your unreal engine project.
+5. Open your project and enable the 'FutureverseUBFController' plugin in the plugins tab of the unreal editor.
 
 ## Overview
 
@@ -42,9 +48,21 @@ As mentioned above, this Execution Controller is designed primarily for renderin
 * Execute Render Blueprint: Initiate execution of the top-level asset’s render blueprint, now fully configured with its required inputs.
 * Provide Artifacts at Runtime: During execution, fulfill any artifact requests from the blueprint(s) by retrieving them from cache or downloading them on demand.
 
-## Using the Execution Controller
+## Using the Futureverse UBF Controller Subsystem
 
 * Add UBFRuntimeController to actor
-* Query Asset Registry for items using ArInventoryComponent
+
+<img width="295" height="138" alt="image" src="https://github.com/user-attachments/assets/bc44ab34-f280-4ab8-88bc-1e0718061ba0" />
+
+* Query Asset Registry for items using an AssetRegisterInventoryComponent
+
+<img width="841" height="226" alt="image" src="https://github.com/user-attachments/assets/1df76374-9b0f-4d07-acb2-ffab9688e5ae" />
+
 * Select which item to render
+
+<img width="721" height="183" alt="image" src="https://github.com/user-attachments/assets/9403a4a9-9cb2-47eb-8f3a-af4102798890" />
+
 * Call RenderItem on FutureverseUBFControllerSubsystem and provide the desired item and target UBFRuntimeController
+
+<img width="561" height="328" alt="image" src="https://github.com/user-attachments/assets/15576b02-028f-4e66-b72b-635e9c05f54b" />
+
