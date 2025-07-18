@@ -62,7 +62,7 @@ TFuture<FLoadAssetProfileResult> UAssetProfileRegistrySubsystem::GetAssetProfile
 				AssetProfile.ModifyId(FString::Printf(TEXT("%s:%s"), *LoadData.GetCollectionID(), *AssetProfile.GetId()));
 			
 			AssetProfiles.Add(AssetProfile.GetId(), AssetProfile);
-			UE_LOG(LogFutureverseUBFController, VeryVerbose, TEXT("UAssetProfileRegistrySubsystem::GetAssetProfile AssetId %s AssetProfile %s loaded."), *Result.Value.GetId(), *Result.Value.ToString());
+			UE_LOG(LogFutureverseUBFController, VeryVerbose, TEXT("UAssetProfileRegistrySubsystem::GetAssetProfile AssetId %s AssetProfile %s loaded."), *AssetProfile.GetId(), *AssetProfile.ToString());
 		}
 			
 		Result.SetResult(AssetProfiles.Get(LoadData.AssetID));
