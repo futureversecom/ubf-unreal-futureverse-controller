@@ -41,7 +41,7 @@ TFuture<bool> UAssetRegisterUBFItem::LoadContextTree()
 
 				if (!ChildItem)
 				{
-					UE_LOG(LogFutureverseUBFController, Warning, TEXT("Failed to add Child Item: %s"), *ChildAssetID);
+					UE_LOG(LogFutureverseUBFController, Verbose, TEXT("Failed to add Child Item: %s"), *ChildAssetID);
 					continue;
 				}
 
