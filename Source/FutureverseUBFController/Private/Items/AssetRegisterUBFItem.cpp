@@ -16,9 +16,17 @@ TFuture<bool> UAssetRegisterUBFItem::LoadContextTree()
 	TSharedPtr<TPromise<bool>> Promise = MakeShared<TPromise<bool>>();
  	TFuture<bool> Future = Promise->GetFuture();
 
-	UAssetRegisterQueryingLibrary::GetAssetLinks(ItemData.TokenID, ItemData.CollectionID).Next([this, Promise]
+	TWeakObjectPtr<UAssetRegisterUBFItem> WeakThis = this;
+
+	UAssetRegisterQueryingLibrary::GetAssetLinks(ItemData.TokenID, ItemData.CollectionID).Next([WeakThis, Promise]
 		(const FLoadAssetResult& Result)
 	{
+		if (!WeakThis.IsValid())
+		{
+			Promise->SetValue(false);
+			return;
+		}
+		
 		const auto Asset = Result.Value;
 		TSharedPtr<TArray<FUBFContextTreeRelationshipData>> Relationships = MakeShared<TArray<FUBFContextTreeRelationshipData>>();
 
@@ -29,7 +37,7 @@ TFuture<bool> UAssetRegisterUBFItem::LoadContextTree()
 			for (const FLink& ChildLink : NFTAssetLink->Data.ChildLinks)
 			{
 				const FString ChildAssetID = FString::Printf(TEXT("%s:%s"), *ChildLink.Asset.CollectionId, *ChildLink.Asset.TokenId);
-				UUBFItem* ChildItem = ItemRegistry->GetItem(ChildAssetID);
+				UUBFItem* ChildItem = WeakThis->ItemRegistry->GetItem(ChildAssetID);
 
 				if (!ChildItem)
 				{
@@ -56,15 +64,27 @@ TFuture<bool> UAssetRegisterUBFItem::LoadContextTree()
 			UE_LOG(LogFutureverseUBFController, Warning, TEXT("UAssetRegisterUBFItem::HandleGetAssetLinks Failed to get NFTAssetLink for Asset: %s:%s"), *Asset.CollectionId, *Asset.TokenId);
 		}
 		
-		LoadActionUtils::WhenAll(ProfileFutures).Next([this, Promise, Relationships](const TArray<bool>& Results)
+		LoadActionUtils::WhenAll(ProfileFutures).Next([WeakThis, Promise, Relationships](const TArray<bool>& Results)
 		{
 			const bool bAllSuccess = !Results.Contains(false);
-			
-			EnsureProfileURILoaded().Next([this, Promise, Relationships, bAllSuccess](bool bResult)
+
+			if (!WeakThis.IsValid())
 			{
+				Promise->SetValue(false);
+				return;
+			}
+			
+			WeakThis->EnsureProfileURILoaded().Next([WeakThis, Promise, Relationships, bAllSuccess](bool bResult)
+			{
+				if (!WeakThis.IsValid())
+				{
+					Promise->SetValue(false);
+					return;
+				}
+				
 				TArray<FUBFContextTreeData> ContextTree;
-				ContextTree.Add(FUBFContextTreeData(ItemData.AssetID, *Relationships.Get(), GetProfileURI()));
-				SetContextTree(ContextTree);
+				ContextTree.Add(FUBFContextTreeData(WeakThis->ItemData.AssetID, *Relationships.Get(), WeakThis->GetProfileURI()));
+				WeakThis->SetContextTree(ContextTree);
 				
 				Promise->SetValue(bAllSuccess && bResult);
 			});
@@ -78,10 +98,18 @@ TFuture<bool> UAssetRegisterUBFItem::LoadProfileURI()
 {
 	TSharedPtr<TPromise<bool>> Promise = MakeShared<TPromise<bool>>();
 	TFuture<bool> Future = Promise->GetFuture();
+
+	TWeakObjectPtr<UAssetRegisterUBFItem> WeakThis = this;
 	
-	UAssetRegisterQueryingLibrary::GetAssetProfile(ItemData.TokenID, ItemData.CollectionID).Next([this, Promise]
+	UAssetRegisterQueryingLibrary::GetAssetProfile(ItemData.TokenID, ItemData.CollectionID).Next([WeakThis, Promise]
 		(const FLoadJsonResult& Result)
 	{
+		if (!WeakThis.IsValid())
+		{
+			Promise->SetValue(false);
+			return;
+		}
+		
 		// some items don't have profile uris uploaded to AssetRegister yet
 		if (!Result.bSuccess)
 		{
@@ -90,11 +118,11 @@ TFuture<bool> UAssetRegisterUBFItem::LoadProfileURI()
 			if (Settings)
 			{
 				FString LegacyProfileURI = FPaths::Combine(Settings->GetDefaultAssetProfilePath(),
-				FString::Printf(TEXT("%s.json"), *ItemData.ContractID));
+				FString::Printf(TEXT("%s.json"), *WeakThis->ItemData.ContractID));
 				LegacyProfileURI = LegacyProfileURI.Replace(TEXT(" "), TEXT(""));
-				ProfileURI = LegacyProfileURI;
+				WeakThis->ProfileURI = LegacyProfileURI;
 
-				UE_LOG(LogFutureverseUBFController, Verbose, TEXT("UAssetRegisterUBFItem::LoadProfileURI using legacy assetprofile URI %s"), *ProfileURI);
+				UE_LOG(LogFutureverseUBFController, Verbose, TEXT("UAssetRegisterUBFItem::LoadProfileURI using legacy assetprofile URI %s"), *WeakThis->ProfileURI);
 			}
 			else
 			{
@@ -106,7 +134,7 @@ TFuture<bool> UAssetRegisterUBFItem::LoadProfileURI()
 		else
 		{
 			UE_LOG(LogFutureverseUBFController, Verbose, TEXT("UAssetRegisterUBFItem::LoadProfileURI got assetprofile URI %s"), *Result.Value);
-			ProfileURI = Result.Value;
+			WeakThis->ProfileURI = Result.Value;
 		}
 	
 		Promise->SetValue(true);
