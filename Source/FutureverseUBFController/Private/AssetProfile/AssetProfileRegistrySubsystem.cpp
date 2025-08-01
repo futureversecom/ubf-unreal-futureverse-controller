@@ -31,15 +31,24 @@ TFuture<FLoadAssetProfileResult> UAssetProfileRegistrySubsystem::GetAssetProfile
 		Promise->SetValue(Result);
 		return Future;
 	}
+
+	TWeakObjectPtr<UAssetProfileRegistrySubsystem> WeakThis = this;
 	
 	FDownloadRequestManager::GetInstance()->LoadStringFromURI(TEXT("AssetProfile"), LoadData.ProfileURI).Next(
-	[this, Promise, LoadData] (const UBF::FLoadStringResult& AssetProfileResult)
+	[WeakThis, Promise, LoadData] (const UBF::FLoadStringResult& AssetProfileResult)
 	{
 		auto Result = FLoadAssetProfileResult();
 				
 		if (!AssetProfileResult.bSuccess)
 		{
 			UE_LOG(LogFutureverseUBFController, Error, TEXT("UAssetProfileRegistrySubsystem::GetAssetProfile failed to load remote AssetProfile from URI '%s'"), *LoadData.ProfileURI);
+			Result.SetFailure();
+			Promise->SetValue(Result);
+			return;
+		}
+
+		if (!WeakThis.IsValid() && !WeakThis->IsSubsystemValid())
+		{
 			Result.SetFailure();
 			Promise->SetValue(Result);
 			return;
@@ -61,11 +70,11 @@ TFuture<FLoadAssetProfileResult> UAssetProfileRegistrySubsystem::GetAssetProfile
 			if (!AssetProfile.GetId().Contains(LoadData.GetContractID()))
 				AssetProfile.ModifyId(FString::Printf(TEXT("%s:%s"), *LoadData.GetCollectionID(), *AssetProfile.GetId()));
 			
-			AssetProfiles.Add(AssetProfile.GetId(), AssetProfile);
+			WeakThis->AssetProfiles.Add(AssetProfile.GetId(), AssetProfile);
 			UE_LOG(LogFutureverseUBFController, VeryVerbose, TEXT("UAssetProfileRegistrySubsystem::GetAssetProfile AssetId %s AssetProfile %s loaded."), *AssetProfile.GetId(), *AssetProfile.ToString());
 		}
 			
-		Result.SetResult(AssetProfiles.Get(LoadData.AssetID));
+		Result.SetResult(WeakThis->AssetProfiles.Get(LoadData.AssetID));
 		Promise->SetValue(Result);
 	});
 	
