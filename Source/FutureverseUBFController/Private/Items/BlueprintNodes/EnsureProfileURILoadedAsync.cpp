@@ -17,9 +17,12 @@ void UEnsureProfileURILoadedAsync::Activate()
 		OnCompleted.Broadcast(false);
 		return;
 	}
-
-	ItemRef->EnsureProfileURILoaded().Next([this](bool bResult)
+	TWeakObjectPtr<UEnsureProfileURILoadedAsync> WeakThis = this;
+	ItemRef->EnsureProfileURILoaded().Next([WeakThis](bool bResult)
 	{
-		OnCompleted.Broadcast(bResult);
+		if (WeakThis.IsValid())
+		{
+			WeakThis->OnCompleted.Broadcast(bResult);
+		}
 	});
 }

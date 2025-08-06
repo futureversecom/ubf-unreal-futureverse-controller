@@ -17,9 +17,12 @@ void UEnsureContextTreeLoadedAsync::Activate()
 		OnCompleted.Broadcast(false);
 		return;
 	}
-
-	ItemRef->EnsureContextTreeLoaded().Next([this](bool bResult)
+	TWeakObjectPtr<UEnsureContextTreeLoadedAsync> WeakThis = this;
+	ItemRef->EnsureContextTreeLoaded().Next([WeakThis](bool bResult)
 	{
-		OnCompleted.Broadcast(bResult);
+		if (WeakThis.IsValid())
+		{
+			WeakThis->OnCompleted.Broadcast(bResult);
+		}
 	});
 }
